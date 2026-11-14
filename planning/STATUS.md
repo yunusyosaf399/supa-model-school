@@ -14,7 +14,8 @@ Date: 2026-11-14
 **12 complete, 100 pending, 2 blocked (total 114).**
 
 ## Blockers
-- SETUP-07 and D01-T05: Flutter SDK not available in this authoring environment; cannot confirm build, analysis or widget tests.
+- SETUP-07 and D01-T05: Flutter SDK not available locally. The GitHub Actions scaffold check [run #3](https://github.com/yunusyosaf399/supa-model-school/actions/runs/43621320297) also **failed**; logs/step details are presently unavailable through the connector. See [issue #6](https://github.com/yunusyosaf399/supa-model-school/issues/6). Do not claim a compiled/tested application.
+- DB01/DB02 are draft SQL on [PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1); deployment, RLS tests and merging remain pending.
 
 ## Next approved work
 1. Review DB01/DB02 SQL draft PR #1; generate CLI migrations and run local tests.
