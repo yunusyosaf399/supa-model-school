@@ -106,6 +106,22 @@ create index user_roles_user_school_idx
   on public.user_roles(user_id,school_id) where is_active;
 create index user_roles_campus_idx on public.user_roles(campus_id) where is_active;
 
+-- Explicit action permissions are SCHOOL-scoped defaults; role/campus scope
+-- is enforced independently by server code and RLS.
+-- No implicit grants: absent permission = denied for non-owners.
+create table public.role_permissions (
+  school_id uuid not null references public.schools(id) on delete restrict,
+  role text not null check (role in (
+    'principal','admin','accountant','attendance_staff'
+  )),
+  resource text not null check (length(btrim(resource)) between 2 and 100),
+  action text not null check (length(btrim(action)) between 2 and 100),
+  permitted boolean not null default false,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users(id),
+  primary key (school_id,role,resource,action)
+);
+
 create table public.principal_report_permissions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.user_profiles(user_id) on delete restrict,
@@ -118,6 +134,7 @@ create table public.principal_report_permissions (
     references public.campuses(id,school_id) on delete restrict,
   unique (user_id,detail_campus_id)
 );
+create index principal_report_grants_user_idx on public.principal_report_permissions(user_id);
 
 create table public.school_settings (
   school_id uuid not null references public.schools(id) on delete restrict,
@@ -217,6 +234,7 @@ alter table public.classes enable row level security;
 alter table public.sections enable row level security;
 alter table public.user_profiles enable row level security;
 alter table public.user_roles enable row level security;
+alter table public.role_permissions enable row level security;
 alter table public.principal_report_permissions enable row level security;
 alter table public.school_settings enable row level security;
 alter table public.campus_settings enable row level security;
@@ -225,11 +243,11 @@ alter table public.registered_devices enable row level security;
 -- Baseline is SELECT only: no INSERT/UPDATE/DELETE client grants or policies.
 revoke all on public.schools,public.campuses,public.academic_years,
   public.classes,public.sections,public.user_profiles,public.user_roles,
-  public.principal_report_permissions,public.school_settings,
-  public.campus_settings,public.registered_devices from anon,authenticated;
+  public.role_permissions,public.principal_report_permissions,public.school_settings,
+  public.campus_settings,public.registered_devices from public,anon,authenticated;
 grant select on public.schools,public.campuses,public.academic_years,
   public.classes,public.sections,public.user_profiles,public.user_roles,
-  public.principal_report_permissions,public.school_settings,
+  public.role_permissions,public.principal_report_permissions,public.school_settings,
   public.campus_settings,public.registered_devices to authenticated;
 
 create policy school_read on public.schools for select to authenticated
@@ -246,20 +264,34 @@ create policy own_profile_read on public.user_profiles for select to authenticat
   using (user_id = (select auth.uid()));
 create policy own_role_read on public.user_roles for select to authenticated
   using (user_id = (select auth.uid()) or app_private.is_school_owner(school_id));
+-- Protect role-policy definitions and school-wide configuration by default.
+-- Later, server-side safe projections can expose specific non-sensitive keys.
+create policy owner_permission_read on public.role_permissions for select to authenticated
+  using (app_private.is_school_owner(school_id));
 create policy principal_grant_read on public.principal_report_permissions
   for select to authenticated
   using (user_id = (select auth.uid()) or app_private.is_school_owner(school_id));
 create policy school_setting_read on public.school_settings for select to authenticated
-  using (app_private.has_school_access(school_id));
+  using (app_private.is_school_owner(school_id));
 create policy campus_setting_read on public.campus_settings for select to authenticated
   using (app_private.can_read_campus(campus_id));
 create policy device_read on public.registered_devices for select to authenticated
-  using (registered_user_id = (select auth.uid()) or app_private.is_school_owner(school_id));
+  using (
+    (registered_user_id = (select auth.uid()) and
+      exists (
+        select 1 from public.user_profiles u
+        where u.user_id = registered_user_id and u.is_active
+      ))
+    or app_private.is_school_owner(school_id)
+  );
 
 commit;
 -- Review notes:
 -- 1. RLS checks must be run with authenticated test users and separate campuses.
--- 2. No owner bootstrap / user management / privilege-changing operations yet.
+-- 2. Owner bootstrap documented in DB01_OWNER_BOOTSTRAP.md; not executed.
+-- 2a. Principal detailed report grants require separate server-side principal-role validation.
 -- 3. No CRUD policies until authenticated server operations are designed.
 -- 4. Validate PostgREST Data API exposure grants in target project.
 -- 5. SQL has NOT been executed; migration ordering to be created by CLI.
+-- 6. Settings remain owner-only until a deliberate non-sensitive projection is added.
+-- 7. role_permissions is a definition table; runtime role+campus authorization not implemented yet.
