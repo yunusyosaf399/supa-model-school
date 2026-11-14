@@ -14,13 +14,13 @@ Date: 2026-11-14
 **12 complete, 97 pending, 3 in progress, 2 blocked (total 114).**
 
 ## Blockers
-- SETUP-07 and D01-T05: Flutter SDK not available locally. The GitHub Actions scaffold check [run #3](https://github.com/yunusyosaf399/supa-model-school/actions/runs/43621320297) also **failed**; logs/step details are presently unavailable through the connector. See [issue #6](https://github.com/yunusyosaf399/supa-model-school/issues/6). Do not claim a compiled/tested application.
+- SETUP-07 and D01-T05: Flutter/Windows/Android validation awaits the user's local computer. Automatic GitHub Actions workflow has been removed by request; former CI issue #6 closed as not planned (no passing build claimed).
 - DB01/DB02 are draft SQL on [PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1); deployment, RLS tests and merging remain pending.
 
 ## Active schema draft work
-- D02-T03: DB01 SQL drafted on [PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1); migration generation and RLS verification remain.
-- D03-T01 and D03-T02: DB02 student/guardian and admissions document SQL drafted on PR #1; migration and permission tests remain.
-- Draft files have deliberately not been deployed to Supabase.
+- D02-T03 **IN_PROGRESS**: DB01 foundation schema hardened on [draft PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1). Structural review verified **12 public tables / 12 RLS ENABLE statements**, with no write policies. See DB01_OWNER_BOOTSTRAP.md, DB01_RLS_MANUAL.md, and check_db01.py on PR branch. **PostgreSQL execution and two-campus RLS tests remain required.**
+- D03-T01 / D03-T02 **IN_PROGRESS**: DB02 student, guardian and conditional admission schema remains in draft; no runtime check.
+- Supabase cloud project remains empty of school-domain public tables. No migration has been deployed.
 
 ## Next approved work
 1. Review DB01/DB02 SQL draft PR #1; generate CLI migrations and run local tests.
