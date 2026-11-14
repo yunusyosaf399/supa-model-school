@@ -33,7 +33,7 @@ The SQL-only fake JWT is ONLY an internal trusted local test. Also verify with r
 | Admin A_A | School S | Campus A only | no rows | own role |
 | Accountant AC_B | School S | Campus B only | no rows | own role |
 | Attendance AS_A | School S | Campus A only | no rows | own role |
-| Disabled user | no school data | no campus data | no rows | own role can still be visible: review pending |
+| Disabled user | no school data | no campus data | no rows | no role rows (active membership required) |
 | Unrelated School T | School T only | Campus T only | none unless Owner T | own role |
 
 ## Mandatory negative cases
