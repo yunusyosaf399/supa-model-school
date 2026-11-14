@@ -11,11 +11,16 @@ Date: 2026-11-14
 - [x] Machine-readable 114-task tracker is committed.
 
 ## Current count
-**12 complete, 100 pending, 2 blocked (total 114).**
+**12 complete, 97 pending, 3 in progress, 2 blocked (total 114).**
 
 ## Blockers
 - SETUP-07 and D01-T05: Flutter SDK not available locally. The GitHub Actions scaffold check [run #3](https://github.com/yunusyosaf399/supa-model-school/actions/runs/43621320297) also **failed**; logs/step details are presently unavailable through the connector. See [issue #6](https://github.com/yunusyosaf399/supa-model-school/issues/6). Do not claim a compiled/tested application.
 - DB01/DB02 are draft SQL on [PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1); deployment, RLS tests and merging remain pending.
+
+## Active schema draft work
+- D02-T03: DB01 SQL drafted on [PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1); migration generation and RLS verification remain.
+- D03-T01 and D03-T02: DB02 student/guardian and admissions document SQL drafted on PR #1; migration and permission tests remain.
+- Draft files have deliberately not been deployed to Supabase.
 
 ## Next approved work
 1. Review DB01/DB02 SQL draft PR #1; generate CLI migrations and run local tests.
