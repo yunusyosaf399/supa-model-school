@@ -1,7 +1,7 @@
 # Development task tracker
 
 Last verified: 2026-11-14.
-**114 tasks: 12 DONE / 97 TODO / 3 IN_PROGRESS / 2 BLOCKED.**
+**114 tasks: 13 DONE / 97 TODO / 2 IN_PROGRESS / 2 BLOCKED.**
 Authoritative machine-readable status: [tasks.csv](tasks.csv).
 
 **Important:** SQL drafts written on PR #1 are NOT equal to DB01/DB02 deployed, so D02-T03 / D03-T01 and related tests remain TODO.
@@ -27,8 +27,8 @@ Authoritative machine-readable status: [tasks.csv](tasks.csv).
 ## Day 02 — Week 1
 - [ ] `D02-T01` Generate Windows and Android Flutter runners — **TODO**
 - [ ] `D02-T02` Verify Flutter analyze and widget tests — **TODO**
-- [ ] `D02-T03` Create/verify DB01 school foundation schema — **IN_PROGRESS**
-- [ ] `D02-T04` Verify DB01 RLS with two campuses — **TODO**
+- [ ] `D02-T03` Author and statically review DB01 foundation schema — **DONE**
+- [ ] `D02-T04` Verify DB01 migration and two-campus RLS locally — **TODO**
 - [ ] `D02-T05` Build authentication and campus selection UI — **TODO**
 
 ## Day 03 — Week 1

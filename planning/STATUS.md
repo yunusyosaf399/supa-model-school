@@ -11,19 +11,19 @@ Date: 2026-11-14
 - [x] Machine-readable 114-task tracker is committed.
 
 ## Current count
-**12 complete, 97 pending, 3 in progress, 2 blocked (total 114).**
+**13 complete, 97 pending, 2 in progress, 2 blocked (total 114).**
 
 ## Blockers
 - SETUP-07 and D01-T05: Flutter/Windows/Android validation awaits the user's local computer. Automatic GitHub Actions workflow has been removed by request; former CI issue #6 closed as not planned (no passing build claimed).
 - DB01/DB02 are draft SQL on [PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1); deployment, RLS tests and merging remain pending.
 
 ## Active schema draft work
-- D02-T03 **IN_PROGRESS**: DB01 foundation schema hardened on [draft PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1). Structural review verified **12 public tables / 12 RLS ENABLE statements**, with no write policies. See DB01_OWNER_BOOTSTRAP.md, DB01_RLS_MANUAL.md, and check_db01.py on PR branch. **PostgreSQL execution and two-campus RLS tests remain required.**
+- D02-T03 **DONE (authoring/static checks)**: DB01 foundation schema hardened on [draft PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1). Structural review verified **12 public tables / 12 RLS ENABLE statements**, with no write policies. See DB01_OWNER_BOOTSTRAP.md, DB01_RLS_MANUAL.md, and check_db01.py on PR branch. **D02-T04 remains TODO for PostgreSQL execution and two-campus RLS tests.**
 - D03-T01 / D03-T02 **IN_PROGRESS**: DB02 student, guardian and conditional admission schema remains in draft; no runtime check.
 - Supabase cloud project remains empty of school-domain public tables. No migration has been deployed.
 
 ## Next approved work
-1. Review DB01/DB02 SQL draft PR #1; generate CLI migrations and run local tests.
+1. D02-T04: run DB01 through a local CLI-generated migration, bootstrap fake Owner and test campus RLS. Review DB02 separately.
 2. Configure school-specific values and seed fictional two-campus test users.
 3. Prove RLS denial, owner bootstrap and cross-campus access constraints.
 4. Build student admission and offline sync vertical slice.
