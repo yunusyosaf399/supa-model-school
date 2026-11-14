@@ -1,0 +1,20 @@
+name: Flutter scaffold checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  flutter-analyze-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter create --project-name supa_model_school --org com.supamodelschool --platforms android,windows .
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test

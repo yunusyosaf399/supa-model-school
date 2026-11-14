@@ -1,0 +1,1 @@
+Place only licensed/owned school logo image assets here. No actual logo committed yet.
