@@ -1,16 +1,18 @@
-# DB01 / DB02 review checklist
+# DB01 / DB02 schema review checklist
 
-- [ ] Run `supabase migration new db01_foundation` to obtain proper migration filename.
-- [ ] Review and paste DB01 draft into generated migration.
-- [ ] Apply/test on a **local** Postgres, not the production Supabase project.
-- [ ] Check `auth.users` references, composite foreign keys, unique indexes.
-- [ ] Bootstrap test Owner using a trusted admin operation; no client role-granting.
-- [ ] Test 2-campus Owner, Principal, Admin, Accountant, Attendance Staff reads.
-- [ ] Confirm no unauthorized INSERT/UPDATE/DELETE by any client.
-- [ ] Review private SECURITY DEFINER helper semantics and EXECUTE grants.
-- [ ] Verify views/Storage/RPCs do not bypass RLS.
-- [ ] Review DB02 draft and link student policies only after approval.
-- [ ] No personal student data / real payments until all tests pass.
-- [ ] Generate DDL migration in actual CLI, record advisors/test evidence and approve release.
+- [x] DB01 draft hardened to limit sensitive settings to Owners and restrict device access.
+- [x] Explicit default-deny role/action permission definitions added.
+- [x] Trusted Owner bootstrap runbook authored.
+- [x] Two-campus RLS acceptance matrix and negative tests documented.
+- [ ] Run Supabase CLI migration new db01_foundation, use its generated migration filename.
+- [ ] Apply reviewed DB01 SQL to local PostgreSQL and inspect constraints.
+- [ ] Create fictional Auth users and bootstrap test Owner via trusted admin.
+- [ ] Verify Owner, Principal, Admin, Accountant, Attendance Staff, inactive accounts and two-campus RLS.
+- [ ] Confirm clients cannot mutate membership, settings or device data.
+- [ ] Review SECURITY DEFINER helper logic and granted EXECUTE.
+- [ ] Validate DB02 and add tested students/admissions security.
+- [ ] Run local database advisors and record evidence.
+- [ ] Merge PR only with reviewed evidence; deploy version-controlled migrations separately.
 
-**Status: DRAFT ONLY.**
+**DB01 schema authoring: improved, but NOT runtime-verified or deployed.**
+**DB02 remains a draft.**
