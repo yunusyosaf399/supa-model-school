@@ -263,7 +263,10 @@ create policy section_read on public.sections for select to authenticated
 create policy own_profile_read on public.user_profiles for select to authenticated
   using (user_id = (select auth.uid()));
 create policy own_role_read on public.user_roles for select to authenticated
-  using (user_id = (select auth.uid()) or app_private.is_school_owner(school_id));
+  using (
+    (user_id = (select auth.uid()) and app_private.has_school_access(school_id))
+    or app_private.is_school_owner(school_id)
+  );
 -- Protect role-policy definitions and school-wide configuration by default.
 -- Later, server-side safe projections can expose specific non-sensitive keys.
 create policy owner_permission_read on public.role_permissions for select to authenticated
@@ -277,11 +280,8 @@ create policy campus_setting_read on public.campus_settings for select to authen
   using (app_private.can_read_campus(campus_id));
 create policy device_read on public.registered_devices for select to authenticated
   using (
-    (registered_user_id = (select auth.uid()) and
-      exists (
-        select 1 from public.user_profiles u
-        where u.user_id = registered_user_id and u.is_active
-      ))
+    (registered_user_id = (select auth.uid())
+      and app_private.can_read_campus(assigned_campus_id))
     or app_private.is_school_owner(school_id)
   );
 
