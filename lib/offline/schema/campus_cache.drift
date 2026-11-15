@@ -1,6 +1,7 @@
 -- D04-T01 v1 CAMPUS-BOUND OFFLINE REPLICA
 -- SQLite / Drift SQL definitions. Do not use this as a Supabase migration.
--- No finance, outbox, background sync or authentication implementation yet.
+-- No finance, background sync or authentication implementation yet.
+-- Version-2 outbox tables are defined separately in operation_outbox.drift.
 -- A single assigned campus is pinned by local_campus_binding(singleton=1).
 -- Every replicated row must match its (school_id,campus_id) composite key.
 -- PRAGMA foreign_keys = ON must be set on EVERY SQLite connection.
