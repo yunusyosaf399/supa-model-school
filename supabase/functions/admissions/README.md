@@ -16,6 +16,9 @@ The server always extracts actor identity through `auth.getUser(jwt)`, then call
 
 Database connection: Deno PostgreSQL Pool 0.19.5, max one connection. Client dependency pinned to supabase-js 2.119.0. **Runtime compatibility is not yet verified.**
 
+## Local validation
+The SQL integration suite is `supabase/tests/ADMISSION_WORKFLOW_INTEGRATION.sql` (not executed). The static checker is `supabase/tests/check_admission_workflow.py`. Run SQL in a disposable LOCAL database and serve the Edge Function only after the migrations succeed.
+
 ## Required constraints
 - `app_private` must NOT be an exposed Data API schema.
 - SQL functions grant EXECUTE only to trusted server roles.
