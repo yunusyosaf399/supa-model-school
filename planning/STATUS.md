@@ -6,16 +6,16 @@ Date: 2026-11-15
 - [x] Supabase project `uebzvfzpbqqttbqyxxos` created in SUPA MODEL SCHOOL connection, ap-south-1; status ACTIVE_HEALTHY.
 - [x] Private GitHub repository `yunusyosaf399/supa-model-school` exists, push permission confirmed.
 - [x] README, Flutter starter shell, architecture/security/SRS/docs and CI definition committed to main.
-- [x] [Draft PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1) contains DB01 and DB02 SQL draft files; not merged/deployed.
+- [x] [PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1) DB01/DB02 SQL draft source merged to main; **not deployed/executed**.
 - [x] Three-week GitHub issues #2/#4/#5 and schema review issue #3 created.
 - [x] Machine-readable 114-task tracker is committed.
 
 ## Current count
-**20 complete, 91 pending, 1 in progress, 2 blocked (total 114).**
+**21 complete, 90 pending, 1 in progress, 2 blocked (total 114).**
 
 ## Blockers
-- SETUP-07 and D01-T05: Flutter/Windows/Android validation awaits the user's local computer. Automatic GitHub Actions workflow has been removed by request; former CI issue #6 closed as not planned (no passing build claimed).
-- DB01/DB02 are draft SQL on [PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1); deployment, RLS tests and merging remain pending.
+- SETUP-07 and D01-T05: Flutter/Windows/Android validation must be performed in the user's local Android Studio environment. Automatic GitHub Actions workflow has been removed by request; former CI issue #6 closed as not planned (no passing build claimed).
+- DB01/DB02 draft SQL is MERGED AS SOURCE to main via PR #1. PostgreSQL runtime migration, authorized RLS tests and deployment remain pending.
 
 ## Active schema draft work
 - D02-T03 **DONE (authoring/static checks)**: DB01 foundation schema hardened on [draft PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1). Structural review verified **12 public tables / 12 RLS ENABLE statements**, with no write policies. See DB01_OWNER_BOOTSTRAP.md, DB01_RLS_MANUAL.md, and check_db01.py on PR branch. **D02-T04 is IN_PROGRESS: transactional SQL fixture, Windows runner, and evidence template are committed; actual PostgreSQL execution and two-campus RLS tests remain outstanding.**
@@ -97,3 +97,11 @@ Date: 2026-11-15
 - Updated exact-schema SQLite test runner and Dart unit tests for operation persistence and file close/reopen. All source files/readbacks structurally checked, **not executed**.
 - **Not ready for real PII**: offline session expiry/revocation, encryption/key management, consistent backups, authenticated server ingest and cloud ID/revision mapping are unfinished.
 - D04-T03 (server idempotent ingest) next; D04-T04 (cloud cursor), D04-T05 (integration) remain TODO. No GitHub Actions runs or Supabase hosted DDL deployment.
+
+## Session 2026-11-15 — repository integration audit and main-branch merges
+- **Merged** Android Studio project runners [PR #9](https://github.com/yunusyosaf399/supa-model-school/pull/9), Flutter preview UI [PR #7](https://github.com/yunusyosaf399/supa-model-school/pull/7), Supabase UNDEPLOYED drafts [PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1), offline Drift source [PR #8](https://github.com/yunusyosaf399/supa-model-school/pull/8).
+- Fixed SDK mismatch: Android Studio uses Dart **3.9.2**; merged offline pubspec now requires >=3.9.0 with Drift/drift_dev **2.32.1**, verified as Dart 3.9-compatible via pub.dev. Removed duplicate unused Android MainActivity for com.suffah.sms; Gradle uses com.example.sms.
+- D02-T01 **DONE for Android/Windows runner source creation**, NOT for a passing build. Added README first-run guidance.
+- IMPORTANT BEFORE TESTING: run `flutter pub get`, then `dart run build_runner build --delete-conflicting-outputs`, then `flutter analyze` and `flutter test`. Drift-generated `campus_cache_database.g.dart` is deliberately not checked in; the previous `pubspec.lock` was generated before Drift dependencies and must be regenerated/committed after successful local resolution.
+- Structural GitHub branch/readback checks completed. **Cannot claim compiled Flutter, complete SQLite/Drift execution or PostgreSQL RLS test success** from this environment. Resolve failures from local command output before any production approval.
+- No GitHub Actions were run, no hosted Supabase schema applied, no database live data created.

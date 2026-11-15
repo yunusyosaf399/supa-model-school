@@ -1,10 +1,10 @@
 # Development task tracker
 
 Last verified: 2026-11-15.
-**114 tasks: 20 DONE / 91 TODO / 1 IN_PROGRESS / 2 BLOCKED.**
+**114 tasks: 21 DONE / 90 TODO / 1 IN_PROGRESS / 2 BLOCKED.**
 Authoritative machine-readable status: [tasks.csv](tasks.csv).
 
-**Important:** D03-T03–T05 and D04-T01–T02 are DONE only for code authoring and structural source review. Runtime tests, deployment and live data handling are not complete. Flutter validation remains blocked until the laptop is available (SETUP-07, D01-T05, D02-T02).
+**Important:** D03-T03–T05 and D04-T01–T02 are DONE only for code authoring and structural source review. Runtime tests, deployment and live data handling are not complete. The source is now merged to main; Flutter analyzer/test/Windows/Android runtime validation still must run locally (SETUP-07, D01-T05, D02-T02).
 
 ## Setup
 - [x] `SETUP-01` Identify Supabase link and organization — **DONE**
@@ -25,7 +25,7 @@ Authoritative machine-readable status: [tasks.csv](tasks.csv).
 - [ ] `D01-T05` Install and validate Flutter toolchain — **BLOCKED**
 
 ## Day 02 — Week 1
-- [ ] `D02-T01` Generate Windows and Android Flutter runners — **TODO**
+- [x] `D02-T01` Generate Windows and Android Flutter runners — **DONE (not yet compiled)**
 - [ ] `D02-T02` Verify Flutter analyze and widget tests — **TODO**
 - [ ] `D02-T03` Author and statically review DB01 foundation schema — **DONE**
 - [ ] `D02-T04` Verify DB01 migration and two-campus RLS locally — **IN_PROGRESS**
