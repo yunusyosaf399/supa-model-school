@@ -58,6 +58,8 @@ The workflow implements a private PostgreSQL transaction API for a trusted serve
 - Duplicate child detection by same name+DOB is a conservative guard, not a definitive person identifier. A school-authorized exception process will be required for legitimate same-name/DOB children.
 - SQL code has **NOT** been executed in PostgreSQL; Edge runtime and concurrency are NOT verified.
 
+The repository also includes `supabase/tests/ADMISSION_WORKFLOW_INTEGRATION.sql` containing executable SQL assertions under a single ROLLBACK transaction. It has **not** been executed. Use fictional local Auth identities described in the SQL header.
+
 ## Local test order (when laptop is available)
 1. Run verified local DB01 migration and two-campus RLS tests.
 2. Run reviewed DB02 base migration.
