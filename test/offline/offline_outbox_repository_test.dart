@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supa_model_school/offline/campus_cache_database.dart';
@@ -192,6 +193,52 @@ void main() {
     expect(await outbox.claimNext(), isNull);
     expect(await outbox.outstandingCount(), 2);
     expect(await count('local_outbox_operations'), 2);
+  });
+
+  test('outbox operation survives closing and reopening a real SQLite file',
+      () async {
+    final folder = await Directory.systemTemp.createTemp('sms-outbox-fixture');
+    final file = File(folder.path + Platform.pathSeparator + 'offline-test.db');
+    CampusCacheDatabase? reopened;
+    try {
+      final first = CampusCacheDatabase.forTest(
+        NativeDatabase(
+          file,
+          setup: (sqlite) => sqlite.execute('PRAGMA foreign_keys=ON'),
+        ),
+      );
+      await first.bindVerifiedAssignment(
+        schoolId: school, campusId: campus, deviceId: device,
+      );
+      await first.customStatement(
+        'INSERT INTO local_academic_years '
+        '(id,school_id,campus_id,label,starts_on,ends_on,is_active) '
+        "VALUES ('year-2026','test-school','campus-a','2026-2027',"
+        "'2026-04-01','2027-03-31',1)",
+      );
+      final firstOutbox = OfflineOutboxRepository(
+        first, clockMs: () => now, uuidV4: nextId,
+      );
+      await firstOutbox.queueAdmissionDraft(draft());
+      await first.close();
+
+      reopened = CampusCacheDatabase.forTest(
+        NativeDatabase(
+          file,
+          setup: (sqlite) => sqlite.execute('PRAGMA foreign_keys=ON'),
+        ),
+      );
+      final reopenedOutbox = OfflineOutboxRepository(
+        reopened, clockMs: () => now, uuidV4: nextId,
+      );
+      expect(await reopenedOutbox.outstandingCount(), 1);
+      final op = await reopenedOutbox.claimNext();
+      expect(op?.operationId, op1);
+      expect(op?.attemptCount, 1);
+    } finally {
+      await reopened?.close();
+      await folder.delete(recursive: true);
+    }
   });
 
   test('direct SQL cannot insert a second outbox operation from other campus',
