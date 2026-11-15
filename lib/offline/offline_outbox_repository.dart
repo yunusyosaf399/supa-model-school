@@ -266,12 +266,13 @@ class OfflineOutboxRepository {
     _assertUuid(op);
     _assertUuid(token);
     final row = await db.customSelect(
-      'SELECT school_id,campus_id,status,lease_token '
+      'SELECT school_id,campus_id,status,lease_token,lease_until_ms '
       'FROM local_outbox_operations WHERE operation_id=?',
       variables: [Variable.withString(op)],
     ).getSingleOrNull();
     if (row == null || row.read<String>('status') != 'sending' ||
-        row.readNullable<String>('lease_token') != token) {
+        row.readNullable<String>('lease_token') != token ||
+        (row.readNullable<int>('lease_until_ms') ?? 0) <= _clock()) {
       throw StateError('Expired, stale or invalid operation lease');
     }
     return (row.read<String>('school_id'),row.read<String>('campus_id'));
