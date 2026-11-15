@@ -11,7 +11,7 @@ Date: 2026-11-15
 - [x] Machine-readable 114-task tracker is committed.
 
 ## Current count
-**19 complete, 92 pending, 1 in progress, 2 blocked (total 114).**
+**20 complete, 91 pending, 1 in progress, 2 blocked (total 114).**
 
 ## Blockers
 - SETUP-07 and D01-T05: Flutter/Windows/Android validation awaits the user's local computer. Automatic GitHub Actions workflow has been removed by request; former CI issue #6 closed as not planned (no passing build claimed).
@@ -25,6 +25,7 @@ Date: 2026-11-15
 - D03-T04 **DONE (UI authoring/static review only)**: six-stage Flutter admission wizard preview with responsive desktop/Android layout, student/guardian/academic/documents/fees/review stages, UI validation, unit/widget test sources, and no false save/payment/verification claims. Draft [UI PR #7](https://github.com/yunusyosaf399/supa-model-school/pull/7) is UNMERGED; Flutter analyzer and widget tests NOT RUN.
 - D03-T05 **DONE (UI authoring/static source checks only)**: Flutter campus-scoped student directory preview, synthetic Campus A data, search by name/registration, filters, mobile cards / desktop table, read-only profile and unit/widget tests in [draft UI PR #7](https://github.com/yunusyosaf399/supa-model-school/pull/7). **No live database, real authorization, persistence, Flutter build or widget-test result.**
 - D04-T01 **DONE (Drift schema source only)**: [Draft PR #8](https://github.com/yunusyosaf399/supa-model-school/pull/8) defines 11 local SQLite tables with one-device/one-campus binding and scoped FKs, Windows-only Drift native connection, schema migration gate, SQL/Dart test sources and [implementation runbook](https://github.com/yunusyosaf399/supa-model-school/blob/db/d04-local-drift-schema/docs/19_OFFLINE_SQLITE_SCHEMA.md). **Exact SQLite script, Drift generator, Flutter compiler/tests have not been executed.** No offline authorization/encryption or actual sync/outbox implemented.
+- D04-T02 **DONE (outbox source design/implementation only)**: [Draft PR #8](https://github.com/yunusyosaf399/supa-model-school/pull/8) now includes a **13-table Drift v2** local schema, two durable outbox/audit tables, three indexes and four immutability triggers, non-destructive v1→v2 migration source, UUIDv4 idempotency, atomic draft+queue, ordered leasing/retry/conflict/ack, WAL synchronous FULL, Python SQLite/Dart test sources and [outbox runbook](https://github.com/yunusyosaf399/supa-model-school/blob/db/d04-local-drift-schema/docs/20_OFFLINE_OUTBOX.md). **Actual SQLite/Flutter/migration testing and encryption are still pending.**
 - Supabase cloud project remains empty of school-domain public tables. No migration has been deployed.
 
 ## Next approved work
@@ -88,3 +89,11 @@ Date: 2026-11-15
 - Added exact-schema Python SQLite test `scripts/test_local_drift_schema_sqlite.py` and Dart in-memory tests; files committed but **not executed**.
 - D04-T02 durable sync outbox, D04-T03 idempotent ingest, D04-T04 change cursor, D04-T05 offline vertical slice remain TODO. Local encryption/authorization still required before real data.
 - No GitHub Actions jobs run, no hosted Supabase SQL changes made.
+
+## Session 2026-11-15 — D04-T02 outbox source authored
+- Branch `db/d04-local-drift-schema`, draft PR #8: local schema version 2 with `local_outbox_operations` and `local_outbox_events`; 13 tables total. Added append-only events, immutable original operation envelopes and no-delete policy via SQL triggers.
+- Added `lib/offline/offline_outbox_repository.dart` with UUIDv4 generation, atomic local admission + queue transaction, duplicate operation-ID replay protection, oldest-first dispatch, time-limited lease/reclaim and stale token fencing, retry backoff, conflict hold and verified-server-only ack API.
+- Updated Drift v1→v2 migration source to add tables/indexes/triggers; WAL synchronous FULL protects committed local data. No destructive table migration authored.
+- Updated exact-schema SQLite test runner and Dart unit tests for operation persistence and file close/reopen. All source files/readbacks structurally checked, **not executed**.
+- **Not ready for real PII**: offline session expiry/revocation, encryption/key management, consistent backups, authenticated server ingest and cloud ID/revision mapping are unfinished.
+- D04-T03 (server idempotent ingest) next; D04-T04 (cloud cursor), D04-T05 (integration) remain TODO. No GitHub Actions runs or Supabase hosted DDL deployment.

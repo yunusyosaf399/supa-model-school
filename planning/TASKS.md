@@ -1,10 +1,10 @@
 # Development task tracker
 
 Last verified: 2026-11-15.
-**114 tasks: 19 DONE / 92 TODO / 1 IN_PROGRESS / 2 BLOCKED.**
+**114 tasks: 20 DONE / 91 TODO / 1 IN_PROGRESS / 2 BLOCKED.**
 Authoritative machine-readable status: [tasks.csv](tasks.csv).
 
-**Important:** D03-T03–T05 and D04-T01 are DONE only for code authoring and structural source review. Runtime tests, deployment and live data handling are not complete. Flutter validation remains blocked until the laptop is available (SETUP-07, D01-T05, D02-T02).
+**Important:** D03-T03–T05 and D04-T01–T02 are DONE only for code authoring and structural source review. Runtime tests, deployment and live data handling are not complete. Flutter validation remains blocked until the laptop is available (SETUP-07, D01-T05, D02-T02).
 
 ## Setup
 - [x] `SETUP-01` Identify Supabase link and organization — **DONE**
@@ -40,7 +40,7 @@ Authoritative machine-readable status: [tasks.csv](tasks.csv).
 
 ## Day 04 — Week 1
 - [x] `D04-T01` Author 11-table campus-scoped SQLite/Drift v1 schema and Windows database wrapper — **DONE**
-- [ ] `D04-T02` Build durable outbox and operation IDs — **TODO**
+- [x] `D04-T02` Author durable UUID operation outbox and atomic local draft writes — **DONE**
 - [ ] `D04-T03` Implement idempotent ingest endpoint — **TODO**
 - [ ] `D04-T04` Build server change log and cursor — **TODO**
 - [ ] `D04-T05` Test assigned campus offline vertical slice — **TODO**
