@@ -64,6 +64,22 @@ begin
     or a.approval_state not in ('not_required','approved') then
    raise exception 'Admission not ready for finalization' using errcode='P0001';
  end if;
+ -- Never trust a direct call to an internal function: revalidate actor
+ -- even when a server function is already performing its own authorization.
+ if not app_private.admission_actor_allowed(
+      p_actor,a.school_id,a.campus_id,
+      case when a.approval_state='approved' then 'review' else 'submit' end) then
+   raise exception 'Unauthorized admission finalization' using errcode='42501';
+ end if;
+ if exists (
+   select 1 from public.students s
+   where s.school_id=a.school_id and s.date_of_birth=a.date_of_birth
+     and pg_catalog.lower(pg_catalog.btrim(s.full_name_en))=
+         pg_catalog.lower(pg_catalog.btrim(a.applicant_name))
+ ) then
+   raise exception 'A registered student may already exist; use existing student workflow'
+     using errcode='23505';
+ end if;
  if a.requested_class_id is null or a.date_of_birth is null then
    raise exception 'Class and birth date required' using errcode='23514';
  end if;
@@ -79,6 +95,22 @@ begin
  ) then
    raise exception 'Exactly one primary guardian with phone required'
      using errcode='23514';
+ end if;
+ -- Re-check document completeness before final enrollment. Never rely only
+ -- on a cached label set at submission time.
+ if a.documents_state='complete' and exists (
+   select 1 from public.student_documents d
+   where d.application_id=a.id and d.is_required and d.is_applicable
+     and d.document_status <> 'verified'
+ ) then
+   raise exception 'Required documents are not all verified';
+ end if;
+ if a.documents_state='conditional' and not exists (
+   select 1 from public.student_documents d
+   where d.application_id=a.id and d.is_required and d.is_applicable
+     and d.document_status <> 'verified'
+ ) then
+   raise exception 'Conditional status stale; resubmit after document review';
  end if;
  if a.documents_state='conditional' then
    if a.missing_documents_due_on is null
@@ -434,7 +466,8 @@ begin
       p_actor,a.school_id,a.campus_id,'review') then
    raise exception 'Unauthorized admission review' using errcode='42501';
  end if;
- if p_operation is null or p_decision not in ('approve','return','reject') then
+ if p_operation is null or p_decision is null
+    or p_decision not in ('approve','return','reject') then
    raise exception 'Invalid review operation or decision';
  end if;
  if exists (select 1 from public.admission_action_events e
