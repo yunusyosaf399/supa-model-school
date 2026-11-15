@@ -116,6 +116,26 @@ SELECT '11111111-1111-4111-8111-111111111111',
  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',user_id,'Campus A main PC',true
 FROM sms_rls_actors WHERE alias='admin_a';
 
+-- Ensure a second simultaneous offline PC cannot be assigned to the same
+-- campus. The expected unique violation must not abort the test transaction.
+DO $test$
+DECLARE blocked boolean := false;
+BEGIN
+  BEGIN
+    INSERT INTO public.registered_devices(
+      school_id,assigned_campus_id,registered_user_id,
+      display_name,is_offline_enabled
+    )
+    SELECT '11111111-1111-4111-8111-111111111111',
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      user_id,'Improper second offline PC',true
+    FROM sms_rls_actors WHERE alias='principal_a';
+  EXCEPTION WHEN unique_violation THEN blocked := true;
+  END;
+  IF NOT blocked THEN RAISE EXCEPTION 'Duplicate active offline device accepted'; END IF;
+END;
+$test$;
+
 -- Structural permission checks under the privileged fixture connection.
 DO $test$
 DECLARE t text;
