@@ -17,7 +17,9 @@ as $$
     select 1 from public.user_roles r
     join public.user_profiles up on up.user_id = r.user_id
     join public.campuses c on c.school_id=r.school_id
+    join public.schools s on s.id=r.school_id
     where r.user_id=p_actor and up.is_active and r.is_active
+      and s.status='active'
       and r.school_id=p_school and c.id=p_campus and c.is_active
       and (
         r.role in ('owner','super_admin')
@@ -110,7 +112,14 @@ begin
    where d.application_id=a.id and d.is_required and d.is_applicable
      and d.document_status <> 'verified'
  ) then
-   raise exception 'Conditional status stale; resubmit after document review';
+   -- Documents were completed while Principal approval was pending.
+   -- Keep deadline events as history, but current completeness is accurate.
+   update public.admission_applications
+      set documents_state='complete',missing_documents_due_on=null,
+          conditional_reason=null,revision=revision+1,
+          updated_at=pg_catalog.now()
+    where id=a.id;
+   a.documents_state:='complete';
  end if;
  if a.documents_state='conditional' then
    if a.missing_documents_due_on is null
@@ -227,14 +236,15 @@ begin
       or a.admission_status not in ('draft','returned') then
      raise exception 'Draft not editable' using errcode='P0001';
    end if;
-   if a.revision is distinct from p_expected_revision then
-     raise exception 'Admission revision conflict' using errcode='40001';
-   end if;
-   -- A repeated operation can have been confirmed but acknowledged late.
+   -- Idempotency check MUST precede revision validation: a confirmed retry
+   -- naturally carries the old expected revision.
    if exists (select 1 from public.admission_action_events e
               where e.school_id=p_school and e.operation_id=p_operation
                 and e.application_id=p_application and e.action='draft_updated')
    then return p_application; end if;
+   if a.revision is distinct from p_expected_revision then
+     raise exception 'Admission revision conflict' using errcode='40001';
+   end if;
    v_previous_status:=a.admission_status;
  end if;
  if exists (select 1 from public.admission_action_events e
