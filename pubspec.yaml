@@ -13,7 +13,6 @@ dependencies:
     sdk: flutter
   # Pinned from the current Dart 3.10-compatible package releases.
   drift: 2.35.3
-  path_provider: 2.1.5
 
 dev_dependencies:
   flutter_test:
