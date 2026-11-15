@@ -15,3 +15,10 @@ DB09 sync: processed_operations, cloud_change_log, sync_conflicts, device_sync_s
 `supabase/drafts/DB01_foundation.sql` and `DB02_admissions.sql` are initial review drafts, not tested or applied.
 ## Conditional admissions (D03-T02 draft)
 The SQL draft separates admission approval status from document completeness. Missing required documents can result in **conditional approval with a recorded deadline**, not deletion. Requirement rows are linked to a campus/application; upload metadata and decisions retain history and deadline changes are auditable. These are SQL-design invariants, **not deployed behavior**. Actual file access requires separate private Storage bucket policies and server-authorized operations.
+
+## Admission workflow source additions (D03-T03, not deployed)
+- `admission_application_guardians` holds guardian data in drafts before student creation.
+- `school_registration_counters` provides a school-wide serial allocated within a trusted finalization transaction.
+- `admission_action_events` tracks create/update/submit/review operation UUIDs and statuses for auditable retries.
+- `admission_applications` receives intended class/section and client operation ID fields via `DB02_WORKFLOW_SCHEMA.sql`.
+- Private transactional operations live in `DB02_ADMISSION_OPERATIONS.sql` and an authenticated server wrapper lives in `supabase/functions/admissions/index.ts`. Neither was deployed; all real PostgreSQL and Edge tests remain pending.

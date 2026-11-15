@@ -11,7 +11,7 @@ Date: 2026-11-15
 - [x] Machine-readable 114-task tracker is committed.
 
 ## Current count
-**15 complete, 96 pending, 1 in progress, 2 blocked (total 114).**
+**16 complete, 95 pending, 1 in progress, 2 blocked (total 114).**
 
 ## Blockers
 - SETUP-07 and D01-T05: Flutter/Windows/Android validation awaits the user's local computer. Automatic GitHub Actions workflow has been removed by request; former CI issue #6 closed as not planned (no passing build claimed).
@@ -21,6 +21,7 @@ Date: 2026-11-15
 - D02-T03 **DONE (authoring/static checks)**: DB01 foundation schema hardened on [draft PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1). Structural review verified **12 public tables / 12 RLS ENABLE statements**, with no write policies. See DB01_OWNER_BOOTSTRAP.md, DB01_RLS_MANUAL.md, and check_db01.py on PR branch. **D02-T04 is IN_PROGRESS: transactional SQL fixture, Windows runner, and evidence template are committed; actual PostgreSQL execution and two-campus RLS tests remain outstanding.**
 - D03-T01 **DONE (authoring/static checks)**: DB02 student/guardian identity and relationships tightened; student/guardian structural constraints verified as part of the updated 10-table DB02 draft. Added `supabase/tests/check_db02.py` and `DB02_STUDENT_GUARDIAN_TEST_PLAN.md`. Actual PostgreSQL migration and runtime RLS verification remain pending.
 - D03-T02 **DONE (authoring/static checks)**: DB02 conditional admissions and four document-related tables drafted, with 24 acceptance cases, storage security design and 10/10 RLS structural review. Still NOT migrated, runtime-tested or deployed. Trusted status transitions and Storage bucket/policies remain future implementation.
+- D03-T03 **DONE (source implementation/static checks only)**: trusted admission transaction functions, parent guardian draft table, school-wide counter, operation-audit table, verified Supabase Auth Edge route and local acceptance SQL committed to [draft PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1). **No local PostgreSQL tests or Edge runtime compile/deploy** yet.
 - Supabase cloud project remains empty of school-domain public tables. No migration has been deployed.
 
 ## Next approved work
@@ -53,3 +54,11 @@ Date: 2026-11-15
 - Test catalog: `supabase/tests/DB02_DOCUMENT_ACCEPTANCE.md` has 24 scenarios. Storage plan: `supabase/drafts/DB02_DOCUMENT_STORAGE_PLAN.md`.
 - D03-T03 (implement trusted admission workflow) is the next coding task. PostgreSQL migration tests, Storage policies, and authorized RPCs remain unimplemented.
 - User will run local tests later; no CI workflows run and no schema deployed to cloud.
+
+## Session 2026-11-15 — D03-T03 source implementation completed
+- Added `supabase/drafts/DB02_WORKFLOW_SCHEMA.sql` (3 public tables with RLS, campus/guardian and operation constraints).
+- Added `supabase/drafts/DB02_ADMISSION_OPERATIONS.sql` (6 non-exposed SECURITY DEFINER functions: authorization, approval setting, finalization, save, submit and review).
+- Added `supabase/functions/admissions/index.ts` (verified Auth token, server-only Postgres connection, parameterized SQL; no service-role key in Flutter).
+- Added `supabase/tests/ADMISSION_WORKFLOW_INTEGRATION.sql`, 40 acceptance scenarios and a static checker.
+- Local SQL/Edge runtime, multiple-campus isolation, enrollment rollback and concurrent retries are NOT TESTED. Do NOT merge/deploy to production until tests pass.
+- D02-T04 remains IN_PROGRESS, D07-T01 remains TODO, and D05-T03 numbering runtime verification remains TODO.

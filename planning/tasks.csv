@@ -20,7 +20,7 @@ id,week,day,title,status,depends_on,evidence
 "D02-T05","1","2","Build authentication and campus selection UI","TODO","Day 01 prerequisite checks",""
 "D03-T01","1","3","Author and statically review student and guardian schema","DONE","DB01 authoring; runtime migration tracked separately","DB02 draft PR #1 commit 404e656c; 7/7 RLS structural checks; unique school registrations, sibling reuse, primary guardian and cross-school composite FKs; PostgreSQL tests NOT RUN"
 "D03-T02","1","3","Author and statically review conditional admission documents schema","DONE","D03-T01; actual migrations and server operations separate","Draft PR #1: 10 DB02 public tables 10/10 RLS source review; conditional deadline and verified upload history, document review and deadline events, 24 acceptance cases; Postgres/Storage tests NOT RUN"
-"D03-T03","1","3","Implement admission workflow","TODO","Day 02 prerequisite checks",""
+"D03-T03","1","3","Author server-side admission workflow SQL and authenticated Edge function","DONE","D03-T01; D03-T02; DB01/DB02 must pass tests before deployment","Draft PR #1: 3 new tables with RLS, 6 private auth-checked SQL operations, verified-token Edge handler, 40-case acceptance plan and transactional local SQL suite; structural tests pass; migration/runtime/Edge deployment NOT RUN"
 "D03-T04","1","3","Build admission wizard first screens","TODO","Day 02 prerequisite checks",""
 "D03-T05","1","3","Build student query/list","TODO","Day 02 prerequisite checks",""
 "D04-T01","1","4","Create local Drift schema","TODO","Day 03 prerequisite checks",""
