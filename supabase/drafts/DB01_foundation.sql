@@ -171,6 +171,11 @@ create table public.registered_devices (
     references public.campuses(id,school_id) on delete restrict
 );
 
+-- Only one active offline-authorized primary desktop per campus in v1.
+create unique index one_offline_device_per_campus
+  on public.registered_devices(assigned_campus_id)
+  where is_offline_enabled and revoked_at is null;
+
 -- Controlled read-only RLS helpers. SECURITY DEFINER is restricted to this
 -- unexposed schema to avoid recursive policies on user_roles.
 create or replace function app_private.is_school_owner(p_school_id uuid)
@@ -273,11 +278,23 @@ create policy owner_permission_read on public.role_permissions for select to aut
   using (app_private.is_school_owner(school_id));
 create policy principal_grant_read on public.principal_report_permissions
   for select to authenticated
-  using (user_id = (select auth.uid()) or app_private.is_school_owner(school_id));
+  using (
+    app_private.is_school_owner(school_id)
+    or (
+      user_id = (select auth.uid())
+      and app_private.has_school_access(school_id)
+      and exists (
+        select 1 from public.user_roles r
+        where r.user_id = (select auth.uid())
+          and r.school_id = principal_report_permissions.school_id
+          and r.role = 'principal' and r.is_active
+      )
+    )
+  );
 create policy school_setting_read on public.school_settings for select to authenticated
   using (app_private.is_school_owner(school_id));
 create policy campus_setting_read on public.campus_settings for select to authenticated
-  using (app_private.can_read_campus(campus_id));
+  using (app_private.is_school_owner(school_id));
 create policy device_read on public.registered_devices for select to authenticated
   using (
     (registered_user_id = (select auth.uid())
@@ -293,5 +310,5 @@ commit;
 -- 3. No CRUD policies until authenticated server operations are designed.
 -- 4. Validate PostgREST Data API exposure grants in target project.
 -- 5. SQL has NOT been executed; migration ordering to be created by CLI.
--- 6. Settings remain owner-only until a deliberate non-sensitive projection is added.
+-- 6. School and campus settings remain owner-only until a deliberate non-sensitive projection is added.
 -- 7. role_permissions is a definition table; runtime role+campus authorization not implemented yet.
