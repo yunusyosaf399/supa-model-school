@@ -204,7 +204,7 @@ declare
 begin
  if p_operation is null or p_school is null or p_campus is null
     or p_year is null or pg_catalog.length(pg_catalog.btrim(coalesce(p_name,'')))<2
-    or pg_catalog.jsonb_typeof(p_guardians) <> 'array'
+    or coalesce(pg_catalog.jsonb_typeof(p_guardians),'null') <> 'array'
     or pg_catalog.jsonb_array_length(p_guardians)>8 then
    raise exception 'Invalid admission draft input' using errcode='22023';
  end if;
