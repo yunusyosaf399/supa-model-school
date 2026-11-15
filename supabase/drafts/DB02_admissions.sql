@@ -96,6 +96,8 @@ create table public.admission_applications (
   applicant_name text not null,
   date_of_birth date,
   previous_school text,
+  -- Student may be enrolled conditionally before all documents are verified.
+  -- Admission approval and documentation completeness are separate states.
   admission_status text not null default 'draft'
     check (admission_status in ('draft','submitted','approved','returned','rejected')),
   approval_state text not null default 'not_required'
@@ -118,12 +120,23 @@ create table public.admission_applications (
   foreign key (student_id,school_id)
     references public.students(id,school_id) on delete restrict,
   check (documents_state <> 'conditional' or missing_documents_due_on is not null),
+  check (
+    admission_status <> 'approved'
+    or (documents_state in ('complete','conditional')
+        and approval_state in ('not_required','approved'))
+  ),
   unique (id,school_id),
-  unique (id,campus_id)
+  unique (id,campus_id),
+  unique (id,school_id,campus_id),
+  unique (id,student_id)
 );
 create index admissions_campus_status_idx
   on public.admission_applications(campus_id,admission_status);
 
+-- A student_documents row represents ONE document requirement per application.
+-- Optional/nonapplicable transfer certificates must not become overdue.
+-- The latest object pointer is retained for quick reads; immutable versions
+-- and review events live in the two tables below.
 create table public.student_documents (
   id uuid primary key default gen_random_uuid(),
   school_id uuid not null,
@@ -132,6 +145,7 @@ create table public.student_documents (
   student_id uuid,
   document_kind text not null
     check (document_kind in ('birth_certificate','transfer_certificate','photo','other')),
+  document_label text,
   is_required boolean not null default false,
   is_applicable boolean not null default true,
   document_status text not null default 'missing'
@@ -140,18 +154,108 @@ create table public.student_documents (
   storage_path text,
   verified_by uuid references auth.users(id),
   verified_at timestamptz,
+  rejection_reason text,
   created_at timestamptz not null default now(),
-  foreign key (application_id,campus_id)
-    references public.admission_applications(id,campus_id) on delete restrict,
+  updated_at timestamptz not null default now(),
+  created_by uuid references auth.users(id),
+  revision bigint not null default 1 check (revision > 0),
+  foreign key (application_id,school_id,campus_id)
+    references public.admission_applications(id,school_id,campus_id) on delete restrict,
   foreign key (student_id,school_id)
     references public.students(id,school_id) on delete restrict,
-  foreign key (campus_id,school_id)
-    references public.campuses(id,school_id) on delete restrict,
-  check (document_status not in ('uploaded','verified') or storage_path is not null)
+  foreign key (application_id,student_id)
+    references public.admission_applications(id,student_id) on delete restrict,
+  check (is_applicable or not is_required),
+  check (document_kind <> 'other' or length(btrim(coalesce(document_label,''))) > 0),
+  check (document_status <> 'missing' or storage_path is null),
+  check (document_status not in ('uploaded','verified','rejected') or storage_path is not null),
+  check (document_status <> 'verified' or
+          (verified_at is not null and verified_by is not null)),
+  check (document_status <> 'rejected' or
+          length(btrim(coalesce(rejection_reason,''))) > 0),
+  unique (id,school_id,campus_id),
+  unique (id,application_id)
 );
+create unique index one_standard_requirement_per_application
+  on public.student_documents(application_id,document_kind)
+  where document_kind <> 'other';
+create unique index one_other_requirement_label_per_application
+  on public.student_documents(application_id,lower(document_label))
+  where document_kind = 'other';
 create index documents_pending_idx
   on public.student_documents(campus_id,submission_due_on)
-  where is_required and document_status <> 'verified';
+  where is_required and is_applicable and document_status <> 'verified';
+create index documents_application_lookup_idx
+  on public.student_documents(application_id,document_status);
+
+-- Every upload is kept as an immutable metadata/version record. The Storage
+-- object itself resides in a private bucket protected by separate policies.
+create table public.student_document_uploads (
+  id uuid primary key default gen_random_uuid(),
+  school_id uuid not null,
+  campus_id uuid not null,
+  document_id uuid not null,
+  version_no integer not null check (version_no > 0),
+  storage_bucket text not null check (length(btrim(storage_bucket)) > 0),
+  object_path text not null check (length(btrim(object_path)) > 0),
+  content_type text not null
+    check (content_type in ('application/pdf','image/jpeg','image/png','image/webp')),
+  file_size_bytes bigint not null check (file_size_bytes > 0),
+  sha256_hex text check (sha256_hex ~ '^[a-fA-F0-9]{64}$'),
+  uploaded_by uuid not null references auth.users(id),
+  uploaded_at timestamptz not null default now(),
+  foreign key (document_id,school_id,campus_id)
+    references public.student_documents(id,school_id,campus_id) on delete restrict,
+  unique (document_id,version_no),
+  unique (id,document_id)
+);
+create index student_document_uploads_doc_idx
+  on public.student_document_uploads(document_id,version_no desc);
+
+-- A verification/rejection decision refers to a PARTICULAR upload version.
+-- These rows should be append-only under a trusted, audited server operation.
+create table public.student_document_reviews (
+  id uuid primary key default gen_random_uuid(),
+  school_id uuid not null,
+  campus_id uuid not null,
+  document_id uuid not null,
+  upload_id uuid not null,
+  decision text not null check (decision in ('verified','rejected')),
+  reason text,
+  reviewed_by uuid not null references auth.users(id),
+  reviewed_at timestamptz not null default now(),
+  foreign key (document_id,school_id,campus_id)
+    references public.student_documents(id,school_id,campus_id) on delete restrict,
+  foreign key (upload_id,document_id)
+    references public.student_document_uploads(id,document_id) on delete restrict,
+  check (decision <> 'rejected' or length(btrim(coalesce(reason,''))) > 0),
+  unique (upload_id,decision,reviewed_by,reviewed_at)
+);
+create index student_document_reviews_doc_idx
+  on public.student_document_reviews(document_id,reviewed_at desc);
+
+-- Extension of conditional deadlines must be justified and recorded.
+-- Applications may have a common deadline; individual documents can also
+-- have their own due dates. Past deadlines are never silently discarded.
+create table public.admission_document_deadline_events (
+  id uuid primary key default gen_random_uuid(),
+  school_id uuid not null,
+  campus_id uuid not null,
+  application_id uuid not null,
+  document_id uuid,
+  old_due_on date,
+  new_due_on date not null,
+  reason text not null check (length(btrim(reason)) > 0),
+  changed_by uuid not null references auth.users(id),
+  changed_at timestamptz not null default now(),
+  foreign key (application_id,school_id,campus_id)
+    references public.admission_applications(id,school_id,campus_id) on delete restrict,
+  foreign key (document_id,application_id)
+    references public.student_documents(id,application_id) on delete restrict,
+  check (old_due_on is distinct from new_due_on)
+);
+create index admission_document_deadline_events_idx
+  on public.admission_document_deadline_events(application_id,changed_at desc);
 
 create table public.student_enrollments (
   id uuid primary key default gen_random_uuid(),
@@ -218,6 +322,9 @@ alter table public.guardians enable row level security;
 alter table public.student_guardians enable row level security;
 alter table public.admission_applications enable row level security;
 alter table public.student_documents enable row level security;
+alter table public.student_document_uploads enable row level security;
+alter table public.student_document_reviews enable row level security;
+alter table public.admission_document_deadline_events enable row level security;
 alter table public.student_enrollments enable row level security;
 alter table public.campus_transfer_requests enable row level security;
 
@@ -225,8 +332,9 @@ alter table public.campus_transfer_requests enable row level security;
 -- matrix, authorization helpers, campus-transfer visibility are tested.
 revoke all on public.students,public.guardians,public.student_guardians,
   public.admission_applications,public.student_documents,
-  public.student_enrollments,public.campus_transfer_requests
-  from anon,authenticated;
+  public.student_document_uploads,public.student_document_reviews,
+  public.admission_document_deadline_events,public.student_enrollments,
+  public.campus_transfer_requests from public,anon,authenticated;
 
 commit;
 -- Review notes:
@@ -242,3 +350,11 @@ commit;
 --    authenticated/anon Data API until explicit reviewed RLS policies exist.
 -- 9. These data tables have NO INSERT/UPDATE/DELETE clients or policies.
 -- 10. A trusted server operation must issue permanent registration numbers.
+-- 11. Conditional enrollment remains permitted with a recorded document deadline.
+--     Required-document presence and approval transition logic must be checked
+--     atomically by a trusted server operation; a row CHECK cannot count siblings.
+-- 12. Missing-document OVERDUE is derived from due date in school-local timezone.
+--     Expiration does NOT automatically remove an enrolled student.
+-- 13. Upload version/review/deadline history is append-only by business rule.
+-- 14. Storage access policies and document verification RPC are not implemented.
+-- 15. DB02 DDL has NOT been executed against local or hosted PostgreSQL.
