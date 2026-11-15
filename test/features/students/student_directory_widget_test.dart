@@ -56,7 +56,7 @@ void main() {
 
     final target = find.byKey(const Key('student-card-demo-student-001'));
     await tester.scrollUntilVisible(target, 180,
-        scrollable: find.byKey(const Key('student-directory')));
+        scrollable: find.byType(Scrollable).first);
     await tester.tap(target);
     await tester.pumpAndSettle();
     expect(find.text('Student Profile (preview)'), findsOneWidget);
