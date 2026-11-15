@@ -11,14 +11,17 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  # Pinned from the current Dart 3.9-compatible package releases.
-  drift: 2.32.1
+  # Drift 2.31 uses sqlite3 2.x and supports installed Dart 3.9.2.
+  # Drift 2.32+ moved to sqlite3 3.x, whose available releases need a newer SDK.
+  drift: 2.31.0
+  sqlite3: 2.9.4
+  sqlite3_flutter_libs: 0.5.42
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  drift_dev: 2.32.1
+  drift_dev: 2.31.0
   build_runner: 2.15.1
 
 flutter:

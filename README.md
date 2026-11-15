@@ -44,8 +44,11 @@ flutter run -d windows
 **Do not skip `build_runner`.** The Drift source contains
 `part 'campus_cache_database.g.dart';` and its generated Dart file is not
 checked in. Generate it before using `flutter analyze`, `flutter test` or
-`flutter run`. The repository currently pins Drift and drift_dev to
-`2.32.1`, a Dart 3.9-compatible version. `flutter pub get` will refresh
+`flutter run`. The repository pins Drift and drift_dev to `2.31.0`, with `sqlite3` `2.9.4` and
+`sqlite3_flutter_libs` `0.5.42` for Dart **3.9.2**. Drift 2.32.x migrated to
+SQLite bindings 3.x, which do not resolve with that Dart SDK. This compatibility
+set has been checked against published package requirements, but **dependency
+resolution and native compilation must still be confirmed locally**. `flutter pub get` will refresh
 `pubspec.lock` from the added Drift dependencies; review the changes and
 commit the resolved lockfile once verified.
 
