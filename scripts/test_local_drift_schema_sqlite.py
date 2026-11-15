@@ -173,8 +173,16 @@ def main():
                  "(operation_id,school_id,campus_id,event_type,event_at_ms)"
                  "VALUES (?,?,?,?,?)",
                  (op,"schoolA","campusB","acked",31))
+    must_fail(c, "UPDATE local_outbox_operations SET payload_json='{}' "
+                 "WHERE operation_id=?", (op,))
+    must_fail(c, "UPDATE local_outbox_events SET event_type='queued' "
+                 "WHERE operation_id=?", (op,))
+    must_fail(c, "DELETE FROM local_outbox_events WHERE operation_id=?", (op,))
     must_fail(c, "DELETE FROM local_outbox_operations WHERE operation_id=?",
-                 (op,))  # audit event keeps original operation referenced
+                 (op,))  # explicit no-delete trigger plus FK retention
+    assert len(c.execute(
+        "SELECT name FROM sqlite_master WHERE type='trigger' "
+        "AND name LIKE 'local_outbox_%'").fetchall()) == 4
     assert c.execute("PRAGMA foreign_key_check").fetchall() == []
 
     db.close()
