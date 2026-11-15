@@ -12,7 +12,10 @@ part 'campus_cache_database.g.dart';
 /// The backend must verify device assignment and offline authorization before
 /// [bindVerifiedAssignment] is called. A local SQLite file is NOT an access
 /// control or encryption boundary.
-@DriftDatabase(include: {'schema/campus_cache.drift'})
+@DriftDatabase(include: {
+  'schema/campus_cache.drift',
+  'schema/operation_outbox.drift',
+})
 class CampusCacheDatabase extends _$CampusCacheDatabase {
   CampusCacheDatabase.forTest(QueryExecutor executor) : super(executor);
 
@@ -39,7 +42,7 @@ class CampusCacheDatabase extends _$CampusCacheDatabase {
   }
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -51,9 +54,30 @@ class CampusCacheDatabase extends _$CampusCacheDatabase {
           }
         },
         onUpgrade: (migrator, from, to) async {
-          // Avoid Drift's default destructive or accidental auto-upgrades.
-          // Schema v2+ requires a separately reviewed migration, with
-          // independent backups and unsynced outbox recovery.
+          // v1 -> v2 ONLY adds the outbox and its audit trail. Existing campus,
+          // student and admission tables are preserved without data copying.
+          // Keep the entire step atomic to avoid a half-migrated database if
+          // the application is terminated during the upgrade.
+          if (from == 1 && to == 2) {
+            await transaction(() async {
+              await migrator.createTable(localOutboxOperations);
+              await migrator.createTable(localOutboxEvents);
+              await customStatement(
+                'CREATE INDEX local_outbox_status_seq_idx '
+                'ON local_outbox_operations (status, sequence_no)',
+              );
+              await customStatement(
+                'CREATE INDEX local_outbox_aggregate_seq_idx '
+                'ON local_outbox_operations (aggregate_type, aggregate_id, '
+                'sequence_no)',
+              );
+              await customStatement(
+                'CREATE INDEX local_outbox_events_operation_idx '
+                'ON local_outbox_events (operation_id, event_seq)',
+              );
+            });
+            return;
+          }
           throw UnsupportedError(
             'Missing reviewed offline schema migration: $from -> $to',
           );
