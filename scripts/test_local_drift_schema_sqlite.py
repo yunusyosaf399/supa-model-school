@@ -2,7 +2,7 @@
 """Run the actual .drift DDL through Python's SQLite engine.
 
 This tests SQLite constraints only. It does NOT compile Dart/Drift, verify
-Supabase RLS, encrypt the DB, or implement an outbox / synchronization.
+Supabase RLS, encrypt the DB, or implement cloud synchronization.
 Uses a throwaway in-memory SQLite connection and fictional fixture data.
 """
 from pathlib import Path
