@@ -36,6 +36,9 @@ class CampusCacheDatabase extends _$CampusCacheDatabase {
         // FK enforcement. Drift's beforeOpen hook verifies the pragma too.
         database.execute('PRAGMA foreign_keys = ON');
         database.execute('PRAGMA journal_mode = WAL');
+        // FULL synchronous mode prioritizes durable local commits over speed.
+        // Backups must include/reconcile WAL data, not copy only the .db file.
+        database.execute('PRAGMA synchronous = FULL');
         database.execute('PRAGMA busy_timeout = 5000');
       },
     );
