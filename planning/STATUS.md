@@ -11,7 +11,7 @@ Date: 2026-11-15
 - [x] Machine-readable 114-task tracker is committed.
 
 ## Current count
-**18 complete, 93 pending, 1 in progress, 2 blocked (total 114).**
+**19 complete, 92 pending, 1 in progress, 2 blocked (total 114).**
 
 ## Blockers
 - SETUP-07 and D01-T05: Flutter/Windows/Android validation awaits the user's local computer. Automatic GitHub Actions workflow has been removed by request; former CI issue #6 closed as not planned (no passing build claimed).
@@ -24,6 +24,7 @@ Date: 2026-11-15
 - D03-T03 **DONE (source implementation/static checks only)**: trusted admission transaction functions, parent guardian draft table, school-wide counter, operation-audit table, verified Supabase Auth Edge route and local acceptance SQL committed to [draft PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1). **No local PostgreSQL tests or Edge runtime compile/deploy** yet.
 - D03-T04 **DONE (UI authoring/static review only)**: six-stage Flutter admission wizard preview with responsive desktop/Android layout, student/guardian/academic/documents/fees/review stages, UI validation, unit/widget test sources, and no false save/payment/verification claims. Draft [UI PR #7](https://github.com/yunusyosaf399/supa-model-school/pull/7) is UNMERGED; Flutter analyzer and widget tests NOT RUN.
 - D03-T05 **DONE (UI authoring/static source checks only)**: Flutter campus-scoped student directory preview, synthetic Campus A data, search by name/registration, filters, mobile cards / desktop table, read-only profile and unit/widget tests in [draft UI PR #7](https://github.com/yunusyosaf399/supa-model-school/pull/7). **No live database, real authorization, persistence, Flutter build or widget-test result.**
+- D04-T01 **DONE (Drift schema source only)**: [Draft PR #8](https://github.com/yunusyosaf399/supa-model-school/pull/8) defines 11 local SQLite tables with one-device/one-campus binding and scoped FKs, Windows-only Drift native connection, schema migration gate, SQL/Dart test sources and [implementation runbook](https://github.com/yunusyosaf399/supa-model-school/blob/db/d04-local-drift-schema/docs/19_OFFLINE_SQLITE_SCHEMA.md). **Exact SQLite script, Drift generator, Flutter compiler/tests have not been executed.** No offline authorization/encryption or actual sync/outbox implemented.
 - Supabase cloud project remains empty of school-domain public tables. No migration has been deployed.
 
 ## Next approved work
@@ -78,3 +79,12 @@ Date: 2026-11-15
 - Tests authored: `test/features/students/student_directory_model_test.dart`, `student_directory_widget_test.dart`; docs and static guardrail checker committed.
 - **Access security:** current in-memory projection is NOT authorization. Before real data, backend RLS and assigned-campus SQLite containment must enforce access and server-side search/pagination.
 - **Local runtime verification pending:** Flutter SDK unavailable in this environment; no GitHub Actions requested or run. No Supabase migrations deployed.
+
+## Session 2026-11-15 — D04-T01 offline schema authored (not runtime-verified)
+- Branch `db/d04-local-drift-schema`; draft PR #8 is separate from DB01/DB02 PR #1 and Flutter UI PR #7.
+- Added `lib/offline/schema/campus_cache.drift`: 11 local tables, singleton pinned school+campus, scoped composite FKs, unique indices for student registration and active enrollments; no money floats.
+- Added `lib/offline/campus_cache_database.dart` using Windows-only NativeDatabase background isolate, foreign key PRAGMA and fail-closed upgrade/mismatched device binding behavior.
+- Pinned `drift` and `drift_dev` 2.35.3 and `build_runner` 2.15.1; `pubspec.lock` and generated `.g.dart` will be generated after local toolchain tests.
+- Added exact-schema Python SQLite test `scripts/test_local_drift_schema_sqlite.py` and Dart in-memory tests; files committed but **not executed**.
+- D04-T02 durable sync outbox, D04-T03 idempotent ingest, D04-T04 change cursor, D04-T05 offline vertical slice remain TODO. Local encryption/authorization still required before real data.
+- No GitHub Actions jobs run, no hosted Supabase SQL changes made.

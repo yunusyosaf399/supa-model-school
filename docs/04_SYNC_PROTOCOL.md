@@ -14,3 +14,5 @@
 10. Device cannot switch assigned campus offline.
 
 Server functions, permission expiry, retention and conflict schema are **not implemented** in this initial repo commit. Test retry after acknowledgement loss, concurrent payments, reconnection after several days and revocation.
+## D04-T01 — SQL/Drift campus cache foundation (draft PR #8)
+The local offline desktop schema now has a source-defined, single-binding school/campus/device table, campus-checked academic/student/admission/guardian/document replicas and a cursor placeholder. See `docs/19_OFFLINE_SQLITE_SCHEMA.md` on branch `db/d04-local-drift-schema`. This is **not** a persistent operation outbox and does **not** provide encryption, auth expiry, live synchronization or server permissions. Only the registered Windows PC will be allowed to open this store after device/session checks are implemented. Android and other PCs remain online-only. The schema and tests are pending developer laptop execution.
