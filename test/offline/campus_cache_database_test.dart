@@ -87,7 +87,7 @@ void main() {
     ), isTrue);
   });
 
-  test('schema has 11 tables and foreign keys enabled', () async {
+  test('v2 schema has 13 tables and foreign keys enabled', () async {
     final flags = await db.customSelect('PRAGMA foreign_keys').getSingle();
     expect(flags.read<int>('foreign_keys'), 1);
 
@@ -95,6 +95,6 @@ void main() {
       "SELECT name FROM sqlite_master WHERE type='table' "
       "AND name LIKE 'local_%'",
     ).get();
-    expect(rows, hasLength(11));
+    expect(rows, hasLength(13));
   });
 }
