@@ -11,7 +11,7 @@ Date: 2026-11-15
 - [x] Machine-readable 114-task tracker is committed.
 
 ## Current count
-**17 complete, 94 pending, 1 in progress, 2 blocked (total 114).**
+**18 complete, 93 pending, 1 in progress, 2 blocked (total 114).**
 
 ## Blockers
 - SETUP-07 and D01-T05: Flutter/Windows/Android validation awaits the user's local computer. Automatic GitHub Actions workflow has been removed by request; former CI issue #6 closed as not planned (no passing build claimed).
@@ -23,6 +23,7 @@ Date: 2026-11-15
 - D03-T02 **DONE (authoring/static checks)**: DB02 conditional admissions and four document-related tables drafted, with 24 acceptance cases, storage security design and 10/10 RLS structural review. Still NOT migrated, runtime-tested or deployed. Trusted status transitions and Storage bucket/policies remain future implementation.
 - D03-T03 **DONE (source implementation/static checks only)**: trusted admission transaction functions, parent guardian draft table, school-wide counter, operation-audit table, verified Supabase Auth Edge route and local acceptance SQL committed to [draft PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1). **No local PostgreSQL tests or Edge runtime compile/deploy** yet.
 - D03-T04 **DONE (UI authoring/static review only)**: six-stage Flutter admission wizard preview with responsive desktop/Android layout, student/guardian/academic/documents/fees/review stages, UI validation, unit/widget test sources, and no false save/payment/verification claims. Draft [UI PR #7](https://github.com/yunusyosaf399/supa-model-school/pull/7) is UNMERGED; Flutter analyzer and widget tests NOT RUN.
+- D03-T05 **DONE (UI authoring/static source checks only)**: Flutter campus-scoped student directory preview, synthetic Campus A data, search by name/registration, filters, mobile cards / desktop table, read-only profile and unit/widget tests in [draft UI PR #7](https://github.com/yunusyosaf399/supa-model-school/pull/7). **No live database, real authorization, persistence, Flutter build or widget-test result.**
 - Supabase cloud project remains empty of school-domain public tables. No migration has been deployed.
 
 ## Next approved work
@@ -70,3 +71,10 @@ Date: 2026-11-15
 - Tests authored: `test/features/admissions/admission_draft_test.dart` and `admission_wizard_widget_test.dart`; static reviewer source checks authored and inspected.
 - Remaining: compile/analyze/widget tests on Windows Flutter laptop, layout/overflow verification, real backend integration under later task D05-T01.
 - No GitHub Actions workflows requested or run.
+
+## Session 2026-11-15 — D03-T05 authoring completed
+- UI branch `ui/d03-admission-wizard`, draft PR #7 now includes `lib/features/students/models/student_directory.dart` and `lib/features/students/presentation/student_directory_page.dart`.
+- Search, status/class and authorized-campus UI filters, count/empty state, desktop table, mobile cards and read-only fictional profile authored; Students tab now opens directory and admission wizard.
+- Tests authored: `test/features/students/student_directory_model_test.dart`, `student_directory_widget_test.dart`; docs and static guardrail checker committed.
+- **Access security:** current in-memory projection is NOT authorization. Before real data, backend RLS and assigned-campus SQLite containment must enforce access and server-side search/pagination.
+- **Local runtime verification pending:** Flutter SDK unavailable in this environment; no GitHub Actions requested or run. No Supabase migrations deployed.
