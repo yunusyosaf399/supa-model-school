@@ -744,11 +744,11 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
             label: const Text('Next'),
           )
         else
-          const FilledButton.icon(
-            key: Key('wizard-submit-disabled'),
+          FilledButton.icon(
+            key: const Key('wizard-submit-disabled'),
             onPressed: null,
-            icon: Icon(Icons.lock_outline),
-            label: Text('Submit unavailable'),
+            icon: const Icon(Icons.lock_outline),
+            label: const Text('Submit unavailable'),
           ),
       ],
     );
