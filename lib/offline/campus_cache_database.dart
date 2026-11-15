@@ -75,6 +75,31 @@ class CampusCacheDatabase extends _$CampusCacheDatabase {
                 'CREATE INDEX local_outbox_events_operation_idx '
                 'ON local_outbox_events (operation_id, event_seq)',
               );
+              // Match the immutable-envelope / append-only SQL triggers in
+              // operation_outbox.drift for non-destructive v1->v2 upgrades.
+              await customStatement(
+                'CREATE TRIGGER local_outbox_envelope_immutable '
+                'BEFORE UPDATE OF operation_id,school_id,campus_id,'
+                'aggregate_type,aggregate_id,operation_type,payload_json,'
+                'expected_cloud_revision,local_revision,created_at_ms '
+                'ON local_outbox_operations BEGIN '
+                "SELECT RAISE(ABORT,'Offline operation envelope is immutable'); END",
+              );
+              await customStatement(
+                'CREATE TRIGGER local_outbox_operations_no_delete '
+                'BEFORE DELETE ON local_outbox_operations BEGIN '
+                "SELECT RAISE(ABORT,'Offline operation deletion requires reviewed retention'); END",
+              );
+              await customStatement(
+                'CREATE TRIGGER local_outbox_events_no_update '
+                'BEFORE UPDATE ON local_outbox_events BEGIN '
+                "SELECT RAISE(ABORT,'Offline audit events are append-only'); END",
+              );
+              await customStatement(
+                'CREATE TRIGGER local_outbox_events_no_delete '
+                'BEFORE DELETE ON local_outbox_events BEGIN '
+                "SELECT RAISE(ABORT,'Offline audit events are append-only'); END",
+              );
             });
             return;
           }
