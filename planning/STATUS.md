@@ -11,7 +11,7 @@ Date: 2026-11-15
 - [x] Machine-readable 114-task tracker is committed.
 
 ## Current count
-**16 complete, 95 pending, 1 in progress, 2 blocked (total 114).**
+**17 complete, 94 pending, 1 in progress, 2 blocked (total 114).**
 
 ## Blockers
 - SETUP-07 and D01-T05: Flutter/Windows/Android validation awaits the user's local computer. Automatic GitHub Actions workflow has been removed by request; former CI issue #6 closed as not planned (no passing build claimed).
@@ -22,6 +22,7 @@ Date: 2026-11-15
 - D03-T01 **DONE (authoring/static checks)**: DB02 student/guardian identity and relationships tightened; student/guardian structural constraints verified as part of the updated 10-table DB02 draft. Added `supabase/tests/check_db02.py` and `DB02_STUDENT_GUARDIAN_TEST_PLAN.md`. Actual PostgreSQL migration and runtime RLS verification remain pending.
 - D03-T02 **DONE (authoring/static checks)**: DB02 conditional admissions and four document-related tables drafted, with 24 acceptance cases, storage security design and 10/10 RLS structural review. Still NOT migrated, runtime-tested or deployed. Trusted status transitions and Storage bucket/policies remain future implementation.
 - D03-T03 **DONE (source implementation/static checks only)**: trusted admission transaction functions, parent guardian draft table, school-wide counter, operation-audit table, verified Supabase Auth Edge route and local acceptance SQL committed to [draft PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1). **No local PostgreSQL tests or Edge runtime compile/deploy** yet.
+- D03-T04 **DONE (UI authoring/static review only)**: six-stage Flutter admission wizard preview with responsive desktop/Android layout, student/guardian/academic/documents/fees/review stages, UI validation, unit/widget test sources, and no false save/payment/verification claims. Draft [UI PR #7](https://github.com/yunusyosaf399/supa-model-school/pull/7) is UNMERGED; Flutter analyzer and widget tests NOT RUN.
 - Supabase cloud project remains empty of school-domain public tables. No migration has been deployed.
 
 ## Next approved work
@@ -62,3 +63,10 @@ Date: 2026-11-15
 - Added `supabase/tests/ADMISSION_WORKFLOW_INTEGRATION.sql`, 40 acceptance scenarios and a static checker.
 - Local SQL/Edge runtime, multiple-campus isolation, enrollment rollback and concurrent retries are NOT TESTED. Do NOT merge/deploy to production until tests pass.
 - D02-T04 remains IN_PROGRESS, D07-T01 remains TODO, and D05-T03 numbering runtime verification remains TODO.
+
+## Session 2026-11-15 — D03-T04 authored (local UI, not compiled)
+- Branch `ui/d03-admission-wizard`, draft PR #7 includes model, responsive screen and wired Students preview entry.
+- No real campus/class identifiers are used; options are explicitly fictional. No Auth call, Storage upload, fee ledger posting, save draft or submit action.
+- Tests authored: `test/features/admissions/admission_draft_test.dart` and `admission_wizard_widget_test.dart`; static reviewer source checks authored and inspected.
+- Remaining: compile/analyze/widget tests on Windows Flutter laptop, layout/overflow verification, real backend integration under later task D05-T01.
+- No GitHub Actions workflows requested or run.

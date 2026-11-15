@@ -15,3 +15,5 @@ Windows: Material 3 shell, collapsible sidebar, global search Ctrl+F (configurab
 - Search, reporting, print preview, sync center, backup and settings
 
 Design status only; no feature UI implementation claimed.
+## D03-T04 — Flutter admission UI authored (unmerged)
+A responsive six-step admission preview (Student, Guardians, Academic, Documents, Fees, Review) is implemented on [draft UI PR #7](https://github.com/yunusyosaf399/supa-model-school/pull/7). Entry point: Students → New admission (preview). All selections and entered values are in-memory only; campus/year/class examples are not live data; submission and file upload are disabled. UI tests are written but not executed. See `docs/17_ADMISSION_WIZARD_UI.md` on that branch for field mapping and test plan.

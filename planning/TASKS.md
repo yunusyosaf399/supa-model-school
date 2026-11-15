@@ -1,10 +1,10 @@
 # Development task tracker
 
 Last verified: 2026-11-15.
-**114 tasks: 16 DONE / 95 TODO / 1 IN_PROGRESS / 2 BLOCKED.**
+**114 tasks: 17 DONE / 94 TODO / 1 IN_PROGRESS / 2 BLOCKED.**
 Authoritative machine-readable status: [tasks.csv](tasks.csv).
 
-**Important:** DONE for D03-T03 means source-code authoring and structural review, NOT a deployed or locally verified admission workflow. Live DB01/DB02 migration, Auth/Edge and financial/offline integration tests remain pending (D02-T04, D07-T01, DB04 tasks).
+**Important:** D03-T03 and D03-T04 are DONE only for code authoring and structural source review. Runtime tests, deployment and live data handling are not complete. Flutter validation remains blocked until the laptop is available (SETUP-07, D01-T05, D02-T02).
 
 ## Setup
 - [x] `SETUP-01` Identify Supabase link and organization — **DONE**
@@ -35,7 +35,7 @@ Authoritative machine-readable status: [tasks.csv](tasks.csv).
 - [x] `D03-T01` Author and statically review student and guardian schema — **DONE**
 - [x] `D03-T02` Author and statically review conditional admission documents schema — **DONE**
 - [x] `D03-T03` Author server-side admission workflow SQL and authenticated Edge function — **DONE**
-- [ ] `D03-T04` Build admission wizard first screens — **TODO**
+- [x] `D03-T04` Author responsive six-stage Flutter admission wizard screens — **DONE**
 - [ ] `D03-T05` Build student query/list — **TODO**
 
 ## Day 04 — Week 1
