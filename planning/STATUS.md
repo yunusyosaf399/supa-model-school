@@ -5,17 +5,17 @@ Date: 2026-11-15
 ## Verified
 - [x] Supabase project `uebzvfzpbqqttbqyxxos` created in SUPA MODEL SCHOOL connection, ap-south-1; status ACTIVE_HEALTHY.
 - [x] Private GitHub repository `yunusyosaf399/supa-model-school` exists, push permission confirmed.
-- [x] README, Flutter starter shell, architecture/security/SRS/docs and CI definition committed to main.
+- [x] README, Flutter Android/Windows project, UI preview source, schema drafts, test runbooks and task documentation committed; no GitHub Actions in use.
 - [x] [PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1) DB01/DB02 SQL draft source merged to main; **not deployed/executed**.
 - [x] Three-week GitHub issues #2/#4/#5 and schema review issue #3 created.
 - [x] Machine-readable 114-task tracker is committed.
 
 ## Current count
-**21 complete, 90 pending, 1 in progress, 2 blocked (total 114).**
+**24 complete, 89 pending, 1 in progress, 0 blocked (total 114).**
 
-## Blockers
-- SETUP-07 and D01-T05: Flutter/Windows/Android validation must be performed in the user's local Android Studio environment. Automatic GitHub Actions workflow has been removed by request; former CI issue #6 closed as not planned (no passing build claimed).
-- DB01/DB02 draft SQL is MERGED AS SOURCE to main via PR #1. PostgreSQL runtime migration, authorized RLS tests and deployment remain pending.
+## Remaining verification gates
+- User reported a successful Windows Flutter build and passing tests on 2026-11-15, after the admission wizard constructor fix. Logs not supplied for independent verification. Android build and explicit Flutter analyzer evidence remain pending; D02-T02 remains TODO.
+- No GitHub Actions are running. DB01/DB02 source is merged to main, but PostgreSQL migration, two-campus RLS tests, trusted offline device authorization, encryption and deployment remain pending.
 
 ## Active schema draft work
 - D02-T03 **DONE (authoring/static checks)**: DB01 foundation schema hardened on [draft PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1). Structural review verified **12 public tables / 12 RLS ENABLE statements**, with no write policies. See DB01_OWNER_BOOTSTRAP.md, DB01_RLS_MANUAL.md, and check_db01.py on PR branch. **D02-T04 is IN_PROGRESS: transactional SQL fixture, Windows runner, and evidence template are committed; actual PostgreSQL execution and two-campus RLS tests remain outstanding.**
@@ -105,3 +105,11 @@ Date: 2026-11-15
 - IMPORTANT BEFORE TESTING: run `flutter pub get`, then `dart run build_runner build --delete-conflicting-outputs`, then `flutter analyze` and `flutter test`. Drift-generated `campus_cache_database.g.dart` is deliberately not checked in; the previous `pubspec.lock` was generated before Drift dependencies and must be regenerated/committed after successful local resolution.
 - Structural GitHub branch/readback checks completed. **Cannot claim compiled Flutter, complete SQLite/Drift execution or PostgreSQL RLS test success** from this environment. Resolve failures from local command output before any production approval.
 - No GitHub Actions were run, no hosted Supabase schema applied, no database live data created.
+
+## Session 2026-11-15 — D04-T03 offline ingestion authored
+- **Source completed:** [draft PR #12](https://github.com/yunusyosaf399/supa-model-school/pull/12) adds `supabase/drafts/DB04_OFFLINE_INGEST.sql` with 3 private RLS-enabled tables, an immutable operation receipt and a trusted private transaction, plus `supabase/functions/offline-ingest/index.ts`, static checker, SQL fixture and runbook.
+- Backend reuses DB01's `registered_devices` table. Current actor/campus/device assignment and secret proof are validated; exact UUID replay returns stored receipt, modified payload fails, new local versions map to the same cloud application with optimistic locking.
+- **Structural source inspection passed**, but SQL execution, concurrency, device-proof provisioning, Edge runtime and PostgreSQL integration have **not run**. No hosted Supabase schema/tables or function deployment. No GitHub Actions.
+- **Windows test reported by user:** Flutter tests passed and app built successfully after constructor fix. This is the user's report (not verified build logs). D02-T02 Flutter analyzer evidence and Android run remain unverified; SETUP-07 and D01-T05 updated to DONE (user-reported Windows).
+- **Correction of earlier dependency guidance:** Drift 2.32.1 is NOT compatible with the user's Dart 3.9.2 dependency resolution. [PR #10](https://github.com/yunusyosaf399/supa-model-school/pull/10) corrected to Drift 2.31.0 + sqlite3 2.x; user subsequently reported build/test success.
+- Next **D04-T04 cloud change log + cursor**, D04-T05 full offline sync integration after RLS/credential/encryption gates. D02-T04 local PostgreSQL two-campus RLS integration remains IN_PROGRESS.

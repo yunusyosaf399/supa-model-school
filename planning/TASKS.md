@@ -1,10 +1,10 @@
 # Development task tracker
 
 Last verified: 2026-11-15.
-**114 tasks: 21 DONE / 90 TODO / 1 IN_PROGRESS / 2 BLOCKED.**
+**114 tasks: 24 DONE / 89 TODO / 1 IN_PROGRESS / 0 BLOCKED.**
 Authoritative machine-readable status: [tasks.csv](tasks.csv).
 
-**Important:** D03-T03–T05 and D04-T01–T02 are DONE only for code authoring and structural source review. Runtime tests, deployment and live data handling are not complete. The source is now merged to main; Flutter analyzer/test/Windows/Android runtime validation still must run locally (SETUP-07, D01-T05, D02-T02).
+**Important:** D03-T03–T05 and D04-T01–T03 are DONE for code authoring/static source review only. The user reports Windows Flutter tests and build passed on 2026-11-15; logs were not independently inspected. Android runtime, Flutter analyzer evidence, PostgreSQL RLS/Edge, offline security, and hosted deployment remain unfinished.
 
 ## Setup
 - [x] `SETUP-01` Identify Supabase link and organization — **DONE**
@@ -13,7 +13,7 @@ Authoritative machine-readable status: [tasks.csv](tasks.csv).
 - [x] `SETUP-04` Create local project starter — **DONE**
 - [x] `SETUP-05` Draft SRS and architecture documents — **DONE**
 - [x] `SETUP-06` Create 21-day task backlog — **DONE**
-- [ ] `SETUP-07` Compile and run Flutter tests — **BLOCKED**
+- [x] `SETUP-07` Compile and run Flutter tests — **DONE (user-reported Windows success)**
 - [x] `SETUP-08` Verify new private GitHub repository — **DONE**
 - [x] `SETUP-09` Create Supabase project — **DONE**
 
@@ -22,7 +22,7 @@ Authoritative machine-readable status: [tasks.csv](tasks.csv).
 - [x] `D01-T02` Create Supabase cloud project — **DONE**
 - [x] `D01-T03` Create private GitHub repository — **DONE**
 - [x] `D01-T04` Commit source scaffold and documents — **DONE**
-- [ ] `D01-T05` Install and validate Flutter toolchain — **BLOCKED**
+- [x] `D01-T05` Install and validate Flutter toolchain — **DONE (user-reported Windows success)**
 
 ## Day 02 — Week 1
 - [x] `D02-T01` Generate Windows and Android Flutter runners — **DONE (not yet compiled)**
@@ -41,7 +41,7 @@ Authoritative machine-readable status: [tasks.csv](tasks.csv).
 ## Day 04 — Week 1
 - [x] `D04-T01` Author 11-table campus-scoped SQLite/Drift v1 schema and Windows database wrapper — **DONE**
 - [x] `D04-T02` Author durable UUID operation outbox and atomic local draft writes — **DONE**
-- [ ] `D04-T03` Implement idempotent ingest endpoint — **TODO**
+- [x] `D04-T03` Author private idempotent admission ingest schema and authenticated Edge endpoint — **DONE (source only)**
 - [ ] `D04-T04` Build server change log and cursor — **TODO**
 - [ ] `D04-T05` Test assigned campus offline vertical slice — **TODO**
 
