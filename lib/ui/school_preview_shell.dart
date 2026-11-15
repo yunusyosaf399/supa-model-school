@@ -25,7 +25,8 @@ class _SchoolPreviewShellState extends State<SchoolPreviewShell> {
   String selectedFee = 'Tuition';
   final paymentController = TextEditingController(text: '1500');
   final cashCountController = TextEditingController(text: '57500');
-  final Map<int, String> attendance = <int, String>{};
+  final Map<String, Map<int, String>> attendanceByScreen = <String, Map<int, String>>{};
+  String tableQuery = '';
   final Map<String, bool> sampleSwitches = <String, bool>{};
   final Map<String, TextEditingController> draftFields =
       <String, TextEditingController>{};
@@ -53,6 +54,7 @@ class _SchoolPreviewShellState extends State<SchoolPreviewShell> {
     setState(() {
       module = nextModule;
       screenIndex = nextIndex;
+      tableQuery = '';
     });
   }
 
@@ -117,7 +119,18 @@ class _SchoolPreviewShellState extends State<SchoolPreviewShell> {
               ],
             ),
             actions: [
-              if (reallyWide) _headerPill(Icons.calendar_today_outlined, year),
+              if (reallyWide)
+                PopupMenuButton<String>(
+                  tooltip: 'Choose sample academic year',
+                  initialValue: year,
+                  onSelected: (v) => setState(() => year = v),
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(value: '2025–2026', child: Text('2025–2026')),
+                    PopupMenuItem(value: '2026–2027', child: Text('2026–2027')),
+                    PopupMenuItem(value: '2027–2028', child: Text('2027–2028')),
+                  ],
+                  child: _headerPill(Icons.calendar_today_outlined, year),
+                ),
               if (reallyWide) const SizedBox(width: 8),
               if (wide)
                 PopupMenuButton<String>(
@@ -340,7 +353,7 @@ class _SchoolPreviewShellState extends State<SchoolPreviewShell> {
           key: Key('screen-tab-' + i.toString()),
           label: Text(tabs[i].title, style: const TextStyle(fontSize: 12)),
           selected: i == screenIndex,
-          onSelected: (_) => setState(() => screenIndex = i),
+          onSelected: (_) => setState(() { screenIndex = i; tableQuery = ''; }),
           selectedColor: const Color(0xffdcefeb),
           side: const BorderSide(color: Color(0xffdbe4e9)),
         ),
@@ -531,6 +544,11 @@ class _SchoolPreviewShellState extends State<SchoolPreviewShell> {
     final columns = spec.columns.isEmpty
         ? const ['Reference', 'Name', 'Status']
         : spec.columns;
+    final visibleRows = List<int>.generate(5, (i) => i).where((i) {
+      if (tableQuery.trim().isEmpty) return true;
+      final haystack = columns.map((col) => _cellValue(col, i)).join(' ').toLowerCase();
+      return haystack.contains(tableQuery.toLowerCase());
+    }).toList();
     return _panel(
       spec.title + ' · sample records',
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -544,7 +562,7 @@ class _SchoolPreviewShellState extends State<SchoolPreviewShell> {
                 prefixIcon: Icon(Icons.search),
                 labelText: 'Filter demo rows',
               ),
-              onChanged: (_) => setState(() {}),
+              onChanged: (value) => setState(() => tableQuery = value),
             ),
           ),
           Chip(label: Text(campus)),
@@ -560,7 +578,7 @@ class _SchoolPreviewShellState extends State<SchoolPreviewShell> {
               const DataColumn(label: Text('Action')),
             ],
             rows: [
-              for (var i = 0; i < 5; i++)
+              for (final i in visibleRows)
                 DataRow(cells: [
                   for (final col in columns) DataCell(Text(_cellValue(col, i))),
                   DataCell(TextButton(
@@ -644,18 +662,23 @@ class _SchoolPreviewShellState extends State<SchoolPreviewShell> {
 
   Widget _payment(ScreenSpec spec) {
     final amount = double.tryParse(paymentController.text) ?? 0;
-    const due = 3100.0;
+    final salaryMode = module == 'Payroll';
+    final due = salaryMode
+        ? 26000.0
+        : <String, double>{'Tuition': 3100, 'Transport': 800, 'Exam': 500}[selectedFee] ?? 3100.0;
     final allocated = math.max(0.0, math.min(due, amount));
     final remaining = due - allocated;
     final extra = math.max(0.0, amount - due);
     return _panel(
       spec.title + ' · calculation preview',
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Selected record: Demo Student A · November 2026',
-            style: TextStyle(color: Color(0xff657b88))),
+        Text(salaryMode
+            ? 'Selected record: Demo Teacher A · November 2026'
+            : 'Selected record: Demo Student A · November 2026',
+            style: const TextStyle(color: Color(0xff657b88))),
         const SizedBox(height: 18),
         Wrap(spacing: 14, runSpacing: 14, children: [
-          SizedBox(
+          if (!salaryMode) SizedBox(
             width: 250,
             child: DropdownButtonFormField<String>(
               value: selectedFee,
@@ -701,7 +724,7 @@ class _SchoolPreviewShellState extends State<SchoolPreviewShell> {
         ]),
         const SizedBox(height: 18),
         Wrap(spacing: 12, runSpacing: 12, children: [
-          _metric('Illustrative due', 'PKR 3,100', Icons.receipt_outlined, 'Month-wise charge'),
+          _metric(salaryMode ? 'Net salary payable' : 'Illustrative due', 'PKR ' + due.toStringAsFixed(2), Icons.receipt_outlined, 'Sample outstanding amount'),
           _metric('Allocated', 'PKR ' + allocated.toStringAsFixed(2),
               Icons.check_circle_outline, 'Example allocation'),
           _metric('Remaining due', 'PKR ' + remaining.toStringAsFixed(2),
@@ -722,17 +745,22 @@ class _SchoolPreviewShellState extends State<SchoolPreviewShell> {
   }
 
   Widget _attendanceScreen(ScreenSpec spec) {
-    final marked = attendance.length;
+    final people = spec.title == 'Staff Attendance'
+        ? const <String>['Demo Teacher A', 'Demo Teacher B', 'Demo Driver A', 'Demo Staff A', 'Demo Staff B']
+        : _students;
+    final statuses = attendanceByScreen.putIfAbsent(
+      spec.title, () => <int, String>{});
+    final marked = statuses.length;
     return _panel(
       spec.title + ' · current-date demo',
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Sample Campus A · Grade 5-A · 15 November 2026 · '
-            + marked.toString() + ' / ' + _students.length.toString() + ' marked',
+            + marked.toString() + ' / ' + people.length.toString() + ' marked',
             style: const TextStyle(color: Color(0xff657b88))),
         const SizedBox(height: 12),
-        LinearProgressIndicator(value: marked / _students.length),
+        LinearProgressIndicator(value: marked / people.length),
         const SizedBox(height: 12),
-        for (var i = 0; i < _students.length; i++)
+        for (var i = 0; i < people.length; i++)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 7),
             child: Wrap(
@@ -742,26 +770,26 @@ class _SchoolPreviewShellState extends State<SchoolPreviewShell> {
               children: [
                 SizedBox(
                   width: 150,
-                  child: Text(_students[i],
+                  child: Text(people[i],
                       style: const TextStyle(fontWeight: FontWeight.w600)),
                 ),
                 for (final status in _statuses)
                   ChoiceChip(
                     label: Text(status),
-                    selected: attendance[i] == status,
-                    onSelected: (_) => setState(() => attendance[i] = status),
+                    selected: statuses[i] == status,
+                    onSelected: (_) => setState(() => statuses[i] = status),
                   ),
               ],
             ),
           ),
         const Divider(),
-        Text('Present: ' + attendance.values.where((v) => v == 'Present').length.toString()
-            + '   Absent: ' + attendance.values.where((v) => v == 'Absent').length.toString()
-            + '   Leave: ' + attendance.values.where((v) => v == 'Leave').length.toString()
-            + '   Late: ' + attendance.values.where((v) => v == 'Late').length.toString()),
+        Text('Present: ' + statuses.values.where((v) => v == 'Present').length.toString()
+            + '   Absent: ' + statuses.values.where((v) => v == 'Absent').length.toString()
+            + '   Leave: ' + statuses.values.where((v) => v == 'Leave').length.toString()
+            + '   Late: ' + statuses.values.where((v) => v == 'Late').length.toString()),
         const SizedBox(height: 12),
         FilledButton.icon(
-          onPressed: marked == _students.length
+          onPressed: marked == people.length
               ? () => showMessage('Register complete in preview only. No attendance was submitted.')
               : null,
           icon: const Icon(Icons.fact_check_outlined),
