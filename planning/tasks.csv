@@ -16,7 +16,7 @@ id,week,day,title,status,depends_on,evidence
 "D02-T01","1","2","Generate Windows and Android Flutter runners","TODO","Day 01 prerequisite checks",""
 "D02-T02","1","2","Verify Flutter analyze and widget tests","TODO","Day 01 prerequisite checks",""
 "D02-T03","1","2","Author and statically review DB01 foundation schema","DONE","Day 01 prerequisite checks","Draft PR #1: 12 school foundation tables, 12 RLS ENABLE checks, owner-only settings, Owner bootstrap/test runbooks; Postgres runtime tests tracked in D02-T04"
-"D02-T04","1","2","Verify DB01 migration and two-campus RLS locally","TODO","D02-T03","Local PostgreSQL migration, fictional Auth Owner bootstrap, multi-role/campus denial tests and advisors pending"
+"D02-T04","1","2","Verify DB01 migration and two-campus RLS locally","IN_PROGRESS","D02-T03","Transactional integration SQL, Windows local runner, seven-role/campus fixtures, bootstrap and evidence template committed in draft PR #1; actual PostgreSQL test NOT RUN"
 "D02-T05","1","2","Build authentication and campus selection UI","TODO","Day 01 prerequisite checks",""
 "D03-T01","1","3","Create student/guardian schema","IN_PROGRESS","Day 02 prerequisite checks",""
 "D03-T02","1","3","Create admissions document schema","IN_PROGRESS","Day 02 prerequisite checks",""
