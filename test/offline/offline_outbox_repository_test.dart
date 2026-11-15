@@ -162,8 +162,8 @@ void main() {
     expect(await count('local_outbox_operations'), 1);
     expect(await count('local_outbox_events'), 4);
     final local = await db.customSelect(
-      'SELECT locally_edited FROM local_admissions WHERE id=?',
-      variables: [],
+      "SELECT locally_edited FROM local_admissions "
+      "WHERE id='11111111-1111-4111-8111-111111111111'",
     ).get(); // Dirty bit intentionally retained until server sync mapping.
     expect(local.single.read<int>('locally_edited'), 1);
   });
