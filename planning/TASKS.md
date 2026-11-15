@@ -1,10 +1,10 @@
 # Development task tracker
 
 Last verified: 2026-11-15.
-**114 tasks: 14 DONE / 96 TODO / 2 IN_PROGRESS / 2 BLOCKED.**
+**114 tasks: 15 DONE / 96 TODO / 1 IN_PROGRESS / 2 BLOCKED.**
 Authoritative machine-readable status: [tasks.csv](tasks.csv).
 
-**Important:** DB01 and student/guardian DB02 *authoring* tasks can be DONE after static verification; live migration, real RLS tests, and student data handling are NOT complete.
+**Important:** DB01 and DB02 *authoring* tasks can be DONE after static verification; live migration, real RLS tests, and student data handling are NOT complete.
 
 ## Setup
 - [x] `SETUP-01` Identify Supabase link and organization — **DONE**
@@ -33,7 +33,7 @@ Authoritative machine-readable status: [tasks.csv](tasks.csv).
 
 ## Day 03 — Week 1
 - [x] `D03-T01` Author and statically review student and guardian schema — **DONE**
-- [ ] `D03-T02` Create admissions document schema — **IN_PROGRESS**
+- [x] `D03-T02` Author and statically review conditional admission documents schema — **DONE**
 - [ ] `D03-T03` Implement admission workflow — **TODO**
 - [ ] `D03-T04` Build admission wizard first screens — **TODO**
 - [ ] `D03-T05` Build student query/list — **TODO**
