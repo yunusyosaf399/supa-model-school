@@ -1,0 +1,229 @@
+-- D04-T01 v1 CAMPUS-BOUND OFFLINE REPLICA
+-- SQLite / Drift SQL definitions. Do not use this as a Supabase migration.
+-- No finance, background sync or authentication implementation yet.
+-- Version-2 outbox tables are defined separately in operation_outbox.drift.
+-- A single assigned campus is pinned by local_campus_binding(singleton=1).
+-- Every replicated row must match its (school_id,campus_id) composite key.
+-- PRAGMA foreign_keys = ON must be set on EVERY SQLite connection.
+
+CREATE TABLE local_campus_binding (
+  singleton INTEGER NOT NULL PRIMARY KEY CHECK (singleton = 1),
+  school_id TEXT NOT NULL CHECK (length(school_id) > 0),
+  campus_id TEXT NOT NULL CHECK (length(campus_id) > 0),
+  device_id TEXT NOT NULL CHECK (length(device_id) > 0),
+  activated_at_ms INTEGER NOT NULL CHECK (activated_at_ms > 0),
+  UNIQUE (school_id, campus_id)
+);
+
+CREATE TABLE local_academic_years (
+  id TEXT NOT NULL PRIMARY KEY,
+  school_id TEXT NOT NULL,
+  campus_id TEXT NOT NULL,
+  label TEXT NOT NULL,
+  starts_on TEXT NOT NULL,
+  ends_on TEXT NOT NULL,
+  is_active INTEGER NOT NULL DEFAULT 0 CHECK (is_active IN (0, 1)),
+  cloud_revision INTEGER,
+  UNIQUE (id, school_id, campus_id),
+  FOREIGN KEY (school_id, campus_id)
+    REFERENCES local_campus_binding (school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CHECK (ends_on >= starts_on)
+);
+
+CREATE UNIQUE INDEX local_one_active_year
+  ON local_academic_years (school_id, campus_id) WHERE is_active = 1;
+
+CREATE TABLE local_classes (
+  id TEXT NOT NULL PRIMARY KEY,
+  school_id TEXT NOT NULL,
+  campus_id TEXT NOT NULL,
+  academic_year_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  cloud_revision INTEGER,
+  UNIQUE (id, school_id, campus_id),
+  UNIQUE (campus_id, academic_year_id, name),
+  FOREIGN KEY (school_id, campus_id)
+    REFERENCES local_campus_binding (school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY (academic_year_id, school_id, campus_id)
+    REFERENCES local_academic_years (id, school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+CREATE TABLE local_sections (
+  id TEXT NOT NULL PRIMARY KEY,
+  school_id TEXT NOT NULL,
+  campus_id TEXT NOT NULL,
+  class_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  cloud_revision INTEGER,
+  UNIQUE (id, school_id, campus_id),
+  UNIQUE (id, class_id, school_id, campus_id),
+  UNIQUE (class_id, name),
+  FOREIGN KEY (school_id, campus_id)
+    REFERENCES local_campus_binding (school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY (class_id, school_id, campus_id)
+    REFERENCES local_classes (id, school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+CREATE TABLE local_students (
+  id TEXT NOT NULL PRIMARY KEY,
+  school_id TEXT NOT NULL,
+  campus_id TEXT NOT NULL,
+  registration_no TEXT NOT NULL,
+  full_name TEXT NOT NULL CHECK (length(trim(full_name)) > 1),
+  date_of_birth TEXT,
+  status TEXT NOT NULL DEFAULT 'active'
+    CHECK (status IN ('active', 'inactive', 'withdrawn', 'graduated')),
+  cloud_revision INTEGER,
+  updated_at_ms INTEGER NOT NULL,
+  UNIQUE (id, school_id, campus_id),
+  FOREIGN KEY (school_id, campus_id)
+    REFERENCES local_campus_binding (school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+CREATE UNIQUE INDEX local_students_registration_ci
+  ON local_students (school_id, registration_no COLLATE NOCASE);
+CREATE INDEX local_students_name_lookup
+  ON local_students (school_id, campus_id, full_name);
+
+CREATE TABLE local_guardians (
+  id TEXT NOT NULL PRIMARY KEY,
+  school_id TEXT NOT NULL,
+  campus_id TEXT NOT NULL,
+  full_name TEXT NOT NULL CHECK (length(trim(full_name)) > 1),
+  phone TEXT,
+  cloud_revision INTEGER,
+  updated_at_ms INTEGER NOT NULL,
+  UNIQUE (id, school_id, campus_id),
+  FOREIGN KEY (school_id, campus_id)
+    REFERENCES local_campus_binding (school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+CREATE TABLE local_student_guardians (
+  student_id TEXT NOT NULL,
+  guardian_id TEXT NOT NULL,
+  school_id TEXT NOT NULL,
+  campus_id TEXT NOT NULL,
+  relationship TEXT NOT NULL
+    CHECK (relationship IN ('father', 'mother', 'guardian', 'other')),
+  is_primary INTEGER NOT NULL DEFAULT 0 CHECK (is_primary IN (0, 1)),
+  PRIMARY KEY (student_id, guardian_id),
+  FOREIGN KEY (school_id, campus_id)
+    REFERENCES local_campus_binding (school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY (student_id, school_id, campus_id)
+    REFERENCES local_students (id, school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY (guardian_id, school_id, campus_id)
+    REFERENCES local_guardians (id, school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+CREATE UNIQUE INDEX local_one_primary_guardian
+  ON local_student_guardians (student_id) WHERE is_primary = 1;
+
+CREATE TABLE local_enrollments (
+  id TEXT NOT NULL PRIMARY KEY,
+  student_id TEXT NOT NULL,
+  school_id TEXT NOT NULL,
+  campus_id TEXT NOT NULL,
+  academic_year_id TEXT NOT NULL,
+  class_id TEXT NOT NULL,
+  section_id TEXT,
+  roll_number TEXT,
+  admitted_on TEXT NOT NULL,
+  ended_on TEXT,
+  cloud_revision INTEGER,
+  UNIQUE (id, school_id, campus_id),
+  FOREIGN KEY (school_id, campus_id)
+    REFERENCES local_campus_binding (school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY (student_id, school_id, campus_id)
+    REFERENCES local_students (id, school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY (academic_year_id, school_id, campus_id)
+    REFERENCES local_academic_years (id, school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY (class_id, school_id, campus_id)
+    REFERENCES local_classes (id, school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY (section_id, class_id, school_id, campus_id)
+    REFERENCES local_sections (id, class_id, school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CHECK (ended_on IS NULL OR ended_on >= admitted_on)
+);
+
+CREATE UNIQUE INDEX local_one_current_enrollment
+  ON local_enrollments (student_id) WHERE ended_on IS NULL;
+CREATE INDEX local_enrollments_class_lookup
+  ON local_enrollments (campus_id, academic_year_id, class_id, section_id);
+
+CREATE TABLE local_admissions (
+  id TEXT NOT NULL PRIMARY KEY,
+  school_id TEXT NOT NULL,
+  campus_id TEXT NOT NULL,
+  academic_year_id TEXT NOT NULL,
+  requested_class_id TEXT,
+  requested_section_id TEXT,
+  student_id TEXT,
+  applicant_name TEXT NOT NULL,
+  date_of_birth TEXT,
+  previous_school TEXT,
+  admission_status TEXT NOT NULL DEFAULT 'draft'
+    CHECK (admission_status IN ('draft', 'submitted', 'approved', 'returned', 'rejected')),
+  approval_state TEXT NOT NULL DEFAULT 'not_required'
+    CHECK (approval_state IN ('not_required', 'pending', 'approved', 'returned', 'rejected')),
+  documents_state TEXT NOT NULL DEFAULT 'incomplete'
+    CHECK (documents_state IN ('incomplete', 'conditional', 'complete')),
+  missing_documents_due_on TEXT,
+  conditional_reason TEXT,
+  cloud_revision INTEGER,
+  local_revision INTEGER NOT NULL DEFAULT 1 CHECK (local_revision > 0),
+  locally_edited INTEGER NOT NULL DEFAULT 0 CHECK (locally_edited IN (0, 1)),
+  updated_at_ms INTEGER NOT NULL,
+  UNIQUE (id, school_id, campus_id),
+  FOREIGN KEY (school_id, campus_id)
+    REFERENCES local_campus_binding (school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY (academic_year_id, school_id, campus_id)
+    REFERENCES local_academic_years (id, school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY (requested_class_id, school_id, campus_id)
+    REFERENCES local_classes (id, school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY (requested_section_id, requested_class_id, school_id, campus_id)
+    REFERENCES local_sections (id, class_id, school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY (student_id, school_id, campus_id)
+    REFERENCES local_students (id, school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CHECK (documents_state <> 'conditional' OR missing_documents_due_on IS NOT NULL),
+  CHECK (admission_status <> 'approved' OR student_id IS NOT NULL)
+);
+
+CREATE INDEX local_admissions_status_lookup
+  ON local_admissions (campus_id, admission_status, updated_at_ms);
+
+CREATE TABLE local_admission_documents (
+  id TEXT NOT NULL PRIMARY KEY,
+  school_id TEXT NOT NULL,
+  campus_id TEXT NOT NULL,
+  application_id TEXT NOT NULL,
+  document_kind TEXT NOT NULL CHECK (document_kind IN (
+    'birth_certificate', 'transfer_certificate', 'photo', 'other')),
+  is_required INTEGER NOT NULL CHECK (is_required IN (0, 1)),
+  is_applicable INTEGER NOT NULL CHECK (is_applicable IN (0, 1)),
+  document_status TEXT NOT NULL DEFAULT 'missing'
+    CHECK (document_status IN ('missing', 'uploaded', 'verified', 'rejected')),
+  submission_due_on TEXT,
+  cloud_revision INTEGER,
+  UNIQUE (id, school_id, campus_id),
+  FOREIGN KEY (school_id, campus_id)
+    REFERENCES local_campus_binding (school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY (application_id, school_id, campus_id)
+    REFERENCES local_admissions (id, school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CHECK (is_applicable = 1 OR is_required = 0)
+);
+
+CREATE UNIQUE INDEX local_standard_document_per_application
+  ON local_admission_documents (application_id, document_kind)
+  WHERE document_kind <> 'other';
+
+-- Cursor is a placeholder for a future authenticated D04 sync protocol.
+-- It MUST be advanced only after all changes are durably applied.
+CREATE TABLE local_replica_metadata (
+  singleton INTEGER NOT NULL PRIMARY KEY CHECK (singleton = 1),
+  school_id TEXT NOT NULL,
+  campus_id TEXT NOT NULL,
+  last_applied_cursor TEXT,
+  last_applied_at_ms INTEGER,
+  FOREIGN KEY (school_id, campus_id)
+    REFERENCES local_campus_binding (school_id, campus_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+);

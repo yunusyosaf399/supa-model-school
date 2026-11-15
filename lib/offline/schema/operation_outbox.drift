@@ -1,0 +1,104 @@
+-- D04-T02: durable, ordered local operation outbox for ONE assigned campus.
+-- Version 2. Offline draft data and payloads are sensitive; NO real student
+-- data until device auth expiry, protected key storage, DB encryption, backup
+-- and server-side idempotent ingest are implemented and verified.
+-- This is not a Supabase/PostgreSQL migration.
+
+CREATE TABLE local_outbox_operations (
+  sequence_no INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  operation_id TEXT NOT NULL UNIQUE
+    CHECK (length(operation_id) = 36),
+  school_id TEXT NOT NULL,
+  campus_id TEXT NOT NULL,
+  aggregate_type TEXT NOT NULL
+    CHECK (aggregate_type = 'admission'),
+  aggregate_id TEXT NOT NULL,
+  operation_type TEXT NOT NULL
+    CHECK (operation_type = 'admission.save_draft'),
+  payload_json TEXT NOT NULL CHECK (length(payload_json) > 1),
+  expected_cloud_revision INTEGER
+    CHECK (expected_cloud_revision IS NULL OR expected_cloud_revision >= 0),
+  local_revision INTEGER NOT NULL CHECK (local_revision > 0),
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending','sending','acked','conflict')),
+  attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+  lease_token TEXT,
+  lease_until_ms INTEGER CHECK (lease_until_ms IS NULL OR lease_until_ms > 0),
+  retry_after_ms INTEGER CHECK (retry_after_ms IS NULL OR retry_after_ms >= 0),
+  last_error_code TEXT,
+  server_revision INTEGER CHECK (server_revision IS NULL OR server_revision >= 0),
+  created_at_ms INTEGER NOT NULL CHECK (created_at_ms > 0),
+  updated_at_ms INTEGER NOT NULL CHECK (updated_at_ms > 0),
+  acknowledged_at_ms INTEGER CHECK (acknowledged_at_ms IS NULL OR acknowledged_at_ms > 0),
+  UNIQUE (operation_id,school_id,campus_id),
+  UNIQUE (aggregate_type,aggregate_id,local_revision),
+  FOREIGN KEY (school_id,campus_id)
+    REFERENCES local_campus_binding (school_id,campus_id)
+      ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY (aggregate_id,school_id,campus_id)
+    REFERENCES local_admissions (id,school_id,campus_id)
+      ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CHECK (
+    (status = 'sending' AND lease_token IS NOT NULL AND lease_until_ms IS NOT NULL)
+    OR (status <> 'sending' AND lease_token IS NULL AND lease_until_ms IS NULL)
+  ),
+  CHECK (status <> 'acked' OR acknowledged_at_ms IS NOT NULL)
+);
+
+CREATE INDEX local_outbox_status_seq_idx
+  ON local_outbox_operations (status, sequence_no);
+CREATE INDEX local_outbox_aggregate_seq_idx
+  ON local_outbox_operations (aggregate_type, aggregate_id, sequence_no);
+
+-- Append-only diagnostic history: status transitions, not PII-rich payloads.
+-- Keeping receipt/attempt history makes restart and lost-ack scenarios auditable.
+CREATE TABLE local_outbox_events (
+  event_seq INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  operation_id TEXT NOT NULL,
+  school_id TEXT NOT NULL,
+  campus_id TEXT NOT NULL,
+  event_type TEXT NOT NULL CHECK (
+    event_type IN ('queued','claimed','released','acked','conflict')
+  ),
+  event_at_ms INTEGER NOT NULL CHECK (event_at_ms > 0),
+  error_code TEXT,
+  FOREIGN KEY (school_id,campus_id)
+    REFERENCES local_campus_binding (school_id,campus_id)
+      ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY (operation_id,school_id,campus_id)
+    REFERENCES local_outbox_operations (operation_id,school_id,campus_id)
+      ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+CREATE INDEX local_outbox_events_operation_idx
+  ON local_outbox_events (operation_id,event_seq);
+
+-- Durable operation identity and payload may NEVER be rewritten. A failed
+-- resend must use the original operation_id, not modify its content.
+CREATE TRIGGER local_outbox_envelope_immutable
+BEFORE UPDATE OF operation_id,school_id,campus_id,aggregate_type,
+  aggregate_id,operation_type,payload_json,expected_cloud_revision,
+  local_revision,created_at_ms ON local_outbox_operations
+BEGIN
+  SELECT RAISE(ABORT, 'Offline operation envelope is immutable');
+END;
+
+-- Do not drop queued OR acknowledged operations silently: reviewed retention
+-- and backup-aware compaction belong to a later release.
+CREATE TRIGGER local_outbox_operations_no_delete
+BEFORE DELETE ON local_outbox_operations
+BEGIN
+  SELECT RAISE(ABORT, 'Offline operation deletion requires reviewed retention');
+END;
+
+CREATE TRIGGER local_outbox_events_no_update
+BEFORE UPDATE ON local_outbox_events
+BEGIN
+  SELECT RAISE(ABORT, 'Offline audit events are append-only');
+END;
+
+CREATE TRIGGER local_outbox_events_no_delete
+BEFORE DELETE ON local_outbox_events
+BEGIN
+  SELECT RAISE(ABORT, 'Offline audit events are append-only');
+END;
