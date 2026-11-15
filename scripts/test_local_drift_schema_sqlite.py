@@ -10,6 +10,7 @@ import sqlite3
 
 ROOT = Path(__file__).resolve().parents[1]
 SQL = ROOT / "lib/offline/schema/campus_cache.drift"
+OUTBOX_SQL = ROOT / "lib/offline/schema/operation_outbox.drift"
 
 def must_fail(cursor, statement, args=()):
     try:
@@ -20,10 +21,12 @@ def must_fail(cursor, statement, args=()):
 
 def main():
     assert SQL.is_file(), f"Missing schema: {SQL}"
+    assert OUTBOX_SQL.is_file(), f"Missing schema: {OUTBOX_SQL}"
     db = sqlite3.connect(":memory:")
     db.execute("PRAGMA foreign_keys = ON")
     assert db.execute("PRAGMA foreign_keys").fetchone()[0] == 1
     db.executescript(SQL.read_text(encoding="utf-8"))
+    db.executescript(OUTBOX_SQL.read_text(encoding="utf-8"))
     c = db.cursor()
     tables = {row[0] for row in c.execute(
         "SELECT name FROM sqlite_master WHERE type='table'")}
@@ -32,6 +35,7 @@ def main():
       "local_sections", "local_students", "local_guardians",
       "local_student_guardians", "local_enrollments", "local_admissions",
       "local_admission_documents", "local_replica_metadata",
+      "local_outbox_operations", "local_outbox_events",
     }
     assert expected == tables, f"Unexpected tables {expected ^ tables}"
     assert all(c.execute("PRAGMA foreign_key_list(" + name + ")").fetchall()
@@ -118,8 +122,63 @@ def main():
     must_fail(c, "UPDATE local_campus_binding SET campus_id = 'campusB' WHERE singleton = 1")
     assert db.execute("PRAGMA foreign_key_check").fetchall() == []
 
+    # Outbox rows are permitted only for an existing bound campus and draft.
+    op = "11111111-1111-4111-8111-111111111111"
+    c.execute(
+        "INSERT INTO local_outbox_operations("
+        "operation_id,school_id,campus_id,aggregate_type,aggregate_id,"
+        "operation_type,payload_json,local_revision,created_at_ms,updated_at_ms)"
+        "VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (op,"schoolA","campusA","admission","appA",
+         "admission.save_draft",'{"action":"draft"}',1,2,2))
+    must_fail(c, "INSERT INTO local_outbox_operations("
+        "operation_id,school_id,campus_id,aggregate_type,aggregate_id,"
+        "operation_type,payload_json,local_revision,created_at_ms,updated_at_ms)"
+        "VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (op,"schoolA","campusA","admission","appA",
+         "admission.save_draft",'{"action":"draft"}',2,2,2))
+    must_fail(c, "INSERT INTO local_outbox_operations("
+        "operation_id,school_id,campus_id,aggregate_type,aggregate_id,"
+        "operation_type,payload_json,local_revision,created_at_ms,updated_at_ms)"
+        "VALUES (?,?,?,?,?,?,?,?,?,?)",
+        ("22222222-2222-4222-8222-222222222222","schoolA","campusB",
+         "admission","appA","admission.save_draft",'{}',2,2,2))
+    must_fail(c, "INSERT INTO local_outbox_operations("
+        "operation_id,school_id,campus_id,aggregate_type,aggregate_id,"
+        "operation_type,payload_json,local_revision,created_at_ms,updated_at_ms)"
+        "VALUES (?,?,?,?,?,?,?,?,?,?)",
+        ("33333333-3333-4333-8333-333333333333","schoolA","campusA",
+         "admission","appB","admission.save_draft",'{}',2,2,2))
+    must_fail(c, "INSERT INTO local_outbox_operations("
+        "operation_id,school_id,campus_id,aggregate_type,aggregate_id,"
+        "operation_type,payload_json,local_revision,created_at_ms,updated_at_ms)"
+        "VALUES (?,?,?,?,?,?,?,?,?,?)",
+        ("44444444-4444-4444-8444-444444444444","schoolA","campusA",
+         "admission","appA","admission.save_draft",'{}',1,2,2))
+    must_fail(c, "UPDATE local_outbox_operations SET status='sending' "
+                 "WHERE operation_id=?", (op,))
+    c.execute("UPDATE local_outbox_operations "
+              "SET status='sending', lease_token='TEST-LEASE',"
+              "lease_until_ms=30,attempt_count=1 WHERE operation_id=?", (op,))
+    must_fail(c, "UPDATE local_outbox_operations "
+                 "SET status='acked',lease_token=NULL,lease_until_ms=NULL "
+                 "WHERE operation_id=?", (op,))
+    c.execute("UPDATE local_outbox_operations "
+              "SET status='acked',lease_token=NULL,lease_until_ms=NULL,"
+              "acknowledged_at_ms=31 WHERE operation_id=?", (op,))
+    c.execute("INSERT INTO local_outbox_events "
+              "(operation_id,school_id,campus_id,event_type,event_at_ms)"
+              "VALUES (?,?,?,?,?)", (op,"schoolA","campusA","acked",31))
+    must_fail(c, "INSERT INTO local_outbox_events "
+                 "(operation_id,school_id,campus_id,event_type,event_at_ms)"
+                 "VALUES (?,?,?,?,?)",
+                 (op,"schoolA","campusB","acked",31))
+    must_fail(c, "DELETE FROM local_outbox_operations WHERE operation_id=?",
+                 (op,))  # audit event keeps original operation referenced
+    assert c.execute("PRAGMA foreign_key_check").fetchall() == []
+
     db.close()
-    print("PASS: actual SQLite schema created; 11 tables; FK containment,"
+    print("PASS: actual SQLite v2 schema created; 13 tables; FK containment,
           " one-campus binding, registration/academic/enrollment/document"
           " constraints verified with fictional in-memory records.")
 
