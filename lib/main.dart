@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'features/admissions/presentation/admission_wizard_page.dart';
+import 'features/students/presentation/student_directory_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,39 +39,34 @@ class _SchoolShellState extends State<_SchoolShell> {
   @override
   Widget build(BuildContext context) {
     final desktop = MediaQuery.sizeOf(context).width >= 820;
-    final content = Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(modules[selected],
-              style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 12),
-          if (selected == 1) ...[
-            const Text(
-              'Student records are not yet connected. You can preview the '
-              'six-stage admission wizard without saving personal data.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              key: const Key('open-admission-wizard'),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const AdmissionWizardPage(),
-                ),
+    final content = selected == 1
+        ? StudentDirectoryPage(
+            onNewAdmission: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const AdmissionWizardPage(),
               ),
-              icon: const Icon(Icons.person_add_alt_1),
-              label: const Text('New admission (preview)'),
             ),
-          ] else
-            const Text(
-              'UI scaffold only. Authentication, financial operations, '
-              'offline database and cloud sync are not yet implemented.',
-              textAlign: TextAlign.center,
+          )
+        : Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    modules[selected],
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'UI scaffold only. Authentication, financial operations, '
+                    'offline database and cloud sync are not yet implemented.',
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
-        ]),
-      ),
-    );
+          );
     return Scaffold(
       appBar: AppBar(title: const Text('Supa Model School')),
       body: desktop
