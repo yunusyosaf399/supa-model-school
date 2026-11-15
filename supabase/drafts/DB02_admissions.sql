@@ -6,31 +6,58 @@ begin;
 create table public.students (
   id uuid primary key default gen_random_uuid(),
   school_id uuid not null references public.schools(id) on delete restrict,
-  registration_no text not null check (length(btrim(registration_no)) > 0),
-  full_name_en text not null check (length(btrim(full_name_en)) > 0),
+  -- Assigned only by a trusted admission finalization operation; never by
+  -- untrusted direct client writes.
+  registration_no text not null
+    check (registration_no = btrim(registration_no)
+           and length(registration_no) between 1 and 40),
+  full_name_en text not null
+    check (length(btrim(full_name_en)) between 2 and 200),
   full_name_ur text,
   date_of_birth date,
   gender text check (gender in ('male','female','other')),
   photo_storage_path text,
+  -- Keep sensitive medical files outside this general-purpose identity row.
   active_status text not null default 'active'
     check (active_status in ('active','inactive','withdrawn','graduated')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  created_by uuid references auth.users(id),
+  updated_by uuid references auth.users(id),
   revision bigint not null default 1 check (revision > 0),
   unique (school_id,registration_no),
   unique (id,school_id)
 );
+-- Prevent case-only variants of the same human registration number.
+create unique index students_school_registration_ci_uq
+  on public.students (school_id, lower(registration_no));
+create index students_school_name_lookup_idx
+  on public.students (school_id, lower(full_name_en));
+create index students_school_status_idx
+  on public.students (school_id, active_status);
 
 create table public.guardians (
   id uuid primary key default gen_random_uuid(),
   school_id uuid not null references public.schools(id) on delete restrict,
-  full_name text not null,
+  full_name text not null
+    check (length(btrim(full_name)) between 2 and 200),
+  full_name_ur text,
   phone text,
+  alternate_phone text,
   government_id text,
   address text,
   created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by uuid references auth.users(id),
+  revision bigint not null default 1 check (revision > 0),
   unique (id,school_id)
 );
+-- A guardian may be linked to several siblings within the SAME school.
+create index guardians_school_name_lookup_idx
+  on public.guardians (school_id, lower(full_name));
+create index guardians_school_phone_idx
+  on public.guardians (school_id, phone)
+  where phone is not null;
 
 create table public.student_guardians (
   student_id uuid not null,
@@ -40,6 +67,8 @@ create table public.student_guardians (
     check (relationship in ('father','mother','guardian','other')),
   is_primary boolean not null default false,
   emergency_contact boolean not null default false,
+  is_legal_guardian boolean not null default false,
+  added_at timestamptz not null default now(),
   foreign key (student_id,school_id)
     references public.students(id,school_id) on delete restrict,
   foreign key (guardian_id,school_id)
@@ -48,6 +77,15 @@ create table public.student_guardians (
 );
 create unique index one_primary_guardian_per_student
   on public.student_guardians(student_id) where is_primary;
+-- Separate father/mother relationships can be shared with siblings; this
+-- index prevents duplicate father/mother links for the SAME student.
+create unique index one_parent_relationship_per_student
+  on public.student_guardians(student_id,relationship)
+  where relationship in ('father','mother');
+create index student_guardians_school_guardian_idx
+  on public.student_guardians (school_id,guardian_id);
+-- "At least one primary contact" is validated during admission approval,
+-- not by allowing direct inserts into an RLS-protected link table.
 
 create table public.admission_applications (
   id uuid primary key default gen_random_uuid(),
@@ -198,3 +236,9 @@ commit;
 -- 4. Need conditional doc approval policy and delayed upload workflow.
 -- 5. Need storage bucket access, audit and trusted server mutations.
 -- 6. No actual migration/test/deployment performed.
+-- 7. D03-T01 authoring review: school-scoped FK to students/guardians,
+--    normalized registration uniqueness, one primary guardian, sibling reuse.
+-- 8. Student and guardian data remain completely inaccessible through
+--    authenticated/anon Data API until explicit reviewed RLS policies exist.
+-- 9. These data tables have NO INSERT/UPDATE/DELETE clients or policies.
+-- 10. A trusted server operation must issue permanent registration numbers.
