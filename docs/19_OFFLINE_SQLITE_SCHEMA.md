@@ -1,6 +1,6 @@
 # D04-T01 — Campus-bound offline Drift/SQLite v1
 
-**Status:** SQL/Drift schema, Windows database wrapper and test sources authored.
+**Historical D04-T01 baseline:** initial 11-table schema authored. D04-T02 adds two durable operation tables, raising the current schema to version 2 (13 tables); see docs/20_OFFLINE_OUTBOX.md. SQLite/Flutter runtime tests remain pending.
 Local SQLite/Drift code-generation, Dart compilation, encryption and real offline sync remain to be verified separately.
 
 ## Strict platform and campus scope
