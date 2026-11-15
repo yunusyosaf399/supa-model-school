@@ -274,7 +274,7 @@ class _SchoolPreviewShellState extends State<SchoolPreviewShell> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(module.toUpperCase(),
+              Text(module,
                   style: const TextStyle(
                     letterSpacing: 1.7,
                     fontSize: 10,
