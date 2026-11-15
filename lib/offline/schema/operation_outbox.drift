@@ -72,3 +72,33 @@ CREATE TABLE local_outbox_events (
 
 CREATE INDEX local_outbox_events_operation_idx
   ON local_outbox_events (operation_id,event_seq);
+
+-- Durable operation identity and payload may NEVER be rewritten. A failed
+-- resend must use the original operation_id, not modify its content.
+CREATE TRIGGER local_outbox_envelope_immutable
+BEFORE UPDATE OF operation_id,school_id,campus_id,aggregate_type,
+  aggregate_id,operation_type,payload_json,expected_cloud_revision,
+  local_revision,created_at_ms ON local_outbox_operations
+BEGIN
+  SELECT RAISE(ABORT, 'Offline operation envelope is immutable');
+END;
+
+-- Do not drop queued OR acknowledged operations silently: reviewed retention
+-- and backup-aware compaction belong to a later release.
+CREATE TRIGGER local_outbox_operations_no_delete
+BEFORE DELETE ON local_outbox_operations
+BEGIN
+  SELECT RAISE(ABORT, 'Offline operation deletion requires reviewed retention');
+END;
+
+CREATE TRIGGER local_outbox_events_no_update
+BEFORE UPDATE ON local_outbox_events
+BEGIN
+  SELECT RAISE(ABORT, 'Offline audit events are append-only');
+END;
+
+CREATE TRIGGER local_outbox_events_no_delete
+BEFORE DELETE ON local_outbox_events
+BEGIN
+  SELECT RAISE(ABORT, 'Offline audit events are append-only');
+END;
