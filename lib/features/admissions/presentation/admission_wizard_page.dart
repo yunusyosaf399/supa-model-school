@@ -125,7 +125,11 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     );
     if (!mounted || discard != true) return;
     setState(() => _allowExit = true);
-    Navigator.of(context).pop();
+    // PopScope must rebuild with canPop=true before popping the route.
+    // Otherwise a second interception can reopen the confirmation dialog.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.of(context).pop();
+    });
   }
 
   @override
