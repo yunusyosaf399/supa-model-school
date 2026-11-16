@@ -140,3 +140,12 @@ Date: 2026-11-16
 - **AUTH UI SOURCE:** PR #15 contains authenticated Owner login, authorized campus choice, signout, Owner Control Panel read-only setup summary and a Supabase Auth current-password-verified change-password screen.
 - **SECURITY ADVISOR:** Auth leaked-password protection disabled warning; Supabase advisor URL documented in docs/23.
 - **UNVERIFIED:** Flutter widget tests/analyzer/runtime (SDK not available), real password login by user, encrypted session storage, full seven-user RLS suite, auth recovery URLs, setup edit service and actual operational modules. No workflows triggered.
+
+## Session 2026-11-16 — Owner initial school setup backend and Flutter (stacked PR #15)
+- **DEPLOYED SQL:** remote Supabase migration `20261116061531_db01_owner_initial_setup_rpc_audit_20261116`; exact source mirrored in `supabase/migrations/`.
+- **DATABASE:** new RLS-enabled `public.owner_setup_audit_events` and secure `public.owner_complete_initial_setup` SECURITY INVOKER RPC backed by `app_private.complete_owner_initial_setup` SECURITY DEFINER. No unauthenticated execution or authenticated direct school/campus/year/audit writes.
+- **SQL TESTS PASSED:** transactional rollback-only (not actual school values): invalid/unknown user rejected, placeholder currency/unknown IANA timezone/stale revision rejected, Owner's atomic school+campus+year+settings+audit operation succeeded, duplicate setup blocked. Original real data still unchanged.
+- **LIVE STATUS:** school initial setup PENDING, currency XXX, timezone Etc/UTC, first campus still setup-pending, no academic year, zero setup audit records. Real values must be entered by Owner; no guessed calendar dates.
+- **FLUTTER SOURCE:** Owner signs in, is taken automatically to Owner Control Panel while setup pending, and can enter real school/campus name, currency, timezone, academic-year label and dates, then Save Setup. After Supabase RPC confirms success, refresh authorized school/year context and show completion; account/password controls remain.
+- **UNVERIFIED:** Flutter compilation/test commands and real Owner password session on Windows/Android. No Flutter SDK installed in assistant environment. Add credential storage hardening and full seven-account RLS harness before live school operations.
+- **DISABLED/UNIMPLEMENTED:** Fees, attendance, admission writes, finance, backups, sync and dashboards remain previews. School setup completion does not turn these on.
