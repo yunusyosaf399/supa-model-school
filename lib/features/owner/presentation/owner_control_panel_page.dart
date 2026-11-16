@@ -73,9 +73,6 @@ class _OwnerControlPanelPageState extends State<OwnerControlPanelPage> {
     final owner = widget.owner;
     final pendingCurrency = owner.currencyCode == 'XXX';
     final pendingTimezone = owner.timezoneName == 'Etc/UTC';
-    final pendingCampus = owner.campuses.any(
-      (c) => c.name.contains('Setup Pending'),
-    );
 
     return ListView(
       key: const Key('owner-control-panel'),
