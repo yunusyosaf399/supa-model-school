@@ -14,6 +14,7 @@ class OwnerAccess {
     this.schoolRevision = 1,
     this.setupComplete = false,
     this.activeYearLabel,
+    this.activeYearId,
     this.activeYearStartsOn,
     this.activeYearEndsOn,
   });
@@ -27,6 +28,7 @@ class OwnerAccess {
   final int schoolRevision;
   final bool setupComplete;
   final String? activeYearLabel;
+  final String? activeYearId;
   final String? activeYearStartsOn;
   final String? activeYearEndsOn;
   final List<OwnerCampus> campuses;
@@ -205,7 +207,7 @@ class SupabaseOwnerAuthGateway implements OwnerAuthGateway {
         setup['status'] == 'complete';
     final year = await client
         .from('academic_years')
-        .select('label,starts_on,ends_on')
+        .select('id,label,starts_on,ends_on')
         .eq('school_id', schoolId)
         .eq('is_active', true)
         .maybeSingle();
@@ -220,6 +222,7 @@ class SupabaseOwnerAuthGateway implements OwnerAuthGateway {
       schoolRevision: (school['revision'] as num).toInt(),
       setupComplete: complete && year != null,
       activeYearLabel: year?['label'] as String?,
+      activeYearId: year?['id'] as String?,
       activeYearStartsOn: year?['starts_on'] as String?,
       activeYearEndsOn: year?['ends_on'] as String?,
       campuses: [
