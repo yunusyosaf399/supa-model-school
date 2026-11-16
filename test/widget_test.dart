@@ -12,6 +12,6 @@ void main() {
     await tester.tap(find.byKey(const Key('open-demo-dashboard')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('dashboard-page')), findsOneWidget);
-    expect(find.textContaining('DEMO PREVIEW'), findsOneWidget);
+    expect(find.byKey(const Key('dashboard-demo-banner')), findsOneWidget);
   });
 }
