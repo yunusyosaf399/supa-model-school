@@ -842,8 +842,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           child: const Padding(
             padding: EdgeInsets.all(12),
             child: Text('The application has NOT been saved or forwarded for '
-                'approval. Connect Supabase Auth, school lookup, private document '
-                'Storage and the audited admission endpoint before enabling submission.'),
+                'approval. Academic placement choices may come from authorized '
+                'DB01 records, but private document Storage and the audited '
+                'DB02 admission endpoint are not connected. Submission remains disabled.'),
           ),
         ),
       ],
