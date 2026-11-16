@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:supa_model_school/features/auth/data/owner_auth_gateway.dart';
 import 'package:supa_model_school/features/dashboard/data/dashboard_repository.dart';
 import 'package:supa_model_school/features/dashboard/presentation/dashboard_page.dart';
+import 'package:supa_model_school/features/dashboard/presentation/dashboard_visuals.dart';
 
 class FakeDashboardRepository implements DashboardRepository {
   FakeDashboardRepository(this.result);
@@ -76,6 +77,13 @@ void main() {
     expect(find.text('Fee Collection Trend'), findsOneWidget);
     expect(find.text('Recent Admissions'), findsOneWidget);
     expect(find.byKey(const Key('dashboard-new-admission')), findsOneWidget);
+    expect(find.byKey(const Key('dashboard-recent-admissions')), findsOneWidget);
+    expect(find.byKey(const Key('dashboard-fee-trend')), findsOneWidget);
+    expect(find.byKey(const Key('dashboard-pending-approvals')), findsOneWidget);
+    expect(find.byKey(const Key('dashboard-attendance-summary')), findsOneWidget);
+    expect(find.byKey(const Key('dashboard-sync-status')), findsOneWidget);
+    expect(find.byType(DashboardTrendChart), findsOneWidget);
+    expect(find.byType(DashboardDonutIndicator), findsOneWidget);
   });
 
   testWidgets('mobile dashboard shows reference cards and bottom-friendly layout',
@@ -88,6 +96,9 @@ void main() {
     expect(find.text('Good morning,'), findsOneWidget);
     expect(find.byKey(const Key('dashboard-mobile-greeting')), findsOneWidget);
     expect(find.byType(Image), findsNothing);
+    expect(find.byKey(const Key('dashboard-recent-admissions')), findsOneWidget);
+    expect(find.byKey(const Key('dashboard-pending-approvals')), findsOneWidget);
+    expect(find.text('New\\nAdmission'), findsOneWidget);
     expect(find.text('Supa Model School'), findsOneWidget);
     expect(find.text('Collect\nFee'), findsOneWidget);
     expect(find.text('Attendance'), findsOneWidget);
