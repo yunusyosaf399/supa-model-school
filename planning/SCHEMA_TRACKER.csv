@@ -5,6 +5,6 @@ DB03,"Fees; discounts; billing; receipt; credit",SQL_DRAFT_REVIEW,NO,18,"Run iso
 DB04,"Attendance; school calendar; teacher duties; student/staff marks and corrections",SQL_DRAFT_REVIEW,NO,11,"Run isolated SQL/RLS tests; complete teacher role authorization and trusted submit/correction operations"
 DB05,"Employees; multi-campus/teaching assignments; leave; payroll; advances/repayments",SQL_DRAFT_REVIEW,NO,20,"Run local SQL and RLS tests; authorize payroll posting; connect DB06 accounts and DB08 approvals"
 DB06,"Chart of accounts; double entry; cash/bank; expenses; transfers; capital; closing; bank reconciliation",SQL_DRAFT_REVIEW,NO,20,"Local SQL and RLS tests; implement authorized posting and DB08 approval; DB07 inventory/COGS and DB09 sync integration"
-DB07,"Canteen; uniform; inventory; vehicles",NOT_FULLY_DESIGNED,NO,,"Full schema design"
+DB07,"Campus inventory and procurement; canteen; uniform production/sales; transport routes and fleet",SQL_DRAFT_REVIEW,NO,37,"Run isolated SQL/RLS tests; protect concurrent stock; extend DB06 for sales and COGS; validate drivers/routes and DB08 approvals"
 DB08,"Approvals; audit; documents; notifications",NOT_FULLY_DESIGNED,NO,,"Full schema design"
 DB09,"Offline sync; device state; backup; reporting",PARTIAL_DESIGN,PARTIAL_DASHBOARD_ONLY,,"Complete domain; D04-T03/T04 drafts are undeployed"

@@ -92,3 +92,24 @@ Schema-first progress: 2 baseline-deployed domains (DB01/DB02); 4 draft
 new domains (DB03–DB06) NOT deployed; **3 domains remain to design
 (DB07–DB09), 7 domains remain undeployed (DB03–DB09)**.
 No Flutter code or live Supabase schema changes in this workstream.
+
+## DB07 Inventory/Canteen/Uniform/Transport — stacked SQL draft, NOT deployed
+
+- `drafts/DB07_INVENTORY_CANTEEN_UNIFORM_TRANSPORT_SCHEMA.sql`: 37 public
+  deny-by-default RLS tables; inventory catalog, stores, suppliers and
+  purchase/receipt, signed stock lot movements with typed source and
+  append-only guards, two campus retail sales channels, uniform BOM and
+  production, transport routes/driver assignments/trip and maintenance.
+- `tests/DB07_BUSINESS_TRANSPORT_INTEGRATION.sql`: fictional local-only
+  BEGIN/ROLLBACK fixture for a stock transfer, canteen and uniform sale,
+  production material/finished lots, enrolled-student route, vehicle
+  maintenance and same-campus DB06 expense FK. **NOT EXECUTED.**
+- `tests/check_db07_business.py`: static source checks, not PostgreSQL proof.
+- `drafts/DB07_BUSINESS_TRANSPORT_RUNBOOK.md`: isolated Postgres and
+  concurrency/finance/permission test gates.
+- `../docs/36_DB07_BUSINESS_TRANSPORT_DESIGN.md`: full schema contract.
+
+**Known dependency:** DB06 source/check constraints must be extended for
+DB07 inventory, POS sales and COGS journal kinds before reviewed migrations.
+No Flutter files or hosted Supabase SQL changes; **2 full domains remain
+to design (DB08–DB09); 7 remain undeployed (DB03–DB09).**
