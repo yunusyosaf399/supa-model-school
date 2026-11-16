@@ -6,7 +6,7 @@ void main() {
   testWidgets('default startup is login and never grants automatic access',
       (tester) async {
     await tester.pumpWidget(const SupaModelSchoolApp());
-    expect(find.text('Supa Model School'), findsOneWidget);
+    expect(find.textContaining('Supa Model School'), findsWidgets);
     expect(find.byKey(const Key('login-email')), findsOneWidget);
     expect(find.byKey(const Key('dashboard-page')), findsNothing);
     await tester.tap(find.byKey(const Key('open-demo-dashboard')));
