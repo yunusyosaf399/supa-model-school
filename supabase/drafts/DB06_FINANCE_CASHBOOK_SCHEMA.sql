@@ -578,7 +578,16 @@ DECLARE
   v_credit bigint;
   v_inflow bigint;
   v_outflow bigint;
+  v_reconcile_status text;
 BEGIN
+  SELECT r.status INTO v_reconcile_status
+    FROM public.bank_reconciliations r
+   WHERE r.id=NEW.reconciliation_id AND r.school_id=NEW.school_id
+     AND r.bank_account_id=NEW.bank_account_id FOR SHARE;
+  IF v_reconcile_status IS DISTINCT FROM 'draft' THEN
+    RAISE EXCEPTION 'Cannot match statement against final reconciliation'
+      USING ERRCODE='23514';
+  END IF;
   SELECT fa.ledger_account_id INTO v_ledger_account
     FROM public.financial_accounts fa
    WHERE fa.id=NEW.bank_account_id AND fa.school_id=NEW.school_id;
@@ -864,6 +873,14 @@ BEGIN
     RAISE EXCEPTION 'Final cash closing or its identity cannot be edited'
       USING ERRCODE='23514';
   END IF;
+  IF NEW.status='final' AND (
+    SELECT coalesce(sum(c.subtotal_minor),0)
+      FROM public.cash_closing_counts c
+      WHERE c.cash_closing_id=NEW.id
+  )<>NEW.counted_minor THEN
+    RAISE EXCEPTION 'Final cash denomination count does not match total'
+      USING ERRCODE='23514';
+  END IF;
   RETURN NEW;
 END;
 $$;
@@ -926,6 +943,23 @@ BEGIN
     RAISE EXCEPTION 'Final bank reconciliation or identity cannot change'
       USING ERRCODE='23514';
   END IF;
+  -- Serialize bank import/finalization on the physical account row.
+  PERFORM 1 FROM public.financial_accounts a
+   WHERE a.id=NEW.bank_account_id AND a.school_id=NEW.school_id
+   FOR UPDATE;
+  IF EXISTS (
+    SELECT 1 FROM public.bank_statement_lines bs
+      WHERE bs.school_id=NEW.school_id
+        AND bs.bank_account_id=NEW.bank_account_id
+        AND bs.booked_on<=NEW.statement_end
+        AND NOT EXISTS (
+          SELECT 1 FROM public.bank_reconciliation_matches m
+            WHERE m.bank_statement_line_id=bs.id
+        )
+  ) THEN
+    RAISE EXCEPTION 'Unmatched bank statement line blocks final reconciliation'
+      USING ERRCODE='23514';
+  END IF;
   RETURN NEW;
 END;
 $$;
@@ -938,6 +972,51 @@ CREATE TRIGGER db06_bank_reconcile_no_delete
 CREATE TRIGGER db06_bank_reconcile_no_truncate
   BEFORE TRUNCATE ON public.bank_reconciliations
   FOR EACH STATEMENT EXECUTE FUNCTION app_private.db06_reject_posted_mutation();
+
+-- Serializes cash count insertion with finalizing the same closing.
+CREATE FUNCTION app_private.db06_validate_cash_count_insert()
+RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
+AS $$
+DECLARE v_status text;
+BEGIN
+  SELECT c.status INTO v_status FROM public.cash_closings c
+   WHERE c.id=NEW.cash_closing_id AND c.school_id=NEW.school_id
+     AND c.campus_id=NEW.campus_id FOR UPDATE;
+  IF v_status IS DISTINCT FROM 'provisional' THEN
+    RAISE EXCEPTION 'Cash denomination count only allowed before final close'
+      USING ERRCODE='23514';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER db06_cash_count_insert_guard BEFORE INSERT
+  ON public.cash_closing_counts FOR EACH ROW
+  EXECUTE FUNCTION app_private.db06_validate_cash_count_insert();
+
+-- A late bank import must not silently change a finalized statement period.
+-- Uses the same physical-account lock as reconciliation finalization.
+CREATE FUNCTION app_private.db06_validate_bank_import()
+RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
+AS $$
+BEGIN
+  PERFORM 1 FROM public.financial_accounts a
+    WHERE a.id=NEW.bank_account_id AND a.school_id=NEW.school_id
+    FOR UPDATE;
+  IF EXISTS (
+    SELECT 1 FROM public.bank_reconciliations r
+      WHERE r.bank_account_id=NEW.bank_account_id
+        AND r.school_id=NEW.school_id
+        AND r.status='final' AND r.statement_end>=NEW.booked_on
+  ) THEN
+    RAISE EXCEPTION 'Late bank import would change finalized statement'
+      USING ERRCODE='23514';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER db06_bank_import_closed_guard BEFORE INSERT
+  ON public.bank_statement_lines FOR EACH ROW
+  EXECUTE FUNCTION app_private.db06_validate_bank_import();
 
 -- RLS deny-by-default on every exposed public DB06 table. All financial
 -- commands need future school/campus+current-role checks in trusted server.
@@ -990,6 +1069,10 @@ REVOKE ALL ON FUNCTION app_private.db06_check_cash_closing_transition()
 REVOKE ALL ON FUNCTION app_private.db06_validate_period_transition()
   FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION app_private.db06_validate_bank_reconcile_transition()
+  FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION app_private.db06_validate_cash_count_insert()
+  FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION app_private.db06_validate_bank_import()
   FROM PUBLIC,anon,authenticated;
 
 -- NOT INCLUDED YET: authorizing server posting, DB08 approval/delegation,
