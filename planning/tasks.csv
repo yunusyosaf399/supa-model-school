@@ -63,7 +63,7 @@ id,week,day,title,status,depends_on,evidence
 "D11-T03","2","11","Implement today-only and backdated rules","TODO","Day 10 prerequisite checks",""
 "D11-T04","2","11","Implement attendance correction audit","TODO","Day 10 prerequisite checks",""
 "D11-T05","2","11","Build monthly attendance report","TODO","Day 10 prerequisite checks",""
-"D12-T01","2","12","Implement employee/campus assignment schema","TODO","Day 11 prerequisite checks",""
+"D12-T01","2","12","Author DB05 employees/campus/teaching assignments and 20-table payroll schema","DONE","Depends on draft DB03 PR #25 and DB04 PR #26; DB06/DB08 posting and authorization pending","Stacked draft PR #29: 20 school/campus-contained employee/payroll tables, 20 RLS deny-by-default, 10 immutable +10 TRUNCATE guards, 1 employee monthly salary uniqueness, advances/partial payments/corrections, fictional SQL fixture and checker; PostgreSQL runtime NOT EXECUTED, no deployment or Flutter changes"
 "D12-T02","2","12","Build employee directory and profile","TODO","Day 11 prerequisite checks",""
 "D12-T03","2","12","Generate fixed-salary payroll","TODO","Day 11 prerequisite checks",""
 "D12-T04","2","12","Add manual adjustments with reasons","TODO","Day 11 prerequisite checks",""

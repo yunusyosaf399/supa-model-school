@@ -4,7 +4,7 @@ Date: 2026-11-16
 
 ## Verified
 - [x] **Current live status verified 2026-11-16:** DB01 foundation and DB02 restricted admissions **baseline deployed** (27 public tables with RLS); one school/campus, no student/enrollment data. Archived notes below claiming public school tables were empty predate these migrations.
-- [x] **Schema-first policy:** DB01/DB02 baseline deployed; DB03 [draft PR #25](https://github.com/yunusyosaf399/supa-model-school/pull/25) and DB04 [stacked draft PR #26](https://github.com/yunusyosaf399/supa-model-school/pull/26) are **authored, not deployed**. No Flutter code or new live SQL in this workstream. **5 full schema domains remain to design (DB05–DB09); 7 remain to deploy (DB03–DB09).**
+- [x] **Schema-first policy:** DB01/DB02 baseline deployed; DB03 [draft PR #25](https://github.com/yunusyosaf399/supa-model-school/pull/25), DB04 [draft PR #26](https://github.com/yunusyosaf399/supa-model-school/pull/26), and DB05 [draft PR #29](https://github.com/yunusyosaf399/supa-model-school/pull/29) are **authored, not deployed**. No Flutter source or new hosted SQL. **4 full schema domains remain to design (DB06–DB09); 7 remain undeployed (DB03–DB09).**
 - [x] Supabase project `uebzvfzpbqqttbqyxxos` created in SUPA MODEL SCHOOL connection, ap-south-1; status ACTIVE_HEALTHY.
 - [x] Private GitHub repository `yunusyosaf399/supa-model-school` exists, push permission confirmed.
 - [x] README, Flutter Android/Windows project, UI preview source, schema drafts, test runbooks and task documentation committed; no GitHub Actions in use.
@@ -13,7 +13,7 @@ Date: 2026-11-16
 - [x] Machine-readable 114-task tracker is committed.
 
 ## Current count
-**27 complete, 86 pending, 1 in progress, 0 blocked (total 114).**
+**28 complete, 85 pending, 1 in progress, 0 blocked (total 114).**
 
 ## Remaining verification gates
 - User reported a successful Windows Flutter build and passing tests on 2026-11-15, after the admission wizard constructor fix. Logs not supplied for independent verification. Android build and explicit Flutter analyzer evidence remain pending; D02-T02 remains TODO.
@@ -236,3 +236,11 @@ Date: 2026-11-16
 - Admissions New Screen still preserves the draft and 6-stage form, but now receives shell global search callback, verified campus context, and module navigation callback; Search is 46px-high with the Dashboard's shape/spacing and Ctrl+K hint; school campus dropdown is authorized and functional.
 - Desktop Admissions sidebar items now actually navigate after a discard confirmation, back to the existing shell page rather than opening another disconnected shell. Notifications show explicit not-configured notice; account Settings and return function. No DB/auth changes.
 - Added widget regression source for dark theme, global search and module navigation. No Flutter SDK in assistant environment to run analyze/tests/build. Full runbook `docs/32_SHARED_THEME_ADMISSION_NAVIGATION.md`.
+
+## 2026-11-16 — DB05 Employees/Payroll Schema Design, NOT deployed
+- Created stacked [draft PR #29](https://github.com/yunusyosaf399/supa-model-school/pull/29) based on DB04 PR #26 and DB03 PR #25. NO Flutter/Dart code or Supabase hosted SQL changes.
+- Authored `supabase/drafts/DB05_EMPLOYEES_PAYROLL_SCHEMA.sql` with 20 RLS-denied tables, school-contained employee/department/position IDs, effective-dated multi-campus assignments, real Auth-linked teacher assignments, approved salary structures/components, school-wide unique monthly salary entries, leave, cost-center splits, immutable partial payments, adjustments, advances, repayments and reversal evidence. Ten immutable UPDATE/DELETE triggers plus ten TRUNCATE guards.
+- Authored fictional local rollback-only SQL fixture, static source checker, design note `docs/34_DB05_EMPLOYEES_PAYROLL_DESIGN.md`, local test runbook and updated `planning/SCHEMA_TRACKER.csv` and schema roadmap.
+- **GitHub source readback: 22 targeted structure checks PASSED.** PostgreSQL syntax/DDL, actual RLS, parallel salary payments, aggregate salary/advance balance locks, bank/cash DB06 movements, Auth teacher/HR roles and approved payroll posting **not executed/implemented**. Do not treat the D12-T01 source completion as end-to-end payroll readiness.
+- Nine core schema domains: 2 baseline deployed (DB01/DB02), 3 source drafted and UNDEPLOYED (DB03–DB05), **4 remaining to design (DB06–DB09), 7 awaiting deployment (DB03–DB09)**. Overall tracker 28 DONE / 85 TODO / 1 IN_PROGRESS / 0 BLOCKED (114).
+- Next schema-only task: **DB06 Financial Accounts, Cash/Bank Movements, Transfers, Expenses and Cash Closings.**

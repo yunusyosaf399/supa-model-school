@@ -1,10 +1,10 @@
 # Development task tracker
 
 Last verified: 2026-11-16.
-**114 tasks: 27 DONE / 86 TODO / 1 IN_PROGRESS / 0 BLOCKED.**
+**114 tasks: 28 DONE / 85 TODO / 1 IN_PROGRESS / 0 BLOCKED.**
 Authoritative machine-readable status: [tasks.csv](tasks.csv).
 
-**Important:** D03-T03–T05 and D04-T01–T04 are DONE for code authoring/static source review only. The user reports Windows Flutter tests and build passed on 2026-11-15; logs were not independently inspected. Schema-first design is now prioritized: DB03 PR #25 is NOT deployed, and no Flutter changes are planned in this workstream. Android runtime, Flutter analyzer evidence, PostgreSQL RLS/Edge, offline security, and hosted deployment remain unfinished.
+**Important:** D03-T03–T05 and D04-T01–T04 are DONE for code authoring/static source review only. The user reports Windows Flutter tests and build passed on 2026-11-15; logs were not independently inspected. Schema-first design is now prioritized: DB03 PR #25, DB04 PR #26, and DB05 PR #29 remain DRAFT and NOT deployed, and no Flutter changes are planned in this workstream. Android runtime, Flutter analyzer evidence, PostgreSQL RLS/Edge, offline security, and hosted deployment remain unfinished.
 
 ## Setup
 - [x] `SETUP-01` Identify Supabase link and organization — **DONE**
@@ -95,7 +95,7 @@ Authoritative machine-readable status: [tasks.csv](tasks.csv).
 - [ ] `D11-T05` Build monthly attendance report — **TODO**
 
 ## Day 12 — Week 2
-- [ ] `D12-T01` Implement employee/campus assignment schema — **TODO**
+- [x] `D12-T01` Author DB05 employee/campus/teaching assignment and payroll schema — **DONE (source only)**
 - [ ] `D12-T02` Build employee directory and profile — **TODO**
 - [ ] `D12-T03` Generate fixed-salary payroll — **TODO**
 - [ ] `D12-T04` Add manual adjustments with reasons — **TODO**
