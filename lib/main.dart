@@ -352,6 +352,19 @@ class _SchoolShellState extends State<_SchoolShell> {
     ],
   );
 
+  Widget _settingsAppearance() => Material(
+    color: Theme.of(context).colorScheme.surface,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(children: [
+        const Icon(Icons.contrast_outlined),
+        const SizedBox(width: 12),
+        const Expanded(child: Text('Appearance — System, Light or Dark')),
+        _themeMenu(),
+      ]),
+    ),
+  );
+
   void _openMore() {
     showModalBottomSheet<void>(
       context: context,
@@ -592,95 +605,22 @@ class _SchoolShellState extends State<_SchoolShell> {
     };
 
     return Scaffold(
-      // Dashboard controls are rendered inside DashboardPage. The desktop
-      // window already has its own native titlebar, so no second teal AppBar.
-      // Other modules retain the normal Flutter toolbar.
-      appBar: selected == 0 ? null
-          : AppBar(
-        titleSpacing: 14,
-        title: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (desktop) ...[
-            const SchoolMark(size: 35),
-            const SizedBox(width: 8),
-          ],
-          const Flexible(child: Text('Supa Model School',
-            overflow: TextOverflow.ellipsis)),
-        ]),
-        actions: [
-          if (owner != null)
-            PopupMenuButton<String>(
-              key: const Key('owner-campus-selector'),
-              tooltip: 'Authorized campus',
-              icon: const Icon(Icons.location_city_outlined),
-              onSelected: (id) => setState(() => activeCampusId = id),
-              itemBuilder: (_) => [
-                for (final campus in owner.campuses)
-                  PopupMenuItem(value: campus.id, child: Text(campus.name)),
-              ],
-            ),
-          IconButton(
-            key: const Key('open-global-search'),
-            tooltip: 'Global search',
-            onPressed: _showGlobalSearch,
-            icon: const Icon(Icons.search),
-          ),
-          IconButton(
-            tooltip: 'Notifications (preview)',
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text(
-                'Notifications are not connected to live data yet.',
-              )),
-            ),
-            icon: const Icon(Icons.notifications_outlined),
-          ),
-          PopupMenuButton<String>(
-            tooltip: 'Account',
-            onSelected: (v) {
-              if (v == 'exit') widget.onExit();
-            },
-            itemBuilder: (_) => [
-              PopupMenuItem(value: 'exit',
-                  child: Text(owner == null ? 'Exit demo' : 'Sign out')),
-            ],
-            icon: const Icon(Icons.account_circle_outlined),
-          ),
-        ],
-      ),
-
-      body: Column(children: [
-        if (selected == 10)
-          Material(
-            color: Theme.of(context).colorScheme.surface,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(children: [
-                const Icon(Icons.contrast_outlined),
-                const SizedBox(width: 12),
-                const Expanded(child: Text('Appearance — System, Light or Dark')),
-                _themeMenu(),
-              ]),
-            ),
-          ),
-        if (owner != null && selected != 0)
-          Container(
-            width: double.infinity,
-            color: Theme.of(context).colorScheme.primaryContainer,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Text(
-              'Verified Owner: ${owner.displayName} • '
-              '${owner.schoolName} • ${activeCampus?.name ?? 'No campus'}'
-              '   |   Only deployed modules have live data.',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
-        Expanded(child: desktop
+      // The shell keeps one permanent sidebar. Changing modules replaces
+      // only the right-hand content pane; no shared header/AppBar is added.
+      appBar: null,
+      body: desktop
           ? Row(children: [
               _desktopSidebar(extended),
               const VerticalDivider(width: 1),
-              Expanded(child: content),
+              Expanded(child: Column(children: [
+                if (selected == 10) _settingsAppearance(),
+                Expanded(child: content),
+              ])),
             ])
-          : content),
-      ]),
+          : Column(children: [
+              if (selected == 10) _settingsAppearance(),
+              Expanded(child: content),
+            ]),
       bottomNavigationBar: desktop
           ? (selected == 0 ? _dashboardFooter() : null)
           : selected == 0
