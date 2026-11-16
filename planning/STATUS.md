@@ -4,7 +4,7 @@ Date: 2026-11-16
 
 ## Verified
 - [x] **Current live status verified 2026-11-16:** DB01 foundation and DB02 restricted admissions **baseline deployed** (27 public tables with RLS); one school/campus, no student/enrollment data. Archived notes below claiming public school tables were empty predate these migrations.
-- [x] **Schema-first policy:** DB01/DB02 baseline deployed; DB03 [draft PR #25](https://github.com/yunusyosaf399/supa-model-school/pull/25), DB04 [draft PR #26](https://github.com/yunusyosaf399/supa-model-school/pull/26), and DB05 [draft PR #29](https://github.com/yunusyosaf399/supa-model-school/pull/29) are **authored, not deployed**. No Flutter source or new hosted SQL. **4 full schema domains remain to design (DB06–DB09); 7 remain undeployed (DB03–DB09).**
+- [x] **Schema-first policy:** DB01/DB02 baseline deployed; DB03 [draft PR #25](https://github.com/yunusyosaf399/supa-model-school/pull/25), DB04 [draft PR #26](https://github.com/yunusyosaf399/supa-model-school/pull/26), DB05 [draft PR #29](https://github.com/yunusyosaf399/supa-model-school/pull/29), and DB06 [draft PR #30](https://github.com/yunusyosaf399/supa-model-school/pull/30) are **authored as source, not deployed**. No Flutter code or new live SQL in the schema-design workstream. **3 full domains remain to design (DB07–DB09); 7 still await deployment (DB03–DB09).**
 - [x] Supabase project `uebzvfzpbqqttbqyxxos` created in SUPA MODEL SCHOOL connection, ap-south-1; status ACTIVE_HEALTHY.
 - [x] Private GitHub repository `yunusyosaf399/supa-model-school` exists, push permission confirmed.
 - [x] README, Flutter Android/Windows project, UI preview source, schema drafts, test runbooks and task documentation committed; no GitHub Actions in use.
@@ -13,7 +13,7 @@ Date: 2026-11-16
 - [x] Machine-readable 114-task tracker is committed.
 
 ## Current count
-**28 complete, 85 pending, 1 in progress, 0 blocked (total 114).**
+**31 complete, 82 pending, 1 in progress, 0 blocked (total 114).**
 
 ## Remaining verification gates
 - User reported a successful Windows Flutter build and passing tests on 2026-11-15, after the admission wizard constructor fix. Logs not supplied for independent verification. Android build and explicit Flutter analyzer evidence remain pending; D02-T02 remains TODO.
@@ -244,3 +244,12 @@ Date: 2026-11-16
 - **GitHub source readback: 22 targeted structure checks PASSED.** PostgreSQL syntax/DDL, actual RLS, parallel salary payments, aggregate salary/advance balance locks, bank/cash DB06 movements, Auth teacher/HR roles and approved payroll posting **not executed/implemented**. Do not treat the D12-T01 source completion as end-to-end payroll readiness.
 - Nine core schema domains: 2 baseline deployed (DB01/DB02), 3 source drafted and UNDEPLOYED (DB03–DB05), **4 remaining to design (DB06–DB09), 7 awaiting deployment (DB03–DB09)**. Overall tracker 28 DONE / 85 TODO / 1 IN_PROGRESS / 0 BLOCKED (114).
 - Next schema-only task: **DB06 Financial Accounts, Cash/Bank Movements, Transfers, Expenses and Cash Closings.**
+
+## 2026-11-16 — DB06 cashbook/finance double-entry schema design (NO deployment)
+- Created [stacked draft PR #30](https://github.com/yunusyosaf399/supa-model-school/pull/30), based on DB05 PR #29 → DB04 PR #26 → DB03 PR #25. No Flutter code or hosted Supabase SQL changes.
+- Authored `supabase/drafts/DB06_FINANCE_CASHBOOK_SCHEMA.sql`: 20 deny-by-default RLS tables, 11 private trigger functions, 43 triggers including 2 deferred balanced/source-linked journal constraints, chart-of-accounts, per-campus physical cash/bank asset accounts, fee + payroll accrual and cash source links, expense claims/postings, inter-campus transfers, Owner equity capital, opening balances, cash closings and bank statement reconciliation.
+- Deferred commit checks require journals with >=2 lines, balanced debit/credit and a typed same-school source. Txid guards prohibit later journal-line/source injection. Full posted evidence immutable; cash closing cannot finalize with unsynced pending operations; final bank reconciliation validates statement lines/account amounts. Note that DB03/DB05 amount reconciliation and owner-approved posting need future trusted server RPC and concurrency tests.
+- Authored fictional local rollback-only SQL fixture, Python static checker, `docs/35_DB06_FINANCE_CASHBOOK_DESIGN.md` and `supabase/drafts/DB06_FINANCE_RUNBOOK.md`. **GitHub source readback 23/23 checks PASSED**, but PostgreSQL parser/schema integration, real RLS and concurrent postings **NOT RUN**.
+- Updated domain tracker and schema roadmap. Project task statuses D13-T04, D14-T01 and D18-T01 marked DONE for SQL **source authoring only**. Full expense posting, account transfers and close approval workflow remain TODO for later.
+- **Schema count:** 9 domains total; 2 baseline deployed (DB01/DB02), 4 new domain designs source authored and undeployed (DB03–DB06), **3 full domains remain to design (DB07–DB09)**; 7 await deployment (DB03–DB09). Project implementation: 31 DONE / 82 TODO / 1 IN_PROGRESS / 0 BLOCKED of 114.
+- Next schema-only task: **DB07 — Canteen, Uniform Production, Inventory and Transport/Vehicle Records**. Then DB08 Approvals/Audit and DB09 Sync/Backup/Reporting. No new live deployment or Flutter code until all designs are reviewed and locally tested.

@@ -1,10 +1,10 @@
 # Development task tracker
 
 Last verified: 2026-11-16.
-**114 tasks: 28 DONE / 85 TODO / 1 IN_PROGRESS / 0 BLOCKED.**
+**114 tasks: 31 DONE / 82 TODO / 1 IN_PROGRESS / 0 BLOCKED.**
 Authoritative machine-readable status: [tasks.csv](tasks.csv).
 
-**Important:** D03-T03–T05 and D04-T01–T04 are DONE for code authoring/static source review only. The user reports Windows Flutter tests and build passed on 2026-11-15; logs were not independently inspected. Schema-first design is now prioritized: DB03 PR #25, DB04 PR #26, and DB05 PR #29 remain DRAFT and NOT deployed, and no Flutter changes are planned in this workstream. Android runtime, Flutter analyzer evidence, PostgreSQL RLS/Edge, offline security, and hosted deployment remain unfinished.
+**Important:** D03-T03–T05 and D04-T01–T04 are DONE for code authoring/static source review only. The user reports Windows Flutter tests and build passed on 2026-11-15; logs were not independently inspected. Schema-first design is prioritized: DB03 PR #25, DB04 PR #26, DB05 PR #29 and DB06 PR #30 remain DRAFT and NOT deployed, and no Flutter changes are planned in this workstream. Android runtime, Flutter analyzer evidence, PostgreSQL RLS/Edge, offline security, and hosted deployment remain unfinished.
 
 ## Setup
 - [x] `SETUP-01` Identify Supabase link and organization — **DONE**
@@ -105,11 +105,11 @@ Authoritative machine-readable status: [tasks.csv](tasks.csv).
 - [ ] `D13-T01` Implement salary advances and recovery — **TODO**
 - [ ] `D13-T02` Build configurable payroll approval — **TODO**
 - [ ] `D13-T03` Generate salary slips — **TODO**
-- [ ] `D13-T04` Implement categorized expenses schema — **TODO**
+- [x] `D13-T04` Author categorized expenses schema — **DONE (schema source only)**
 - [ ] `D13-T05` Build expense entry and approval status — **TODO**
 
 ## Day 14 — Week 2
-- [ ] `D14-T01` Implement financial cash/bank accounts — **TODO**
+- [x] `D14-T01` Author cash/bank and double-entry ledger schema — **DONE (schema source only)**
 - [ ] `D14-T02` Implement linked account transfers — **TODO**
 - [ ] `D14-T03` Build campus cashbook list — **TODO**
 - [ ] `D14-T04` Reconcile financial transactions — **TODO**
@@ -137,7 +137,7 @@ Authoritative machine-readable status: [tasks.csv](tasks.csv).
 - [ ] `D17-T05` Test lost acknowledgment and resume — **TODO**
 
 ## Day 18 — Week 3
-- [ ] `D18-T01` Build daily closing data model — **TODO**
+- [x] `D18-T01` Author daily cash closing and adjustment data model — **DONE (schema source only)**
 - [ ] `D18-T02` Build closing/reconciliation UI — **TODO**
 - [ ] `D18-T03` Block final close with unresolved sync — **TODO**
 - [ ] `D18-T04` Add closed-day approved adjustment — **TODO**
