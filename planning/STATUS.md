@@ -1,6 +1,6 @@
 # Current development status
 
-Date: 2026-11-15
+Date: 2026-11-16
 
 ## Verified
 - [x] Supabase project `uebzvfzpbqqttbqyxxos` created in SUPA MODEL SCHOOL connection, ap-south-1; status ACTIVE_HEALTHY.
@@ -11,7 +11,7 @@ Date: 2026-11-15
 - [x] Machine-readable 114-task tracker is committed.
 
 ## Current count
-**24 complete, 89 pending, 1 in progress, 0 blocked (total 114).**
+**25 complete, 88 pending, 1 in progress, 0 blocked (total 114).**
 
 ## Remaining verification gates
 - User reported a successful Windows Flutter build and passing tests on 2026-11-15, after the admission wizard constructor fix. Logs not supplied for independent verification. Android build and explicit Flutter analyzer evidence remain pending; D02-T02 remains TODO.
@@ -113,3 +113,12 @@ Date: 2026-11-15
 - **Windows test reported by user:** Flutter tests passed and app built successfully after constructor fix. This is the user's report (not verified build logs). D02-T02 Flutter analyzer evidence and Android run remain unverified; SETUP-07 and D01-T05 updated to DONE (user-reported Windows).
 - **Correction of earlier dependency guidance:** Drift 2.32.1 is NOT compatible with the user's Dart 3.9.2 dependency resolution. [PR #10](https://github.com/yunusyosaf399/supa-model-school/pull/10) corrected to Drift 2.31.0 + sqlite3 2.x; user subsequently reported build/test success.
 - Next **D04-T04 cloud change log + cursor**, D04-T05 full offline sync integration after RLS/credential/encryption gates. D02-T04 local PostgreSQL two-campus RLS integration remains IN_PROGRESS.
+
+## Session 2026-11-16 — D04-T04 server change log and cursor source authored
+- **Source complete:** [stacked draft PR #13](https://github.com/yunusyosaf399/supa-model-school/pull/13) branches from [draft PR #12](https://github.com/yunusyosaf399/supa-model-school/pull/12), not main; change-feed SQL must never be deployed without prior D04 ingest/device credentials.
+- Added `supabase/drafts/DB04_CHANGE_FEED.sql`: private append-only RLS-protected admission event log with campus index, INSERT/UPDATE/DELETE triggers, TRUNCATE guard, latest-state backfill and global transaction-scoped advisory lock before identity-number allocation to avoid out-of-commit-order cursor skips.
+- Added `supabase/functions/offline-pull/index.ts`: verified Auth user, current campus/registered Windows device credential, bounded 1–100 page size, decimal-string `after_cursor`, lossless `change_seq`/`next_cursor`, has_more and deletion tombstone.
+- Added rollback-only SQL fixture `supabase/tests/OFFLINE_CHANGE_FEED_INTEGRATION.sql`, static checker, Edge API README, separate-session concurrency runbook and Supabase docs index.
+- **Structural GitHub source readback: 19/19 targeted assertions passed.** PostgreSQL migration/RLS tests, concurrency fixture, Deno Edge invocation, device security, local SQLite event application and cursor atomically persisted have **not been executed or implemented**. User-reported Windows Flutter UI build success does NOT validate server sync.
+- No hosted Supabase DDL changes/deployments, no GitHub Actions. Live public school tables remain uncreated pending separate verification.
+- **Next D04-T05:** authorized Windows offline vertical slice: secure device credentials, encrypted persistence, dispatch/ingest receipt, local cloud UUID mapping, event apply + cursor in one local transaction, restart/conflict and device tests. D02-T04 local PostgreSQL RLS still IN_PROGRESS.

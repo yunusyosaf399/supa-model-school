@@ -1,10 +1,10 @@
 # Development task tracker
 
-Last verified: 2026-11-15.
-**114 tasks: 24 DONE / 89 TODO / 1 IN_PROGRESS / 0 BLOCKED.**
+Last verified: 2026-11-16.
+**114 tasks: 25 DONE / 88 TODO / 1 IN_PROGRESS / 0 BLOCKED.**
 Authoritative machine-readable status: [tasks.csv](tasks.csv).
 
-**Important:** D03-T03–T05 and D04-T01–T03 are DONE for code authoring/static source review only. The user reports Windows Flutter tests and build passed on 2026-11-15; logs were not independently inspected. Android runtime, Flutter analyzer evidence, PostgreSQL RLS/Edge, offline security, and hosted deployment remain unfinished.
+**Important:** D03-T03–T05 and D04-T01–T04 are DONE for code authoring/static source review only. The user reports Windows Flutter tests and build passed on 2026-11-15; logs were not independently inspected. Android runtime, Flutter analyzer evidence, PostgreSQL RLS/Edge, offline security, and hosted deployment remain unfinished.
 
 ## Setup
 - [x] `SETUP-01` Identify Supabase link and organization — **DONE**
@@ -42,7 +42,7 @@ Authoritative machine-readable status: [tasks.csv](tasks.csv).
 - [x] `D04-T01` Author 11-table campus-scoped SQLite/Drift v1 schema and Windows database wrapper — **DONE**
 - [x] `D04-T02` Author durable UUID operation outbox and atomic local draft writes — **DONE**
 - [x] `D04-T03` Author private idempotent admission ingest schema and authenticated Edge endpoint — **DONE (source only)**
-- [ ] `D04-T04` Build server change log and cursor — **TODO**
+- [x] `D04-T04` Author commit-ordered campus admission change log and cursor pull endpoint — **DONE (source only)**
 - [ ] `D04-T05` Test assigned campus offline vertical slice — **TODO**
 
 ## Day 05 — Week 1
