@@ -43,8 +43,9 @@ class AdmissionDraft {
   String gender = 'unspecified';
   String previousSchool = '';
 
-  // These IDs are demo-only selections until DB01 campus/year/class lookup
-  // and server-side campus authorization are implemented.
+  // When the Owner has completed setup, these IDs come from authorized
+  // DB01 campus/active-year/class/section records. They are UI-only draft
+  // choices: the server must revalidate them during future DB02 submission.
   String? campusId;
   String? academicYearId;
   String? classId;
