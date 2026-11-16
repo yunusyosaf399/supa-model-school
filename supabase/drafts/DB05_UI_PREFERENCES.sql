@@ -30,12 +30,19 @@ grant select,insert,update on public.user_ui_preferences to authenticated;
 
 create policy ui_prefs_own_read on public.user_ui_preferences
   for select to authenticated
-  using (user_id = (select auth.uid()));
+  using (user_id = (select auth.uid()) and exists (
+    select 1 from public.user_profiles p
+    where p.user_id = (select auth.uid()) and p.is_active
+  ));
 
 create policy ui_prefs_own_insert on public.user_ui_preferences
   for insert to authenticated
   with check (
     user_id = (select auth.uid())
+    and exists (
+      select 1 from public.user_profiles p
+      where p.user_id = (select auth.uid()) and p.is_active
+    )
     and (
       preferred_campus_id is null
       or (select app_private.can_read_campus(preferred_campus_id))
@@ -47,6 +54,10 @@ create policy ui_prefs_own_update on public.user_ui_preferences
   using (user_id = (select auth.uid()))
   with check (
     user_id = (select auth.uid())
+    and exists (
+      select 1 from public.user_profiles p
+      where p.user_id = (select auth.uid()) and p.is_active
+    )
     and (
       preferred_campus_id is null
       or (select app_private.can_read_campus(preferred_campus_id))
