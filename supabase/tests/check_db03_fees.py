@@ -56,7 +56,7 @@ assert not re.search(
     sql_without_comments,
 ), "Floating-point/PG MONEY types are forbidden for fee amounts"
 assert len(re.findall(r"(?im)^CREATE TRIGGER \w+_immutable\b",sql)) == 10
-for item in ("UNIQUE","foreign key","discount","partial", "rollback",
+for item in ("UNIQUE","foreign_key_violation","discount","partial", "rollback",
              "CROSS CAMPUS","RLS","posted fee", "bank submission"):
     assert item.lower() in tests.lower(), f"Test evidence missing: {item}"
 assert "ROLLBACK;" in tests and "\\set ON_ERROR_STOP on" in tests
