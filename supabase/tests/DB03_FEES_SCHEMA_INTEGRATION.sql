@@ -175,6 +175,25 @@ BEGIN
   EXCEPTION WHEN unique_violation THEN NULL;
   END;
 
+  -- Original posted fee receipt remains immutable; a full reversal is
+  -- recorded separately, and the same receipt cannot be reversed twice.
+  INSERT INTO public.fee_receipt_reversals(
+    school_id,student_id,receipt_id,reversal_operation_id,
+    reason,approved_by)
+    VALUES(v_s,v_student,v_r1,
+     'aaaaaaaa-0000-4000-8000-00000000000a',
+     'Approved fictional full payment reversal',v_actor);
+  BEGIN
+    INSERT INTO public.fee_receipt_reversals(
+      school_id,student_id,receipt_id,reversal_operation_id,
+      reason,approved_by)
+      VALUES(v_s,v_student,v_r1,
+       'aaaaaaaa-0000-4000-8000-00000000000b',
+       'Invalid duplicate reversal attempt',v_actor);
+    RAISE EXCEPTION 'Duplicate full reversal accepted';
+  EXCEPTION WHEN unique_violation THEN NULL;
+  END;
+
   INSERT INTO public.fee_charge_adjustments(
     school_id,student_id,charge_id,operation_id,
     delta_minor,reason,approved_by)
