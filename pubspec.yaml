@@ -16,6 +16,8 @@ dependencies:
   drift: 2.31.0
   sqlite3: 2.9.4
   sqlite3_flutter_libs: 0.5.42
+  # Stable Supabase Flutter release supporting Dart 3.9 (no admin/secret keys in clients).
+  supabase_flutter: 2.18.3
 
 dev_dependencies:
   flutter_test:
