@@ -106,15 +106,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(repo.requests, ['campus-a/year-active']);
 
-    expect(find.text('Grade 1'), findsOneWidget);
-    await tester.ensureVisible(find.text('Class *'));
-    await tester.tap(find.text('Class *'));
+    final classSelector = find.byKey(
+      const ValueKey('class-choice-campus-a-year-active-1'),
+    );
+    expect(classSelector, findsOneWidget);
+    await tester.ensureVisible(classSelector);
+    await tester.tap(classSelector);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Grade 1').last);
     await tester.pumpAndSettle();
 
-    expect(find.text('A'), findsOneWidget);
-    expect(find.text('B'), findsOneWidget);
+    final sectionSelector =
+        find.byKey(const ValueKey('section-choice-grade-one'));
+    expect(sectionSelector, findsOneWidget);
+    await tester.ensureVisible(sectionSelector);
+    await tester.tap(sectionSelector);
+    await tester.pumpAndSettle();
+    expect(find.text('A'), findsWidgets);
+    expect(find.text('B'), findsWidgets);
     expect(repo.createCalls, 0);
     expect(find.text('Submit unavailable'), findsNothing);
   });
@@ -140,8 +149,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repo.requests, ['campus-a/year-active', 'campus-b/year-active']);
+    expect(
+        find.byKey(const ValueKey('class-choice-campus-b-year-active-1')),
+        findsOneWidget);
+    await tester.ensureVisible(
+        find.byKey(const ValueKey('class-choice-campus-b-year-active-1')));
+    await tester.tap(
+        find.byKey(const ValueKey('class-choice-campus-b-year-active-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('Grade 2'), findsWidgets);
     expect(find.text('Grade 1'), findsNothing);
-    expect(find.text('Grade 2'), findsOneWidget);
     expect(repo.createCalls, 0);
   });
 }
