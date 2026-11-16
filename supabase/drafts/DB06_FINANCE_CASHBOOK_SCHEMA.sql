@@ -8,8 +8,16 @@ BEGIN;
 
 -- Existing DB03/05 source rows need an explicit (id,school_id) UNIQUE
 -- so financial journal links can enforce the SAME SCHOOL in Postgres FKs.
+-- Link accrual facts as well as cash/bank movements so school profit is
+-- assessed once at obligation creation, not double-counted at receipt.
 ALTER TABLE public.fee_receipts ADD CONSTRAINT db06_fee_receipt_school_key
   UNIQUE (id,school_id);
+ALTER TABLE public.fee_charge_adjustments
+  ADD CONSTRAINT db06_fee_adjustment_school_key UNIQUE (id,school_id);
+ALTER TABLE public.payroll_entries
+  ADD CONSTRAINT db06_payroll_entry_school_key UNIQUE (id,school_id);
+ALTER TABLE public.payroll_adjustments
+  ADD CONSTRAINT db06_payroll_adjustment_school_key UNIQUE (id,school_id);
 ALTER TABLE public.fee_receipt_reversals
   ADD CONSTRAINT db06_fee_receipt_reversal_school_key UNIQUE (id,school_id);
 ALTER TABLE public.admission_fee_deposits
@@ -252,7 +260,8 @@ CREATE TABLE public.ledger_journals (
   period_month date NOT NULL CHECK (EXTRACT(DAY FROM period_month)=1),
   journal_date date NOT NULL,
   journal_kind text NOT NULL CHECK (journal_kind IN (
-    'fee_collection','fee_refund','salary_payment','salary_refund',
+    'fee_assessment','fee_adjustment','fee_collection','fee_refund',
+    'payroll_accrual','payroll_adjustment','salary_payment','salary_refund',
     'salary_advance','admission_deposit','expense_payment','transfer',
     'capital_in','capital_out','opening_balance','journal_reversal')),
   operation_id uuid NOT NULL,
@@ -328,6 +337,10 @@ CREATE TABLE public.ledger_source_links (
   journal_id uuid PRIMARY KEY,
   school_id uuid NOT NULL,
   journal_kind text NOT NULL,
+  fee_charge_id uuid UNIQUE,
+  fee_adjustment_id uuid UNIQUE,
+  payroll_entry_id uuid UNIQUE,
+  payroll_adjustment_id uuid UNIQUE,
   fee_receipt_id uuid UNIQUE,
   fee_receipt_reversal_id uuid UNIQUE,
   salary_payment_id uuid UNIQUE,
@@ -342,6 +355,14 @@ CREATE TABLE public.ledger_source_links (
   FOREIGN KEY (journal_id,school_id,journal_kind)
     REFERENCES public.ledger_journals(id,school_id,journal_kind)
     ON DELETE RESTRICT,
+  FOREIGN KEY (fee_charge_id,school_id)
+    REFERENCES public.fee_charges(id,school_id) ON DELETE RESTRICT,
+  FOREIGN KEY (fee_adjustment_id,school_id)
+    REFERENCES public.fee_charge_adjustments(id,school_id) ON DELETE RESTRICT,
+  FOREIGN KEY (payroll_entry_id,school_id)
+    REFERENCES public.payroll_entries(id,school_id) ON DELETE RESTRICT,
+  FOREIGN KEY (payroll_adjustment_id,school_id)
+    REFERENCES public.payroll_adjustments(id,school_id) ON DELETE RESTRICT,
   FOREIGN KEY (fee_receipt_id,school_id)
     REFERENCES public.fee_receipts(id,school_id) ON DELETE RESTRICT,
   FOREIGN KEY (fee_receipt_reversal_id,school_id)
@@ -365,10 +386,15 @@ CREATE TABLE public.ledger_source_links (
   FOREIGN KEY (reversal_id,school_id)
     REFERENCES public.ledger_reversals(id,school_id) ON DELETE RESTRICT,
   CHECK (num_nonnulls(
+    fee_charge_id,fee_adjustment_id,payroll_entry_id,payroll_adjustment_id,
     fee_receipt_id,fee_receipt_reversal_id,salary_payment_id,
     salary_payment_reversal_id,salary_advance_id,admission_deposit_id,
     expense_id,transfer_id,capital_id,opening_id,reversal_id)=1),
   CHECK (
+    (journal_kind='fee_assessment' AND fee_charge_id IS NOT NULL) OR
+    (journal_kind='fee_adjustment' AND fee_adjustment_id IS NOT NULL) OR
+    (journal_kind='payroll_accrual' AND payroll_entry_id IS NOT NULL) OR
+    (journal_kind='payroll_adjustment' AND payroll_adjustment_id IS NOT NULL) OR
     (journal_kind='fee_collection' AND fee_receipt_id IS NOT NULL) OR
     (journal_kind='fee_refund' AND fee_receipt_reversal_id IS NOT NULL) OR
     (journal_kind='salary_payment' AND salary_payment_id IS NOT NULL) OR
@@ -586,7 +612,8 @@ CREATE TABLE public.financial_operation_receipts (
   school_id uuid NOT NULL REFERENCES public.schools(id) ON DELETE RESTRICT,
   operation_id uuid NOT NULL,
   action text NOT NULL CHECK (action IN (
-    'open_account','post_fee_receipt','reverse_fee_receipt',
+    'open_account','assess_fee','adjust_fee','post_fee_receipt',
+    'reverse_fee_receipt','assess_payroll','adjust_payroll',
     'post_salary_payment','reverse_salary_payment','issue_advance',
     'post_expense','transfer_cash_bank','inject_capital',
     'withdraw_capital','post_opening_balance','reverse_journal',
