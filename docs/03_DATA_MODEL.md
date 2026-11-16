@@ -3,7 +3,7 @@
 DB01 school foundation: schools, campuses, academic_years, classes, sections, user_profiles, user_roles, principal_report_permissions, school_settings, campus_settings, registered_devices.
 DB02 admissions: students, guardians, student_guardians, admission_applications, student_documents, student_document_uploads, student_document_reviews, admission_document_deadline_events, student_enrollments, campus_transfer_requests; transfer_receivables follows only after DB03 fee charges.
 DB03 fees: fee_categories, fee_plans, fee_plan_items, student_fee_rules, fee_discounts, fee_charges, fee_receipts, fee_allocations, student_credit_entries, fee_adjustments.
-DB04 attendance: attendance_registers, student_attendance, attendance_corrections, staff_attendance, school_calendar.
+DB04 attendance: school_calendar_days, attendance_policies, attendance_duties, attendance_registers, attendance_register_events, student_attendance_marks, attendance_correction_requests, attendance_correction_decisions, staff_attendance_records, staff_attendance_correction_requests, staff_attendance_correction_decisions.
 DB05 payroll: employees, employee_assignments, salary_settings, payroll_periods, payroll_entries, payroll_adjustments, salary_advances, advance_repayments, salary_payments.
 DB06 money: financial_accounts, account_movements, account_transfers, expense_categories, expenses, capital_transactions, cash_closings, cash_closing_adjustments.
 DB07 business: canteen_products, stock_movements, canteen_sales, uniform_materials, production_batches, finished_stock_movements, uniform_sales, vehicles, vehicle_expenses.
@@ -32,3 +32,14 @@ See docs/31_SCHEMA_FIRST_ROADMAP.md. Names like DB05_UI_PREFERENCES and DB09
 Owner dashboard are smaller auxiliary works, not full completion of their
 respective payroll or sync/backup domains. Finance cash/bank movements belong
 to DB06, not the DB03 fee collection and student debt ledger.
+
+## DB04 attendance schema — design authored, NOT deployed (2026-11-16)
+The stacked DB04 draft contains 11 deny-by-default RLS tables, first-period
+and optional after-break session attendance, same-school/campus/year/class/
+section enrollment FK guards, daily teacher duties, immutable initial
+student/staff marks and approved correction event history. It depends on
+DB03's composite enrollment UNIQUE constraint. Staff user records will be
+linked to the future DB05 employee/assignment model. The currently deployed
+DB01 role constraint does not yet include a full Teacher role; the authorizing
+server RPCs are not implemented. See docs/33_DB04_ATTENDANCE_DESIGN.md.
+**5 domains remain to design (DB05–DB09), 7 remain undeployed (DB03–DB09).**
