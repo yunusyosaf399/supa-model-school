@@ -5,6 +5,7 @@ import 'features/auth/data/owner_auth_gateway.dart';
 import 'features/admissions/presentation/admission_wizard_page.dart';
 import 'features/auth/presentation/login_page.dart';
 import 'features/dashboard/presentation/dashboard_page.dart';
+import 'features/owner/presentation/owner_control_panel_page.dart';
 import 'features/students/presentation/student_directory_page.dart';
 import 'ui/school_brand.dart';
 import 'ui/school_theme.dart';
@@ -113,6 +114,11 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   themeMode: themeMode,
                   onThemeChanged: (mode) => setState(() => themeMode = mode),
                   onExit: _exitShell,
+                  onChangePassword: _gateway.changePassword,
+                  onPasswordChanged: () => setState(() {
+                    _authorized = null;
+                    _preview = false;
+                  }),
                 )
               : LoginPage(
                   themeMode: themeMode,
@@ -131,12 +137,16 @@ class _SchoolShell extends StatefulWidget {
     required this.themeMode,
     required this.onThemeChanged,
     required this.onExit,
+    required this.onChangePassword,
+    required this.onPasswordChanged,
     this.owner,
   });
   final OwnerAccess? owner;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
   final VoidCallback onExit;
+  final Future<void> Function(String, String) onChangePassword;
+  final VoidCallback onPasswordChanged;
 
   @override
   State<_SchoolShell> createState() => _SchoolShellState();
@@ -241,6 +251,13 @@ class _SchoolShellState extends State<_SchoolShell> {
     }
     if (selected == 1) {
       return StudentDirectoryPage(onNewAdmission: _newAdmission);
+    }
+    if (selected == 10 && widget.owner != null) {
+      return OwnerControlPanelPage(
+        owner: widget.owner!,
+        onChangePassword: widget.onChangePassword,
+        onPasswordChanged: widget.onPasswordChanged,
+      );
     }
     return _modulePreview();
   }
