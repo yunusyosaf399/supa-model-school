@@ -81,6 +81,18 @@ void main() {
       expect(draft.validateStep(AdmissionStep.documents, today: today), isNull);
     });
 
+    test('document deadline cannot exceed two calendar months', () {
+      final draft = AdmissionDraft()
+        ..conditionalReason = 'Waiting for certificate';
+      final today = DateTime(2026, 11, 16);
+      draft.missingDocumentsDueOn = DateTime(2027, 2, 17);
+      expect(draft.validateStep(AdmissionStep.documents, today: today),
+          contains('two calendar months'));
+      draft.missingDocumentsDueOn = DateTime(2027, 1, 16);
+      expect(draft.validateStep(AdmissionStep.documents, today: today),
+          isNull);
+    });
+
     test('review checks incomplete earlier steps', () {
       final draft = AdmissionDraft();
       expect(draft.validateStep(AdmissionStep.review),

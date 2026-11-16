@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../../academics/data/academic_structure_repository.dart';
 import '../../auth/data/owner_auth_gateway.dart';
 import '../models/admission_draft.dart';
+import '../../../ui/school_brand.dart';
 
 /// First-stage admissions UI for Windows and Android.
 ///
@@ -165,9 +167,10 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     final chosen = await showDatePicker(
       context: context,
       initialDate: _draft.missingDocumentsDueOn ??
-          currentDay.add(const Duration(days: 60)),
+          AdmissionDraft.latestConditionalDeadline(currentDay),
       firstDate: currentDay,
-      lastDate: DateTime(today.year + 3, today.month, today.day),
+      // Match deployed DB02 conditional admission rule, including month end.
+      lastDate: AdmissionDraft.latestConditionalDeadline(currentDay),
       helpText: 'Deadline for outstanding certificates',
     );
     if (!mounted || chosen == null) return;
@@ -252,180 +255,502 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     });
   }
 
+
+  static const _teal = Color(0xFF00635D);
+  static const _pale = Color(0xFFE7F5F6);
+  static const _ink = Color(0xFF193745);
+  static const _line = Color(0xFFD5E2E8);
+
+  IconData _stepIcon(AdmissionStep step) => switch (step) {
+    AdmissionStep.student => Icons.person_outline_rounded,
+    AdmissionStep.guardians => Icons.groups_outlined,
+    AdmissionStep.academic => Icons.school_outlined,
+    AdmissionStep.documents => Icons.description_outlined,
+    AdmissionStep.fees => Icons.savings_outlined,
+    AdmissionStep.review => Icons.check_rounded,
+  };
+
   @override
   Widget build(BuildContext context) {
-    final wide = MediaQuery.sizeOf(context).width >= 850;
-    return PopScope(
-      canPop: _allowExit,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) _confirmExit();
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('New Student Admission'),
-          leading: IconButton(
-            tooltip: 'Leave admission preview',
-            onPressed: _confirmExit,
-            icon: const Icon(Icons.arrow_back),
-          ),
-          actions: const [
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              child: Center(child: Text('Preview • Not saved')),
-            ),
-          ],
+    final wide = MediaQuery.sizeOf(context).width >= 1250;
+    return Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: ColorScheme.fromSeed(seedColor: _teal),
+        scaffoldBackgroundColor: const Color(0xFFF0F8FD),
+        inputDecorationTheme: InputDecorationTheme(
+          isDense: true,
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(
+              horizontal: 13, vertical: 12),
+          border: OutlineInputBorder(
+            borderSide: const BorderSide(color: _line),
+            borderRadius: BorderRadius.circular(7)),
         ),
-        body: SafeArea(
-          child: wide
-              ? Row(
-                  children: [
-                    SizedBox(width: 240, child: _stepNavigation(wide: true)),
-                    const VerticalDivider(width: 1),
-                    Expanded(child: _formScroll()),
-                  ],
-                )
-              : Column(
-                  children: [
-                    _stepNavigation(wide: false),
-                    const Divider(height: 1),
-                    Expanded(child: _formScroll()),
-                  ],
-                ),
+      ),
+      child: PopScope(
+        canPop: _allowExit,
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop) _confirmExit();
+        },
+        child: Scaffold(
+          key: const Key('admission-wizard-screen'),
+          resizeToAvoidBottomInset: true,
+          body: SafeArea(
+            child: wide ? _desktopLayout() : _mobileLayout(),
+          ),
+          bottomNavigationBar: wide ? _footerBar() : null,
         ),
       ),
     );
   }
 
-  Widget _stepNavigation({required bool wide}) {
-    final items = List.generate(AdmissionStep.values.length, (i) {
-      final step = AdmissionStep.values[i];
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-        child: wide
-            ? ListTile(
-                key: Key('step-tab-$i'),
-                leading: CircleAvatar(
-                  radius: 14,
-                  child: Text('${i + 1}'),
-                ),
-                title: Text(step.label),
-                selected: _step == i,
-                enabled: i <= _step,
-                onTap: i > _step
-                    ? null
-                    : () => setState(() {
-                          _step = i;
-                          _error = null;
-                        }),
-              )
-            : ChoiceChip(
-                key: Key('step-chip-$i'),
-                label: Text('${i + 1}. ${step.label}'),
-                selected: _step == i,
-                onSelected: i > _step
-                    ? null
-                    : (_) => setState(() {
-                          _step = i;
-                          _error = null;
-                        }),
-              ),
-      );
-    });
-
-    if (wide) {
-      return ListView(
-        padding: const EdgeInsets.all(12),
+  Widget _brandRow({bool mobile = false}) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      SchoolMark(size: mobile ? 57 : 65),
+      const SizedBox(width: 11),
+      Flexible(child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Padding(
-            padding: EdgeInsets.all(8),
-            child: Text('Admission stages',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          ...items,
+          Text('Supa Model School',
+            maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: _teal, fontWeight: FontWeight.w900,
+              fontSize: mobile ? 20 : 19)),
+          Text('School Management System',
+            maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: _ink, fontSize: mobile ? 12 : 11)),
         ],
-      );
-    }
+      )),
+    ],
+  );
 
-    return Column(
-      children: [
-        LinearProgressIndicator(
-          value: (_step + 1) / AdmissionStep.values.length,
-          minHeight: 3,
-        ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.all(8),
-          child: Row(children: items),
-        ),
-      ],
+  // The native Windows titlebar already displays the brand. Do not
+  // introduce a second dark green strip below it.
+  Widget _desktopLayout() => Row(children: [
+    _sidebar(),
+    Expanded(child: Column(children: [
+      _desktopToolbar(),
+      Expanded(child: _admissionScroll(wide: true)),
+    ])),
+  ]);
+
+  Widget _sidebar() {
+    const names = ['Dashboard', 'Students', 'Admissions', 'Fees',
+      'Attendance', 'Employees', 'Payroll', 'Expenses',
+      'Reports', 'Sync Center', 'Settings'];
+    const icons = [Icons.home_outlined, Icons.groups_outlined,
+      Icons.school_outlined, Icons.savings_outlined,
+      Icons.calendar_month_outlined, Icons.people_outline,
+      Icons.account_balance_wallet_outlined,
+      Icons.receipt_long_outlined, Icons.bar_chart_outlined,
+      Icons.sync_outlined, Icons.settings_outlined];
+    return Container(
+      key: const Key('admission-desktop-sidebar'),
+      width: 244,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(right: BorderSide(color: _line))),
+      child: Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 13, 12, 17),
+          child: Column(children: [
+            const SchoolMark(size: 68),
+            const SizedBox(height: 5),
+            const Text('Supa Model School',
+              style: TextStyle(color: _teal, fontWeight: FontWeight.w900,
+                  fontSize: 17)),
+            const Text('School Management System',
+              style: TextStyle(fontSize: 11, color: _ink)),
+            const Divider(height: 24),
+          ])),
+        Expanded(child: ListView(padding: const EdgeInsets.symmetric(
+            horizontal: 13), children: [
+          for (var i = 0; i < names.length; i++)
+            Container(
+              height: 40, margin: const EdgeInsets.only(bottom: 4),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(9),
+                gradient: i == 2 ? const LinearGradient(colors: [
+                  Color(0xFF029B8A), Color(0xFF005B55)]) : null),
+              child: Row(children: [
+                const SizedBox(width: 16),
+                Icon(icons[i], size: 21,
+                  color: i == 2 ? Colors.white : _ink),
+                const SizedBox(width: 13),
+                Text(names[i], style: TextStyle(
+                  color: i == 2 ? Colors.white : _ink,
+                  fontWeight: i == 2 ? FontWeight.w800 : FontWeight.w500,
+                  fontSize: 13)),
+              ]),
+            ),
+        ])),
+      ]),
     );
   }
 
-  Widget _formScroll() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 840),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                child: const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Admission preview only. Academic choices are '
-                          'loaded from authorized school records when signed in. '
-                          'No information is saved, uploaded or submitted.',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                '${_step + 1}. ${AdmissionStep.values[_step].label}',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
+  Widget _desktopToolbar() => Container(
+    height: 73,
+    padding: const EdgeInsets.symmetric(horizontal: 22),
+    child: Row(children: [
+      Expanded(flex: 4, child: OutlinedButton.icon(
+        onPressed: () {},
+        icon: const Icon(Icons.search_outlined),
+        label: const Align(alignment: Alignment.centerLeft,
+          child: Text('Search students, staff, invoices, etc...',
+            overflow: TextOverflow.ellipsis)),
+      )),
+      const SizedBox(width: 14),
+      _topPill(Icons.account_balance_outlined,
+          widget.owner?.campuses.isNotEmpty == true
+            ? widget.owner!.campuses.first.name : 'School / Campus'),
+      const SizedBox(width: 12),
+      _topPill(Icons.calendar_month_outlined,
+          widget.owner?.activeYearLabel ?? 'Academic Year'),
+      const SizedBox(width: 13),
+      const Icon(Icons.notifications_none_rounded, size: 26, color: _teal),
+      const SizedBox(width: 14),
+      const CircleAvatar(radius: 18,
+          child: Icon(Icons.person_outline)),
+      const SizedBox(width: 8),
+      const Flexible(child: Text('Administrator',
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+    ]),
+  );
+
+  Widget _topPill(IconData icon, String label) => Container(
+    constraints: const BoxConstraints(maxWidth: 200),
+    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+    decoration: BoxDecoration(color: Colors.white,
+      borderRadius: BorderRadius.circular(9),
+      border: Border.all(color: _line)),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, color: _teal, size: 20),
+      const SizedBox(width: 8),
+      Flexible(child: Text(label, overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 12))),
+      const Icon(Icons.keyboard_arrow_down, size: 18),
+    ]),
+  );
+
+  Widget _mobileLayout() => Column(children: [
+    Container(
+      padding: const EdgeInsets.fromLTRB(18, 9, 17, 7),
+      child: Row(children: [
+        Expanded(child: _brandRow(mobile: true)),
+        IconButton(onPressed: () {}, tooltip: 'Notifications (preview)',
+          icon: const Icon(Icons.notifications_none_rounded,
+              color: _teal, size: 26)),
+      ]),
+    ),
+    Expanded(child: _admissionScroll(wide: false)),
+    _mobileActions(),
+  ]);
+
+  Widget _admissionScroll({required bool wide}) => SingleChildScrollView(
+    key: const Key('admission-scroll'),
+    padding: EdgeInsets.fromLTRB(wide ? 24 : 16, wide ? 8 : 8,
+        wide ? 24 : 16, 20),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _pageHeading(wide),
+      SizedBox(height: wide ? 16 : 13),
+      _progress(wide),
+      const SizedBox(height: 15),
+      if (wide)
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(flex: 7, child: Column(children: [
+            _mainStepPanel(),
+            if (_step == AdmissionStep.student) ...[
               const SizedBox(height: 12),
-              if (_error != null) ...[
-                Card(
-                  color: Theme.of(context).colorScheme.errorContainer,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Text(
-                      _error!,
-                      key: const Key('admission-validation-error'),
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onErrorContainer,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-              ],
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: _stepContent(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              _actions(),
-              const SizedBox(height: 24),
+              _contactPanel(),
             ],
+          ])),
+          const SizedBox(width: 15),
+          Expanded(flex: 3, child: _sideChecklist()),
+        ])
+      else ...[
+        _mainStepPanel(),
+        if (_step == AdmissionStep.student) ...[
+          const SizedBox(height: 13),
+          _contactPanel(),
+        ],
+        const SizedBox(height: 14),
+        _mobileDocumentsChecklist(),
+      ],
+      if (wide) ...[
+        const SizedBox(height: 16),
+        _actions(),
+      ],
+    ]),
+  );
+
+  Widget _pageHeading(bool wide) => Row(children: [
+    if (!wide)
+      IconButton(
+        key: const Key('admission-back-button'),
+        onPressed: _step == 0 ? _confirmExit : _previous,
+        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+            color: _teal)),
+    Container(width: 5, height: wide ? 49 : 53,
+        decoration: BoxDecoration(
+          color: const Color(0xFF00A28E),
+          borderRadius: BorderRadius.circular(6))),
+    const SizedBox(width: 14),
+    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('New Admission', style: TextStyle(
+          color: _teal, fontSize: wide ? 31 : 29,
+          fontWeight: FontWeight.w900)),
+        Text(wide
+            ? '${widget.owner?.campuses.isNotEmpty == true
+                ? widget.owner!.campuses.first.name : 'School / Campus'} • '
+              '${widget.owner?.activeYearLabel ?? 'Academic year'}'
+            : widget.owner?.campuses.isNotEmpty == true
+              ? widget.owner!.campuses.first.name
+              : 'School / Campus',
+            maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: _ink, fontSize: 13)),
+      ])),
+    if (wide) ...[
+      OutlinedButton.icon(
+        key: const Key('admission-save-draft-disabled'),
+        onPressed: null, icon: const Icon(Icons.save_outlined),
+        label: const Text('Save Draft')),
+      const SizedBox(width: 10),
+      FilledButton.icon(
+        onPressed: null,
+        icon: const Icon(Icons.send_outlined),
+        label: const Text('Submit for Approval')),
+      const SizedBox(width: 10),
+      OutlinedButton.icon(
+        onPressed: _confirmExit,
+        icon: const Icon(Icons.close),
+        label: const Text('Cancel')),
+    ] else
+      Chip(
+        avatar: const Icon(Icons.description_outlined, color: _teal, size: 18),
+        label: const Text('Draft', style: TextStyle(
+            color: _teal, fontWeight: FontWeight.w700)),
+        backgroundColor: const Color(0xFFFFF0D4),
+        side: BorderSide.none),
+  ]);
+
+  Widget _progress(bool wide) => _surfaceCard(
+    padding: EdgeInsets.symmetric(
+      horizontal: wide ? 15 : 7, vertical: wide ? 10 : 13),
+    child: Row(children: [
+      for (var i = 0; i < AdmissionStep.values.length; i++) ...[
+        if (i > 0)
+          Expanded(child: Container(height: 2, color: i <= _step
+            ? _teal : const Color(0xFFBFD1DA))),
+        Flexible(flex: wide ? 3 : 2,
+          child: InkWell(
+            key: Key(wide ? 'step-tab-$i' : 'step-chip-$i'),
+            // Debug builds can inspect every screen independently.
+            // This does not mark any validation as passed or submit data.
+            onTap: i <= _step || kDebugMode
+              ? () => setState(() { _step = i; _error = null; })
+              : null,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              CircleAvatar(
+                radius: wide ? 18 : 23,
+                backgroundColor: i == _step
+                    ? _teal : Colors.white,
+                child: wide
+                  ? Text('${i + 1}', style: TextStyle(
+                      color: i == _step ? Colors.white : _ink,
+                      fontWeight: FontWeight.w700))
+                  : Icon(_stepIcon(AdmissionStep.values[i]),
+                      color: i == _step ? Colors.white : _teal,
+                      size: 22),
+              ),
+              const SizedBox(height: 6),
+              Text(AdmissionStep.values[i].label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                style: TextStyle(
+                  color: i == _step ? _teal : _ink,
+                  fontWeight: i == _step
+                      ? FontWeight.w800 : FontWeight.w500,
+                  fontSize: wide ? 12 : 10)),
+            ]),
+          )),
+      ],
+    ]),
+  );
+
+  Widget _surfaceCard({required Widget child,
+      EdgeInsetsGeometry padding = const EdgeInsets.all(15)}) => Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(15),
+      border: Border.all(color: _line),
+      boxShadow: const [BoxShadow(color: Color(0x10046D7B),
+        blurRadius: 11, offset: Offset(0, 4))]),
+    child: Padding(padding: padding, child: child),
+  );
+
+  Widget _panelHeading(IconData icon, String text, {String? trailing}) =>
+    Row(children: [
+      Icon(icon, color: _teal, size: 25),
+      const SizedBox(width: 10),
+      Expanded(child: Text(text, style: const TextStyle(
+        fontSize: 19, fontWeight: FontWeight.w900, color: _teal))),
+      if (trailing != null)
+        Text(trailing, style: const TextStyle(
+          fontSize: 12, color: Color(0xFF63798A))),
+    ]);
+
+  Widget _mainStepPanel() => _surfaceCard(
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _panelHeading(_stepIcon(AdmissionStep.values[_step]),
+            switch (AdmissionStep.values[_step]) {
+              AdmissionStep.student => 'Student Details',
+              AdmissionStep.guardians => 'Guardian Details',
+              AdmissionStep.academic => 'Academic Placement',
+              AdmissionStep.documents => 'Required Documents',
+              AdmissionStep.fees => 'Fee Setup',
+              AdmissionStep.review => 'Review Application',
+            }, trailing: 'Step ${_step + 1} of 6'),
+        const Divider(height: 21, color: _line),
+        if (_error != null) ...[
+          Container(
+            key: const Key('admission-validation-error'),
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFE9E7),
+              borderRadius: BorderRadius.circular(9)),
+            child: Text(_error!, style: const TextStyle(
+              color: Color(0xFFB01D24), fontWeight: FontWeight.w600))),
+          const SizedBox(height: 10),
+        ],
+        _stepContent(),
+      ]),
+  );
+
+  Widget _mobileDocumentsChecklist() => _surfaceCard(child: Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      _panelHeading(Icons.description_outlined, 'Required Documents',
+          trailing: 'Sample / preview'),
+      const Divider(height: 15, color: _line),
+      _checkRow('Birth Certificate', isRequired: true),
+      _checkRow('Guardian Identity Document'),
+      if (_draft.transferCertificateApplicable)
+        _checkRow('Transfer Certificate'),
+      const SizedBox(height: 5),
+      const Text('Uploads and verification are not enabled.',
+        style: TextStyle(fontSize: 11, color: Color(0xFF617888))),
+    ],
+  ));
+
+  Widget _checkRow(String title, {bool isRequired = false}) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Row(children: [
+      const Icon(Icons.check_box_outline_blank,
+          size: 18, color: Color(0xFF8FA6B6)),
+      const SizedBox(width: 11),
+      Expanded(child: Text(title,
+          style: const TextStyle(fontSize: 12))),
+      if (isRequired)
+        const Text('*', style: TextStyle(color: Colors.red)),
+    ]),
+  );
+
+  Widget _sideChecklist() => Column(children: [
+    _surfaceCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _panelHeading(Icons.checklist_outlined, 'Admission Checklist'),
+        const Divider(color: _line),
+        for (final item in [
+          'Birth Certificate',
+          if (_draft.transferCertificateApplicable) 'Transfer Certificate',
+          'Guardian ID',
+          'Class Placement',
+          'Fee Setup'
+        ]) _checkRow(item),
+      ])),
+    const SizedBox(height: 11),
+    _surfaceCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _panelHeading(Icons.description_outlined, 'Required Documents'),
+        const Divider(color: _line),
+        for (final item in _draft.requiredDocumentNames)
+          ListTile(
+            dense: true, contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.description_outlined,
+                color: _teal, size: 19),
+            title: Text(item, style: const TextStyle(fontSize: 12)),
+            trailing: const Text('Pending', style: TextStyle(
+              color: Color(0xFFB47713), fontSize: 11)),
           ),
+      ])),
+    const SizedBox(height: 11),
+    _surfaceCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _panelHeading(Icons.school_outlined, 'Admission Status'),
+        const Divider(color: _line),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: const Color(0xFFE2F7EE),
+            borderRadius: BorderRadius.circular(10)),
+          child: const Row(children: [
+            Icon(Icons.hourglass_top_outlined, color: _teal),
+            SizedBox(width: 10),
+            Expanded(child: Text('Draft (In Progress)',
+              style: TextStyle(color: _teal, fontWeight: FontWeight.w800))),
+          ]),
         ),
-      ),
-    );
-  }
+        const SizedBox(height: 8),
+        const Text('No application has been saved. Uploads and '
+          'verification are pending.',
+          style: TextStyle(fontSize: 12)),
+      ])),
+  ]);
+
+  Widget _mobileActions() => Container(
+    padding: const EdgeInsets.fromLTRB(15, 11, 15, 12),
+    decoration: const BoxDecoration(color: Colors.white,
+        border: Border(top: BorderSide(color: _line))),
+    child: Row(children: [
+      Expanded(child: OutlinedButton.icon(
+        key: const Key('admission-save-draft-disabled'),
+        onPressed: null,
+        icon: const Icon(Icons.save_outlined),
+        label: const Text('Save Draft'))),
+      const SizedBox(width: 11),
+      Expanded(child: _step == AdmissionStep.review
+        ? FilledButton.icon(
+            key: const Key('wizard-submit-disabled'),
+            onPressed: null,
+            icon: const Icon(Icons.lock_outline),
+            label: const Text('Submit unavailable'))
+        : FilledButton.icon(
+            key: const Key('wizard-next'),
+            onPressed: _next,
+            icon: const Icon(Icons.arrow_forward),
+            label: const Text('Next Step'))),
+    ]),
+  );
+
+  Widget _footerBar() => Container(
+    height: 39,
+    color: const Color(0xFF005653),
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    child: const Row(children: [
+      Icon(Icons.verified_user_outlined, color: Colors.white, size: 18),
+      SizedBox(width: 9),
+      Expanded(child: Text('Secure access for authorized staff only',
+        style: TextStyle(color: Colors.white, fontSize: 11))),
+      Text('Supa Model School v1.0.0',
+        style: TextStyle(color: Colors.white, fontSize: 11)),
+    ]),
+  );
 
   Widget _stepContent() => switch (AdmissionStep.values[_step]) {
         AdmissionStep.student => _studentFields(),
@@ -436,228 +761,439 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         AdmissionStep.review => _reviewFields(),
       };
 
-  Widget _studentFields() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text('Student identity', style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 16),
-        TextFormField(
-          key: const Key('student-name'),
-          initialValue: _draft.studentName,
-          maxLength: 200,
-          decoration: const InputDecoration(
-            labelText: 'Student full name *',
-            border: OutlineInputBorder(),
-          ),
-          textCapitalization: TextCapitalization.words,
-          onChanged: (value) => _draft.studentName = value,
-        ),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          key: const Key('date-of-birth'),
-          onPressed: _chooseBirthDate,
-          icon: const Icon(Icons.calendar_today_outlined),
-          label: Text('Date of birth *: ${_dateLabel(_draft.dateOfBirth)}'),
-        ),
-        const SizedBox(height: 16),
-        _choice(
-          label: 'Gender (optional)',
-          current: _draft.gender,
-          choices: const {
-            'unspecified': 'Prefer not to say',
-            'male': 'Male',
-            'female': 'Female',
-            'other': 'Other',
-          },
-          onChanged: (value) => setState(() => _draft.gender = value!),
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          key: const Key('previous-school'),
-          initialValue: _draft.previousSchool,
-          maxLength: 200,
-          decoration: const InputDecoration(
-            labelText: 'Previous school (if applicable)',
-            helperText: 'Determines whether a transfer/leaving certificate is required.',
-            border: OutlineInputBorder(),
-          ),
-          onChanged: (value) => _draft.previousSchool = value,
-        ),
-      ],
-    );
-  }
 
-  Widget _guardianFields() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text('Parent or guardian contacts',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        const Text('Exactly one primary guardian is required for submission. '
-            'A guardian may later be linked to several siblings.'),
-        const SizedBox(height: 14),
-        for (var i = 0; i < _draft.guardians.length; i++)
-          _guardianCard(i, _draft.guardians[i]),
-        const SizedBox(height: 8),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: FilledButton.tonalIcon(
-            onPressed: _draft.guardians.length >= 8
-                ? null
-                : () => setState(() => _draft.guardians.add(
-                      GuardianDraft(localId: _nextGuardianId++),
-                    )),
-            icon: const Icon(Icons.person_add_alt),
-            label: const Text('Add another guardian'),
-          ),
-        ),
-      ],
-    );
-  }
+  Widget _styledField({
+    required String label,
+    required IconData icon,
+    required ValueChanged<String> onChanged,
+    String initialValue = '',
+    Key? key,
+    String? hint,
+    bool isRequired = false,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+  }) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Row(children: [
+      Icon(icon, color: _teal, size: 17),
+      const SizedBox(width: 7),
+      Flexible(child: Text(label,
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
+          color: _ink))),
+      if (isRequired) const Text(' *', style: TextStyle(color: Colors.red)),
+    ]),
+    const SizedBox(height: 6),
+    TextFormField(
+      key: key, initialValue: initialValue,
+      onChanged: onChanged, maxLines: maxLines,
+      keyboardType: keyboardType,
+      textCapitalization: TextCapitalization.sentences,
+      decoration: InputDecoration(
+        hintText: hint,
+        border: const OutlineInputBorder()),
+    ),
+  ]);
 
-  Widget _guardianCard(int index, GuardianDraft guardian) {
-    return Card.outlined(
-      key: ValueKey('guardian-${guardian.localId}'),
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(child: Text('Guardian ${index + 1}',
-                    style: const TextStyle(fontWeight: FontWeight.bold))),
-                if (_draft.guardians.length > 1)
-                  IconButton(
-                    key: Key('remove-guardian-${guardian.localId}'),
-                    tooltip: 'Remove guardian',
-                    onPressed: () => setState(() => _draft.guardians.removeAt(index)),
-                    icon: const Icon(Icons.delete_outline),
-                  ),
-              ],
-            ),
-            TextFormField(
-              key: Key('guardian-name-${guardian.localId}'),
-              initialValue: guardian.fullName,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Full name *',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) => guardian.fullName = v,
-            ),
-            const SizedBox(height: 12),
-            _choice(
-              label: 'Relationship',
-              current: guardian.relationship,
-              choices: const {
-                'father': 'Father',
-                'mother': 'Mother',
-                'guardian': 'Guardian',
-                'other': 'Other',
-              },
-              onChanged: (v) => setState(() => guardian.relationship = v!),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              key: Key('guardian-phone-${guardian.localId}'),
-              initialValue: guardian.phone,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                labelText: guardian.isPrimary
-                    ? 'Primary guardian phone *'
-                    : 'Phone number',
-                border: const OutlineInputBorder(),
-              ),
-              onChanged: (v) => guardian.phone = v,
-            ),
-            CheckboxListTile(
-              title: const Text('Primary contact'),
-              contentPadding: EdgeInsets.zero,
-              value: guardian.isPrimary,
-              onChanged: (selected) => setState(() {
-                if (selected ?? false) {
-                  for (final g in _draft.guardians) {
-                    g.isPrimary = identical(g, guardian);
-                  }
-                } else {
-                  guardian.isPrimary = false;
-                }
-              }),
-            ),
-            CheckboxListTile(
-              title: const Text('Legal guardian'),
-              contentPadding: EdgeInsets.zero,
-              value: guardian.isLegalGuardian,
-              onChanged: (selected) =>
-                  setState(() => guardian.isLegalGuardian = selected ?? false),
-            ),
-          ],
-        ),
+  Widget _styledChoice({
+    required String label,
+    required IconData icon,
+    required String? current,
+    required Map<String, String> options,
+    required ValueChanged<String?> onChanged,
+    bool isRequired = false,
+  }) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Row(children: [
+      Icon(icon, color: _teal, size: 17),
+      const SizedBox(width: 7),
+      Text(label, style: const TextStyle(fontSize: 12,
+        fontWeight: FontWeight.w700, color: _ink)),
+      if (isRequired) const Text(' *', style: TextStyle(color: Colors.red)),
+    ]),
+    const SizedBox(height: 6),
+    _choice(label: 'Choose $label', current: current,
+      choices: options, onChanged: onChanged),
+  ]);
+
+  Widget _dobField() => Column(crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Row(children: [
+        Icon(Icons.calendar_month_outlined, size: 17, color: _teal),
+        SizedBox(width: 7),
+        Text('Date of Birth', style: TextStyle(fontSize: 12,
+          fontWeight: FontWeight.w700, color: _ink)),
+        Text(' *', style: TextStyle(color: Colors.red)),
+      ]),
+      const SizedBox(height: 6),
+      SizedBox(height: 43, child: OutlinedButton.icon(
+        key: const Key('date-of-birth'),
+        onPressed: _chooseBirthDate,
+        icon: const Icon(Icons.calendar_today_outlined, size: 17),
+        label: Text(_dateLabel(_draft.dateOfBirth),
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 12)),
+      )),
+    ]);
+
+  Widget _photoPlaceholder() => Tooltip(
+    message: 'Photo uploads require the private admission upload service.',
+    child: Container(
+      key: const Key('admission-photo-placeholder'),
+      width: 140, height: 134,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFFEDFAF6),
+        border: Border.all(color: const Color(0xFFABDCD0),
+          style: BorderStyle.solid)),
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.cloud_upload_outlined, size: 35, color: _teal),
+          SizedBox(height: 8),
+          Text('Photo Upload', style: TextStyle(
+            fontWeight: FontWeight.w800, color: _teal, fontSize: 12)),
+          SizedBox(height: 4),
+          Text('Coming soon\nJPG, PNG • max 2 MB',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 10, color: Color(0xFF587481))),
+        ],
       ),
-    );
-  }
+    ),
+  );
 
-  Widget _academicFields() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text('Class and campus allocation',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        if (!_academicReady) ...[
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(12),
-              child: Text('No authorized academic options are available. '
-                  'Sign in as Owner, complete school setup, and create '
-                  'classes and sections before selecting a placement.'),
-            ),
-          ),
-        ] else ...[
-          const Text('The options below come from your school database. '
-              'Only the active academic year is available for new admissions.'),
-          const SizedBox(height: 16),
-          _choice(
+  Widget _studentFields() => LayoutBuilder(builder: (context, constraints) {
+    final wide = constraints.maxWidth >= 660;
+    final name = _styledField(
+      key: const Key('student-name'), label: 'Full Name',
+      icon: Icons.person_outline, isRequired: true,
+      hint: 'Student full name', initialValue: _draft.studentName,
+      onChanged: (v) => _draft.studentName = v);
+    final date = _dobField();
+    final gender = _styledChoice(
+      label: 'Gender', icon: Icons.groups_outlined,
+      current: _draft.gender,
+      options: const {
+        'unspecified': 'Prefer not to say',
+        'male': 'Male', 'female': 'Female', 'other': 'Other',
+      },
+      onChanged: (v) => setState(() => _draft.gender = v ?? 'unspecified'));
+    final previous = _styledField(
+      key: const Key('previous-school'),
+      label: 'Previous School', icon: Icons.account_balance_outlined,
+      hint: 'Previous school (if applicable)',
+      initialValue: _draft.previousSchool,
+      onChanged: (v) => setState(() => _draft.previousSchool = v));
+    final nationality = _styledField(
+      label: 'Nationality', icon: Icons.flag_outlined,
+      hint: 'Nationality', initialValue: _draft.nationality,
+      onChanged: (v) => _draft.nationality = v);
+    final religion = _styledField(
+      label: 'Religion (optional)', icon: Icons.account_balance_outlined,
+      hint: 'Optional', initialValue: _draft.religion,
+      onChanged: (v) => _draft.religion = v);
+    final language = _styledField(
+      label: 'Primary Language', icon: Icons.translate_outlined,
+      hint: 'e.g. English / Urdu',
+      initialValue: _draft.primaryLanguage,
+      onChanged: (v) => _draft.primaryLanguage = v);
+    final notes = _styledField(
+      label: 'Notes (Optional)', icon: Icons.notes_outlined,
+      maxLines: 2, initialValue: _draft.notes,
+      hint: 'Additional student information',
+      onChanged: (v) => _draft.notes = v);
+
+    if (wide) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(flex: 7, child: Column(children: [
+            Row(children: [
+              Expanded(flex: 2, child: name),
+              const SizedBox(width: 12),
+              Expanded(child: date),
+            ]),
+            const SizedBox(height: 13),
+            Row(children: [
+              Expanded(child: gender),
+              const SizedBox(width: 12),
+              Expanded(flex: 2, child: previous),
+            ]),
+          ])),
+          const SizedBox(width: 15),
+          _photoPlaceholder(),
+        ]),
+        const SizedBox(height: 13),
+        Row(children: [
+          Expanded(child: nationality),
+          const SizedBox(width: 12),
+          Expanded(child: religion),
+          const SizedBox(width: 12),
+          Expanded(child: language),
+        ]),
+        const SizedBox(height: 13),
+        notes,
+      ]);
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(width: 108, child: _photoPlaceholder()),
+        const SizedBox(width: 13),
+        Expanded(child: name),
+      ]),
+      const SizedBox(height: 14),
+      Row(children: [
+        Expanded(child: date),
+        const SizedBox(width: 12),
+        Expanded(child: gender),
+      ]),
+      const SizedBox(height: 14),
+      previous,
+      const SizedBox(height: 14),
+      Row(children: [
+        Expanded(child: nationality),
+        const SizedBox(width: 12),
+        Expanded(child: religion),
+      ]),
+      const SizedBox(height: 14),
+      language,
+      const SizedBox(height: 14),
+      notes,
+    ]);
+  });
+
+  Widget _contactPanel() => _surfaceCard(child: Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      _panelHeading(Icons.perm_contact_calendar_outlined,
+          'Contact / Identity Information'),
+      const Divider(height: 20, color: _line),
+      LayoutBuilder(builder: (context, c) {
+        final wide = c.maxWidth > 560;
+        final birth = _styledField(
+          label: 'Birth Certificate No.', icon: Icons.description_outlined,
+          initialValue: _draft.birthCertificateNumber,
+          onChanged: (v) => _draft.birthCertificateNumber = v);
+        final identity = _styledField(
+          label: 'B-Form / Identity No. (if applicable)',
+          icon: Icons.badge_outlined, initialValue: _draft.identityNumber,
+          onChanged: (v) => _draft.identityNumber = v);
+        return Column(children: [
+          if (wide)
+            Row(children: [
+              Expanded(child: birth), const SizedBox(width: 12),
+              Expanded(child: identity),
+            ])
+          else ...[
+            birth, const SizedBox(height: 12), identity,
+          ],
+          const SizedBox(height: 12),
+          _styledField(label: 'Address', icon: Icons.location_on_outlined,
+            initialValue: _draft.address,
+            onChanged: (v) => _draft.address = v),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(child: _styledField(
+              label: 'City', icon: Icons.location_city_outlined,
+              initialValue: _draft.city,
+              onChanged: (v) => _draft.city = v)),
+            const SizedBox(width: 12),
+            Expanded(child: _styledField(
+              label: 'Emergency Contact', icon: Icons.call_outlined,
+              keyboardType: TextInputType.phone,
+              initialValue: _draft.emergencyContact,
+              onChanged: (v) => _draft.emergencyContact = v)),
+          ]),
+        ]);
+      }),
+    ]),
+  );
+
+  Widget _guardianFields() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const Text('Parent / Guardian Information',
+        style: TextStyle(color: _teal, fontWeight: FontWeight.w800,
+          fontSize: 15)),
+      const SizedBox(height: 6),
+      const Text('One primary contact is required. Other guardians can '
+        'be added for the same student.',
+        style: TextStyle(color: Color(0xFF5A7382), fontSize: 12)),
+      const SizedBox(height: 14),
+      for (var i = 0; i < _draft.guardians.length; i++)
+        _guardianCard(i, _draft.guardians[i]),
+      const SizedBox(height: 4),
+      Align(alignment: Alignment.centerLeft, child:
+        OutlinedButton.icon(
+          key: const Key('admission-add-guardian'),
+          onPressed: _draft.guardians.length >= 8
+            ? null : () => setState(() {
+                _draft.guardians.add(
+                  GuardianDraft(localId: _nextGuardianId++));
+              }),
+          icon: const Icon(Icons.person_add_alt_1_outlined),
+          label: const Text('Add Another Guardian'),
+        )),
+    ],
+  );
+
+  Widget _guardianCard(int index, GuardianDraft guardian) => Container(
+    key: ValueKey('guardian-${guardian.localId}'),
+    margin: const EdgeInsets.only(bottom: 12),
+    padding: const EdgeInsets.all(13),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF8FCFF),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: _line)),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [
+        const Icon(Icons.groups_outlined, color: _teal),
+        const SizedBox(width: 8),
+        Expanded(child: Text('Guardian ${index + 1}',
+          style: const TextStyle(color: _teal,
+            fontWeight: FontWeight.w800, fontSize: 15))),
+        if (_draft.guardians.length > 1)
+          IconButton(
+            tooltip: 'Remove guardian',
+            key: Key('remove-guardian-${guardian.localId}'),
+            onPressed: () => setState(
+              () => _draft.guardians.removeAt(index)),
+            icon: const Icon(Icons.delete_outline, color: Colors.redAccent)),
+      ]),
+      const SizedBox(height: 12),
+      _styledField(
+        key: Key('guardian-name-${guardian.localId}'),
+        label: 'Full Name', isRequired: true,
+        icon: Icons.person_outline,
+        initialValue: guardian.fullName,
+        onChanged: (v) => guardian.fullName = v),
+      const SizedBox(height: 12),
+      LayoutBuilder(builder: (context, bounds) {
+        final relationship = _styledChoice(
+          label: 'Relationship', icon: Icons.people_outline,
+          current: guardian.relationship,
+          options: const {
+            'father': 'Father', 'mother': 'Mother',
+            'guardian': 'Guardian', 'other': 'Other',
+          },
+          onChanged: (v) => setState(
+            () => guardian.relationship = v ?? 'guardian'));
+        final phone = _styledField(
+          key: Key('guardian-phone-${guardian.localId}'),
+          label: guardian.isPrimary
+              ? 'Primary Guardian Phone' : 'Phone Number',
+          icon: Icons.call_outlined,
+          isRequired: guardian.isPrimary,
+          keyboardType: TextInputType.phone,
+          initialValue: guardian.phone,
+          onChanged: (v) => guardian.phone = v);
+        return bounds.maxWidth >= 440
+          ? Row(children: [
+              Expanded(child: relationship),
+              const SizedBox(width: 12),
+              Expanded(child: phone),
+            ])
+          : Column(children: [
+              relationship, const SizedBox(height: 12), phone,
+            ]);
+      }),
+      const SizedBox(height: 7),
+      Wrap(spacing: 10, runSpacing: 0, children: [
+        SizedBox(width: 210, child: CheckboxListTile(
+          dense: true, contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          title: const Text('Primary Contact', style: TextStyle(fontSize: 12)),
+          value: guardian.isPrimary,
+          onChanged: (selected) => setState(() {
+            if (selected ?? false) {
+              for (final person in _draft.guardians) {
+                person.isPrimary = identical(person, guardian);
+              }
+            } else {
+              guardian.isPrimary = false;
+            }
+          }),
+        )),
+        SizedBox(width: 190, child: CheckboxListTile(
+          dense: true, contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          title: const Text('Legal Guardian', style: TextStyle(fontSize: 12)),
+          value: guardian.isLegalGuardian,
+          onChanged: (selected) => setState(
+            () => guardian.isLegalGuardian = selected ?? false),
+        )),
+      ]),
+    ]),
+  );
+
+  Widget _academicFields() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const Text('Assign the academic year, campus, class and section.',
+        style: TextStyle(color: Color(0xFF587484), fontSize: 12)),
+      const SizedBox(height: 14),
+      if (!_academicReady)
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF4DC),
+            border: Border.all(color: const Color(0xFFF4D6A7)),
+            borderRadius: BorderRadius.circular(10)),
+          child: const Row(children: [
+            Icon(Icons.info_outline, color: Color(0xFF9A6D11)),
+            SizedBox(width: 10),
+            Expanded(child: Text(
+              'No authorized academic options are available. '
+              'Sign in as Owner, complete school setup, and create '
+              'classes and sections first.',
+              style: TextStyle(fontSize: 12))),
+          ]),
+        )
+      else ...[
+        const Text('Academic choices are loaded from your verified '
+          'school records. Only the active academic year is shown.',
+          style: TextStyle(fontSize: 12)),
+        const SizedBox(height: 13),
+        LayoutBuilder(builder: (context, c) {
+          final campus = _choice(
             key: const Key('admission-campus-choice'),
-            label: 'Campus *',
-            current: _draft.campusId,
+            label: 'Campus *', current: _draft.campusId,
             choices: _campusChoices,
-            onChanged: _chooseCampus,
-          ),
-          const SizedBox(height: 16),
-          _choice(
+            onChanged: _chooseCampus);
+          final year = _choice(
             key: const Key('admission-year-choice'),
-            label: 'Academic year *',
-            current: _draft.academicYearId,
+            label: 'Academic Year *', current: _draft.academicYearId,
             choices: _yearChoices,
-            onChanged: (_) {}, // Server-selected active year only.
-          ),
-          if (_academicLoading) ...[
-            const SizedBox(height: 12),
-            const LinearProgressIndicator(
-              key: Key('admission-classes-loading'),
-            ),
-          ],
-          if (_academicError != null) ...[
-            const SizedBox(height: 12),
-            Text(_academicError!,
-                key: const Key('admission-classes-error'),
-                style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            TextButton.icon(
-              onPressed: _draft.campusId == null
-                  ? null : () => _loadClasses(_draft.campusId!),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry class lookup'),
-            ),
-          ],
-          const SizedBox(height: 16),
-          _choice(
+            onChanged: (_) {});
+          if (c.maxWidth >= 520) {
+            return Row(children: [
+              Expanded(child: campus),
+              const SizedBox(width: 13),
+              Expanded(child: year),
+            ]);
+          }
+          return Column(children: [
+            campus, const SizedBox(height: 12), year,
+          ]);
+        }),
+        if (_academicLoading) ...[
+          const SizedBox(height: 13),
+          const LinearProgressIndicator(
+            key: Key('admission-classes-loading')),
+        ],
+        if (_academicError != null) ...[
+          const SizedBox(height: 13),
+          Text(_academicError!,
+            key: const Key('admission-classes-error'),
+            style: const TextStyle(color: Color(0xFFB6232C))),
+          TextButton.icon(
+            onPressed: _draft.campusId == null
+              ? null : () => _loadClasses(_draft.campusId!),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry class lookup')),
+        ],
+        const SizedBox(height: 13),
+        LayoutBuilder(builder: (context, c) {
+          final schoolClass = _choice(
             key: ValueKey('class-choice-${_draft.campusId}-'
-                '${_draft.academicYearId}-${_academicClasses.length}'),
+              '${_draft.academicYearId}-${_academicClasses.length}'),
             label: 'Class *',
             current: _draft.classId,
             choices: _classChoices,
@@ -666,15 +1202,8 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
               _draft.sectionId = null;
               _error = null;
             }),
-          ),
-          if (!_academicLoading && _draft.campusId != null &&
-              _academicError == null && _academicClasses.isEmpty) ...[
-            const SizedBox(height: 8),
-            const Text('No classes exist for this campus and academic year. '
-                'Create them in Owner → Academic Setup.'),
-          ],
-          const SizedBox(height: 16),
-          _choice(
+          );
+          final section = _choice(
             key: ValueKey('section-choice-${_draft.classId}'),
             label: 'Section (optional)',
             current: _draft.sectionId,
@@ -683,172 +1212,342 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
               _draft.sectionId = value;
               _error = null;
             }),
-          ),
+          );
+          if (c.maxWidth >= 520) {
+            return Row(children: [
+              Expanded(child: schoolClass),
+              const SizedBox(width: 13),
+              Expanded(child: section),
+            ]);
+          }
+          return Column(children: [
+            schoolClass, const SizedBox(height: 12), section,
+          ]);
+        }),
+        if (!_academicLoading && _draft.campusId != null &&
+            _academicError == null && _academicClasses.isEmpty) ...[
+          const SizedBox(height: 10),
+          const Text('No classes exist for this campus and academic year. '
+            'Create them in Owner → Academic Setup.',
+            style: TextStyle(fontSize: 12, color: Color(0xFF9A6D11))),
         ],
-        const SizedBox(height: 12),
-        const Text('The permanent registration number will be generated by '
-            'the trusted server after admission approval; nothing is '
-            'submitted at this stage.'),
       ],
-    );
-  }
+      const SizedBox(height: 18),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: _pale,
+          borderRadius: BorderRadius.circular(10)),
+        child: const Row(children: [
+          Icon(Icons.verified_user_outlined, color: _teal),
+          SizedBox(width: 10),
+          Expanded(child: Text('A permanent registration/admission number '
+            'will be generated by the trusted server after Principal approval. '
+            'This screen does not create a student.',
+            style: TextStyle(fontSize: 12))),
+        ]),
+      ),
+    ],
+  );
 
-  Widget _documentFields() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text('Required certificates',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        const Text('Files cannot be uploaded or verified in this preview. '
-            'All required certificates must be treated as outstanding.'),
-        const SizedBox(height: 12),
-        for (final name in _draft.requiredDocumentNames)
-          ListTile(
-            leading: const Icon(Icons.description_outlined),
-            title: Text(name),
-            subtitle: const Text('Not uploaded or verified'),
-            trailing: const Chip(label: Text('Outstanding')),
-          ),
-        const Divider(height: 24),
-        const Text('Conditional documentation',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        const Text('School policy allows conditional admission with a deadline. '
-            'A late document does not automatically cancel enrollment.'),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          key: const Key('document-deadline'),
-          onPressed: _chooseDocumentDeadline,
-          icon: const Icon(Icons.calendar_month_outlined),
-          label: Text('Document deadline *: '
-              '${_dateLabel(_draft.missingDocumentsDueOn)}'),
+  Widget _documentFields() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const Text('Required Certificate Uploads',
+        style: TextStyle(color: _teal, fontSize: 15,
+          fontWeight: FontWeight.w900)),
+      const SizedBox(height: 7),
+      const Text('Documents are awaiting secure upload and verification. '
+        'No file has been stored from this preview.',
+        style: TextStyle(fontSize: 12, color: Color(0xFF5B7380))),
+      const SizedBox(height: 14),
+      for (final name in _draft.requiredDocumentNames)
+        Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(color: _line),
+            borderRadius: BorderRadius.circular(11),
+            color: const Color(0xFFF8FCFF)),
+          child: Row(children: [
+            Container(width: 44, height: 44,
+              decoration: BoxDecoration(
+                color: _pale, borderRadius: BorderRadius.circular(9)),
+              child: const Icon(Icons.description_outlined,
+                color: _teal)),
+            const SizedBox(width: 12),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(
+                  fontWeight: FontWeight.w800, fontSize: 13)),
+                const SizedBox(height: 4),
+                const Text('Not uploaded • Not verified',
+                  style: TextStyle(
+                    color: Color(0xFF667E8B), fontSize: 11)),
+              ],
+            )),
+            const Chip(
+              visualDensity: VisualDensity.compact,
+              backgroundColor: Color(0xFFFFE9C5),
+              side: BorderSide.none,
+              label: Text('Pending',
+                style: TextStyle(
+                  color: Color(0xFF986313), fontSize: 11))),
+          ]),
         ),
-        const SizedBox(height: 12),
-        TextFormField(
-          key: const Key('conditional-reason'),
-          initialValue: _draft.conditionalReason,
-          minLines: 2,
-          maxLines: 3,
-          decoration: const InputDecoration(
-            labelText: 'Reason for conditional admission *',
-            border: OutlineInputBorder(),
-            helperText: 'Saved in the server audit trail when the backend is ready.',
-          ),
-          onChanged: (v) => _draft.conditionalReason = v,
-        ),
-        const SizedBox(height: 10),
-        const Text('Verification and deadline extensions will require '
-            'authorized server operations and separate audit records.'),
-      ],
-    );
-  }
+      Container(
+        key: const Key('admission-upload-disabled'),
+        padding: const EdgeInsets.symmetric(vertical: 19, horizontal: 10),
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFFB3CDD8)),
+          color: const Color(0xFFF5FAFC),
+          borderRadius: BorderRadius.circular(12)),
+        child: const Column(children: [
+          Icon(Icons.cloud_upload_outlined, size: 39, color: _teal),
+          SizedBox(height: 5),
+          Text('Secure document upload coming soon',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: _teal,
+              fontWeight: FontWeight.w800)),
+          SizedBox(height: 4),
+          Text('PDF, JPG, PNG • verification by authorized staff',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF607A87), fontSize: 11)),
+        ]),
+      ),
+      const SizedBox(height: 16),
+      const Text('Conditional Document Submission',
+        style: TextStyle(color: _teal, fontSize: 15,
+          fontWeight: FontWeight.w900)),
+      const SizedBox(height: 6),
+      const Text('Where required certificates are missing, the school may '
+        'permit a deadline up to two calendar months. '
+        'An overdue certificate never automatically deletes the student.',
+        style: TextStyle(fontSize: 12, color: Color(0xFF5A7280))),
+      const SizedBox(height: 13),
+      OutlinedButton.icon(
+        key: const Key('document-deadline'),
+        onPressed: _chooseDocumentDeadline,
+        icon: const Icon(Icons.calendar_month_outlined, color: _teal),
+        label: Text('Submission Deadline *: '
+          '${_dateLabel(_draft.missingDocumentsDueOn)}'),
+      ),
+      const SizedBox(height: 13),
+      _styledField(
+        key: const Key('conditional-reason'),
+        label: 'Reason for Outstanding Documents', isRequired: true,
+        icon: Icons.notes_outlined,
+        initialValue: _draft.conditionalReason,
+        maxLines: 3,
+        onChanged: (v) => _draft.conditionalReason = v),
+      const SizedBox(height: 12),
+      const Text('Deadline decisions and document verification will be '
+        'audited when the trusted admissions service is enabled.',
+        style: TextStyle(fontSize: 11, color: Color(0xFF5A7280))),
+    ],
+  );
 
-  Widget _feeFields() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text('Fee preferences (no financial posting)',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 10),
-        const Text('Tuition and other fee amounts will come from approved '
-            'campus/class plans. This screen does not collect money.'),
-        const SizedBox(height: 16),
-        _choice(
-          label: 'Admission fee status',
-          current: _draft.admissionFeeStatus,
-          choices: const {
-            'not_recorded': 'Not recorded / skip',
-            'unpaid': 'Unpaid',
-            'paid': 'Paid (verification required)',
-          },
-          onChanged: (v) => setState(() => _draft.admissionFeeStatus = v!),
-        ),
-        const SizedBox(height: 10),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Uses school transport'),
-          value: _draft.usesTransport,
-          onChanged: (v) => setState(() => _draft.usesTransport = v),
-        ),
-        if (_draft.usesTransport) ...[
-          TextFormField(
-            initialValue: _draft.transportNotes,
-            decoration: const InputDecoration(
-              labelText: 'Transport notes',
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (v) => _draft.transportNotes = v,
-          ),
+  Widget _feeFields() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const Text('Admission Fee Preferences',
+        style: TextStyle(color: _teal,
+          fontWeight: FontWeight.w900, fontSize: 15)),
+      const SizedBox(height: 6),
+      const Text('Fee amounts and payment verification will come from '
+        'authorized school plans. No money is collected on this screen.',
+        style: TextStyle(fontSize: 12, color: Color(0xFF617887))),
+      const SizedBox(height: 15),
+      Container(
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF7FBFE),
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(color: _line)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Row(children: [
+            Icon(Icons.savings_outlined, color: _teal),
+            SizedBox(width: 9),
+            Text('Admission Fee Status', style: TextStyle(
+              color: _teal, fontWeight: FontWeight.w800)),
+          ]),
           const SizedBox(height: 12),
-        ],
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Request a fee discount'),
-          subtitle: const Text('Requires an authorized discount rule later'),
-          value: _draft.requestsDiscount,
-          onChanged: (v) => setState(() => _draft.requestsDiscount = v),
-        ),
-        if (_draft.requestsDiscount)
-          TextFormField(
-            initialValue: _draft.discountNotes,
-            decoration: const InputDecoration(
-              labelText: 'Discount request notes',
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (v) => _draft.discountNotes = v,
+          _choice(label: 'Select admission fee status',
+            current: _draft.admissionFeeStatus,
+            choices: const {
+              'not_recorded': 'Skip / Not recorded',
+              'unpaid': 'Unpaid',
+              'paid': 'Paid (requires verification)',
+            },
+            onChanged: (v) => setState(
+              () => _draft.admissionFeeStatus = v ?? 'not_recorded')),
+          const SizedBox(height: 8),
+          const Text('Selecting Paid does not record a payment or issue a receipt.',
+            style: TextStyle(fontSize: 11, color: Color(0xFF657C89))),
+        ]),
+      ),
+      const SizedBox(height: 12),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: const Color(0xFFF7FBFE),
+          border: Border.all(color: _line),
+          borderRadius: BorderRadius.circular(11)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            secondary: const Icon(Icons.directions_bus_outlined, color: _teal),
+            title: const Text('School Transport', style: TextStyle(
+              fontWeight: FontWeight.w800, fontSize: 14)),
+            subtitle: const Text('Request transport for this student',
+              style: TextStyle(fontSize: 11)),
+            value: _draft.usesTransport,
+            onChanged: (v) => setState(() => _draft.usesTransport = v),
           ),
-        const SizedBox(height: 12),
-        const Text('Paid/unpaid is informational in this preview. '
-            'No payment receipt or school ledger entry is created.'),
-      ],
+          if (_draft.usesTransport) ...[
+            _styledField(label: 'Transport Notes',
+              icon: Icons.notes_outlined,
+              initialValue: _draft.transportNotes,
+              onChanged: (v) => _draft.transportNotes = v),
+            const SizedBox(height: 10),
+          ],
+          const Divider(height: 12, color: _line),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            secondary: const Icon(Icons.percent_outlined, color: _teal),
+            title: const Text('Scholarship / Discount Request',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+            subtitle: const Text('Requires an authorized discount rule',
+              style: TextStyle(fontSize: 11)),
+            value: _draft.requestsDiscount,
+            onChanged: (v) => setState(() => _draft.requestsDiscount = v),
+          ),
+          if (_draft.requestsDiscount)
+            _styledField(label: 'Discount Request Notes',
+              icon: Icons.notes_outlined,
+              initialValue: _draft.discountNotes,
+              onChanged: (v) => _draft.discountNotes = v),
+        ]),
+      ),
+      const SizedBox(height: 13),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: _pale, borderRadius: BorderRadius.circular(10)),
+        child: const Row(children: [
+          Icon(Icons.info_outline, color: _teal),
+          SizedBox(width: 10),
+          Expanded(child: Text('Tuition, transport and other fee categories '
+            'will be calculated after an approved enrollment. '
+            'No financial ledger entry has been created.',
+            style: TextStyle(fontSize: 12))),
+        ]),
+      ),
+    ],
+  );
+
+  Widget _reviewSection(String title, IconData icon, List<Widget> rows) =>
+    Container(
+      margin: const EdgeInsets.only(bottom: 13),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        border: Border.all(color: _line),
+        color: const Color(0xFFF9FCFF),
+        borderRadius: BorderRadius.circular(11)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Icon(icon, color: _teal, size: 21),
+          const SizedBox(width: 9),
+          Expanded(child: Text(title,
+            style: const TextStyle(color: _teal,
+              fontSize: 15, fontWeight: FontWeight.w900))),
+        ]),
+        const Divider(height: 16, color: _line),
+        ...rows,
+      ]),
     );
-  }
 
   Widget _reviewFields() {
     final warning = _draft.validateStep(AdmissionStep.review);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text('Review admission information',
-            style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 12),
-        if (warning != null) ...[
-          Text('Additional information required: $warning',
-              style: TextStyle(color: Theme.of(context).colorScheme.error)),
-          const SizedBox(height: 12),
-        ],
-        _summaryRow('Student', _draft.studentName),
-        _summaryRow('Birth date', _dateLabel(_draft.dateOfBirth)),
-        _summaryRow('Previous school',
-            _draft.previousSchool.trim().isEmpty
-                ? 'Not applicable'
-                : _draft.previousSchool),
-        _summaryRow('Guardians', _draft.guardians
-            .map((g) => '${g.fullName} (${g.relationship}'
-                '${g.isPrimary ? ', primary' : ''})')
-            .join(', ')),
-        _summaryRow('Campus', _campusChoices[_draft.campusId] ?? 'Not selected'),
-        _summaryRow('Year', _yearChoices[_draft.academicYearId] ?? 'Not selected'),
-        _summaryRow('Class', _classChoices[_draft.classId] ?? 'Not selected'),
-        _summaryRow('Section', _sectionChoices[_draft.sectionId] ?? 'Unassigned'),
-        _summaryRow('Document state', 'Conditional — awaiting verification'),
-        _summaryRow('Document deadline', _dateLabel(_draft.missingDocumentsDueOn)),
-        _summaryRow('Admission fee', _draft.admissionFeeStatus),
-        _summaryRow('Transport', _draft.usesTransport ? 'Requested' : 'Not requested'),
-        const SizedBox(height: 18),
-        Card(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          child: const Padding(
-            padding: EdgeInsets.all(12),
-            child: Text('The application has NOT been saved or forwarded for '
-                'approval. Academic placement choices may come from authorized '
-                'DB01 records, but private document Storage and the audited '
-                'DB02 admission endpoint are not connected. Submission remains disabled.'),
-          ),
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const Text('Confirm the application details below before forwarding '
+        'to the Principal.',
+        style: TextStyle(fontSize: 12, color: Color(0xFF587482))),
+      const SizedBox(height: 13),
+      if (warning != null) ...[
+        Container(
+          padding: const EdgeInsets.all(11),
+          decoration: BoxDecoration(color: const Color(0xFFFFF1DA),
+            borderRadius: BorderRadius.circular(9)),
+          child: Row(children: [
+            const Icon(Icons.warning_amber_outlined,
+                color: Color(0xFF9C6B12)),
+            const SizedBox(width: 9),
+            Expanded(child: Text('Additional information required: $warning',
+              style: const TextStyle(fontSize: 12))),
+          ]),
         ),
+        const SizedBox(height: 12),
       ],
-    );
+      _reviewSection('Student Information', Icons.person_outline, [
+        _summaryRow('Full Name', _draft.studentName),
+        _summaryRow('Date of Birth', _dateLabel(_draft.dateOfBirth)),
+        _summaryRow('Gender', _draft.gender),
+        _summaryRow('Previous School',
+          _draft.previousSchool.trim().isEmpty
+            ? 'Not applicable' : _draft.previousSchool),
+        _summaryRow('Nationality', _draft.nationality),
+        _summaryRow('Primary Language', _draft.primaryLanguage),
+        _summaryRow('Notes', _draft.notes),
+      ]),
+      _reviewSection('Guardian Contacts', Icons.groups_outlined, [
+        for (final person in _draft.guardians)
+          _summaryRow(person.isPrimary ? 'Primary Guardian' : 'Guardian',
+            '${person.fullName} • ${person.relationship} • '
+            '${person.phone.isEmpty ? 'No phone' : person.phone}'),
+      ]),
+      _reviewSection('Academic Placement', Icons.school_outlined, [
+        _summaryRow('Campus', _campusChoices[_draft.campusId] ?? 'Not selected'),
+        _summaryRow('Academic Year',
+          _yearChoices[_draft.academicYearId] ?? 'Not selected'),
+        _summaryRow('Class',
+          _classChoices[_draft.classId] ?? 'Not selected'),
+        _summaryRow('Section',
+          _sectionChoices[_draft.sectionId] ?? 'Unassigned'),
+      ]),
+      _reviewSection('Documents', Icons.description_outlined, [
+        for (final name in _draft.requiredDocumentNames)
+          _summaryRow(name, 'Not uploaded / unverified'),
+        _summaryRow('Conditional Deadline',
+          _dateLabel(_draft.missingDocumentsDueOn)),
+        _summaryRow('Reason', _draft.conditionalReason),
+      ]),
+      _reviewSection('Fee Preferences', Icons.savings_outlined, [
+        _summaryRow('Admission Fee', _draft.admissionFeeStatus),
+        _summaryRow('Transport',
+          _draft.usesTransport ? 'Requested' : 'Not requested'),
+        _summaryRow('Scholarship / Discount',
+          _draft.requestsDiscount ? 'Requested' : 'Not requested'),
+      ]),
+      Container(
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF2DB),
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(color: const Color(0xFFF3D8A3))),
+        child: const Row(children: [
+          Icon(Icons.lock_outline, color: Color(0xFF906115)),
+          SizedBox(width: 12),
+          Expanded(child: Text(
+            'This application has NOT been saved or submitted. '
+            'Real admission requires secure private document uploads '
+            'and an authenticated DB02 intake endpoint. '
+            'The Principal approval action stays disabled until those '
+            'services are deployed and tested.',
+            style: TextStyle(fontSize: 12))),
+        ]),
+      ),
+    ]);
   }
 
   Widget _summaryRow(String label, String value) => Padding(
@@ -885,31 +1584,26 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     );
   }
 
-  Widget _actions() {
-    return Row(
-      children: [
-        OutlinedButton.icon(
-          onPressed: _step == 0 ? null : _previous,
-          icon: const Icon(Icons.chevron_left),
-          label: const Text('Back'),
-        ),
-        const Spacer(),
-        if (_step < AdmissionStep.values.length - 1)
-          FilledButton.icon(
-            key: const Key('wizard-next'),
-            onPressed: _next,
-            icon: const Icon(Icons.chevron_right),
-            iconAlignment: IconAlignment.end,
-            label: const Text('Next'),
-          )
-        else
-          FilledButton.icon(
-            key: const Key('wizard-submit-disabled'),
-            onPressed: null,
-            icon: const Icon(Icons.lock_outline),
-            label: const Text('Submit unavailable'),
-          ),
-      ],
-    );
-  }
+  Widget _actions() => Row(children: [
+    Expanded(child: OutlinedButton.icon(
+      onPressed: _step == 0 ? null : _previous,
+      icon: const Icon(Icons.arrow_back),
+      label: const Text('Back'),
+    )),
+    const SizedBox(width: 13),
+    Expanded(child: _step < AdmissionStep.values.length - 1
+      ? FilledButton.icon(
+          key: const Key('wizard-next'),
+          onPressed: _next,
+          icon: const Icon(Icons.arrow_forward),
+          iconAlignment: IconAlignment.end,
+          label: const Text('Next Step'))
+      : FilledButton.icon(
+          key: const Key('wizard-submit-disabled'),
+          onPressed: null,
+          icon: const Icon(Icons.lock_outline),
+          label: const Text('Submit unavailable')),
+    ),
+  ]);
+
 }

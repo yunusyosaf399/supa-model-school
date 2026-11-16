@@ -42,6 +42,17 @@ class AdmissionDraft {
   DateTime? dateOfBirth;
   String gender = 'unspecified';
   String previousSchool = '';
+  // Additional student/contact fields for the six-step UI preview. These
+  // values are never persisted before the approved DB02 intake endpoint.
+  String nationality = '';
+  String religion = '';
+  String primaryLanguage = '';
+  String notes = '';
+  String birthCertificateNumber = '';
+  String identityNumber = '';
+  String address = '';
+  String city = '';
+  String emergencyContact = '';
 
   // When the Owner has completed setup, these IDs come from authorized
   // DB01 campus/active-year/class/section records. They are UI-only draft
@@ -66,6 +77,14 @@ class AdmissionDraft {
   String transportNotes = '';
   bool requestsDiscount = false;
   String discountNotes = '';
+
+  /// Two calendar months, clamping month-end dates as Postgres intervals do.
+  static DateTime latestConditionalDeadline(DateTime today) {
+    final target = DateTime(today.year, today.month + 2, 1);
+    final lastDay = DateTime(target.year, target.month + 1, 0).day;
+    final day = today.day > lastDay ? lastDay : today.day;
+    return DateTime(target.year, target.month, day);
+  }
 
   bool get transferCertificateApplicable => previousSchool.trim().isNotEmpty;
 
@@ -132,6 +151,10 @@ class AdmissionDraft {
         final deadline = missingDocumentsDueOn!;
         if (DateTime(deadline.year, deadline.month, deadline.day).isBefore(day)) {
           return 'The document deadline cannot be in the past.';
+        }
+        final latest = latestConditionalDeadline(day);
+        if (deadline.isAfter(latest)) {
+          return 'Choose a document deadline within two calendar months.';
         }
         if (conditionalReason.trim().length < 4) {
           return 'Explain why the documents will be supplied later.';
