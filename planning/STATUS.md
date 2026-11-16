@@ -202,3 +202,10 @@ Date: 2026-11-16
 - **TEST SOURCE:** Updated Owner and widget smoke tests plus dashboard reference test assertions for real Flutter chart, donut, cards and both layouts.
 - **CI LIMIT:** Experimental GitHub workflow failed without executing any job steps (likely runner/account condition), and was removed; Flutter analyzer/test Windows build have not been executed by assistant. User should run local commands.
 - **DOCS:** `docs/30_DASHBOARD_PIXEL_REFERENCE_FLUTTER.md`.
+
+## Session 2026-11-16 — Six-stage admissions UI reference (Windows and Android)
+- **FLUTTER UI:** New Admission layout rebuilt to closely follow user-supplied desktop and mobile screenshots. Desktop left Admissions sidebar, in-page toolbar, numbered progress, Student Details + Contact/Identity forms, right checklist/status cards and footer; Android school crest, icon progress, responsive student form, documents checklist and bottom actions. No duplicate Windows green titlebar or school-building photos.
+- **SIX STEPS:** Student name/DOB/gender/previous school/nationality/religion/language/notes/contact; multiple Guardians with primary/legal indicators; authorized campus/active-year/class/section Academic lookups; Document pending cards and two-calendar-month conditional deadline; Fee request preferences; grouped Review summary.
+- **GATED:** Admission entries stay local in memory. No DB02 admission write, storage upload, fee payment or Principal submit. Save Draft and Submit for Approval remain disabled; academic selector still requires Owner verified context. In debug mode the six stepper panels can be inspected for UI testing without satisfying submission rules.
+- **TESTS:** Updated widget tests for Windows/Android reference layout and all six stages plus Student/Guardian/Academic/Document/Fees/Review; extra conditional due-date tests. Static delimiter/quote scan of edited Dart source passed. Flutter analyzer, full widget test runtime and device rendering NOT RUN (Flutter SDK unavailable).
+- **DOC:** `docs/31_ADMISSIONS_WIZARD_SIX_STEP_REFERENCE.md`. Backend and actual school records unchanged.
