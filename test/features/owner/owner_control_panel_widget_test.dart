@@ -19,6 +19,8 @@ void main() {
           owner: owner,
           onChangePassword: (a, b) async {},
           onPasswordChanged: () {},
+          onSaveSetup: (request) async => owner,
+          onSetupSaved: (_) {},
         ),
       ),
     ));
@@ -35,7 +37,14 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
         body: OwnerControlPanelPage(
-          owner: owner,
+          owner: const OwnerAccess(
+            userId: 'sample-owner', displayName: 'Sample Owner',
+            schoolId: 'sample-school', schoolName: 'Supa Model School',
+            setupComplete: true,
+            campuses: [OwnerCampus(id: 'main', name: 'Main Campus')],
+          ),
+          onSaveSetup: (request) async => owner,
+          onSetupSaved: (_) {},
           onChangePassword: (current, next) async {
             expect(current, 'old-pass-12345');
             expect(next, 'a-longer-new-password-2026!');
