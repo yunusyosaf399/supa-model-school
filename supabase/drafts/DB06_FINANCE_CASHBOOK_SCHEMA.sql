@@ -604,6 +604,15 @@ BEGIN
     RAISE EXCEPTION 'Posted journal must have equal, positive debit/credit'
       USING ERRCODE='23514';
   END IF;
+  -- Exactly one typed source link is required before COMMIT. The source
+  -- link's own CHECK and same-school FKs prevent orphan/forged origins.
+  IF NOT EXISTS (
+    SELECT 1 FROM public.ledger_source_links
+    WHERE journal_id=v_journal
+  ) THEN
+    RAISE EXCEPTION 'Posted journal missing trusted source link'
+      USING ERRCODE='23514';
+  END IF;
   RETURN NULL;
 END;
 $$;
@@ -725,6 +734,74 @@ CREATE TRIGGER db06_cash_close_guard
   BEFORE UPDATE ON public.cash_closings
   FOR EACH ROW EXECUTE FUNCTION app_private.db06_check_cash_closing_transition();
 
+-- Cash closing and its denomination evidence cannot be erased. A
+-- finalized closing is locked; only a new approved adjustment may reconcile.
+CREATE TRIGGER db06_cash_closings_no_delete
+  BEFORE DELETE ON public.cash_closings
+  FOR EACH ROW EXECUTE FUNCTION app_private.db06_reject_posted_mutation();
+CREATE TRIGGER db06_cash_closings_no_truncate
+  BEFORE TRUNCATE ON public.cash_closings
+  FOR EACH STATEMENT EXECUTE FUNCTION app_private.db06_reject_posted_mutation();
+CREATE TRIGGER db06_cash_counts_immutable
+  BEFORE UPDATE OR DELETE ON public.cash_closing_counts
+  FOR EACH ROW EXECUTE FUNCTION app_private.db06_reject_posted_mutation();
+CREATE TRIGGER db06_cash_counts_no_truncate
+  BEFORE TRUNCATE ON public.cash_closing_counts
+  FOR EACH STATEMENT EXECUTE FUNCTION app_private.db06_reject_posted_mutation();
+
+-- Closed accounting periods and finalized bank reconciliation cannot
+-- silently reopen, change identity or be deleted after reporting.
+CREATE FUNCTION app_private.db06_validate_period_transition()
+RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
+AS $
+BEGIN
+  IF OLD.status='closed'
+    OR NEW.school_id IS DISTINCT FROM OLD.school_id
+    OR NEW.campus_id IS DISTINCT FROM OLD.campus_id
+    OR NEW.period_month IS DISTINCT FROM OLD.period_month
+    OR NEW.status<>'closed' THEN
+    RAISE EXCEPTION 'Accounting period may only be closed once'
+      USING ERRCODE='23514';
+  END IF;
+  RETURN NEW;
+END;
+$;
+CREATE TRIGGER db06_period_close_guard
+  BEFORE UPDATE ON public.accounting_periods
+  FOR EACH ROW EXECUTE FUNCTION app_private.db06_validate_period_transition();
+CREATE TRIGGER db06_period_no_delete
+  BEFORE DELETE ON public.accounting_periods
+  FOR EACH ROW EXECUTE FUNCTION app_private.db06_reject_posted_mutation();
+CREATE TRIGGER db06_period_no_truncate
+  BEFORE TRUNCATE ON public.accounting_periods
+  FOR EACH STATEMENT EXECUTE FUNCTION app_private.db06_reject_posted_mutation();
+
+CREATE FUNCTION app_private.db06_validate_bank_reconcile_transition()
+RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
+AS $
+BEGIN
+  IF OLD.status='final'
+    OR NEW.school_id IS DISTINCT FROM OLD.school_id
+    OR NEW.campus_id IS DISTINCT FROM OLD.campus_id
+    OR NEW.bank_account_id IS DISTINCT FROM OLD.bank_account_id
+    OR NEW.statement_end IS DISTINCT FROM OLD.statement_end
+    OR NEW.status<>'final' THEN
+    RAISE EXCEPTION 'Final bank reconciliation or identity cannot change'
+      USING ERRCODE='23514';
+  END IF;
+  RETURN NEW;
+END;
+$;
+CREATE TRIGGER db06_bank_reconcile_final_guard
+  BEFORE UPDATE ON public.bank_reconciliations
+  FOR EACH ROW EXECUTE FUNCTION app_private.db06_validate_bank_reconcile_transition();
+CREATE TRIGGER db06_bank_reconcile_no_delete
+  BEFORE DELETE ON public.bank_reconciliations
+  FOR EACH ROW EXECUTE FUNCTION app_private.db06_reject_posted_mutation();
+CREATE TRIGGER db06_bank_reconcile_no_truncate
+  BEFORE TRUNCATE ON public.bank_reconciliations
+  FOR EACH STATEMENT EXECUTE FUNCTION app_private.db06_reject_posted_mutation();
+
 -- RLS deny-by-default on every exposed public DB06 table. All financial
 -- commands need future school/campus+current-role checks in trusted server.
 ALTER TABLE public.ledger_accounts ENABLE ROW LEVEL SECURITY;
@@ -766,6 +843,10 @@ REVOKE ALL ON FUNCTION app_private.db06_assert_journal_balanced()
 REVOKE ALL ON FUNCTION app_private.db06_reject_posted_mutation()
   FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION app_private.db06_check_cash_closing_transition()
+  FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION app_private.db06_validate_period_transition()
+  FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION app_private.db06_validate_bank_reconcile_transition()
   FROM PUBLIC,anon,authenticated;
 
 -- NOT INCLUDED YET: authorizing server posting, DB08 approval/delegation,
