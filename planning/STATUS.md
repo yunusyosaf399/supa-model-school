@@ -122,3 +122,12 @@ Date: 2026-11-16
 - **Structural GitHub source readback: 19/19 targeted assertions passed.** PostgreSQL migration/RLS tests, concurrency fixture, Deno Edge invocation, device security, local SQLite event application and cursor atomically persisted have **not been executed or implemented**. User-reported Windows Flutter UI build success does NOT validate server sync.
 - No hosted Supabase DDL changes/deployments, no GitHub Actions. Live public school tables remain uncreated pending separate verification.
 - **Next D04-T05:** authorized Windows offline vertical slice: secure device credentials, encrypted persistence, dispatch/ingest receipt, local cloud UUID mapping, event apply + cursor in one local transaction, restart/conflict and device tests. D02-T04 local PostgreSQL RLS still IN_PROGRESS.
+
+## Session 2026-11-16 — First Owner Auth preparation (PR #15; source only)
+- **Not yet activated:** hosted Supabase Auth had 0 users and the DB01 foundation had 0 tables/0 migrations when checked. No Owner invitation, password, profile, role, school or campus has been created on the hosted project.
+- Added Owner Auth gateway and integrated email/password sign-in into Flutter. Login is allowed only after server-verified Auth identity, active profile, one school-wide Owner membership, active school and authorized campus membership are confirmed. Invalid session is signed out.
+- The configured login selects campus AFTER authentication and keeps the existing debug preview separate; real dashboard statistics remain fictional placeholders.
+- Supabase client uses the publishable key only, and `EmptyLocalStorage` disables persistence of Auth session tokens until encrypted storage is built/tested.
+- Added one-time privileged Owner bootstrap SQL template, verified-email requirement, detailed runbook and fake-gateway Flutter widget tests.
+- Static source checks only. Flutter analyzer, SDK dependency lock resolution, widget tests, DB01 RLS migration tests and actual auth/campus integration remain **NOT RUN**.
+- **Activation gate:** Owner email identity not yet explicitly specified; user must accept a trusted Supabase Auth invitation. DB01 migration/RLS tests, school currency/timezone, and first campus require explicit configuration. Do not use guessed credentials or manually insert auth.users.
