@@ -172,7 +172,7 @@ class DashboardDonutIndicator extends StatelessWidget {
         children: [
           CustomPaint(
             size: Size.square(size),
-            painter: _DonutPainter(ratio.clamp(0.0, 1.0)),
+            painter: _DonutPainter(ratio.clamp(0.0, 1.0).toDouble()),
           ),
           Column(mainAxisSize: MainAxisSize.min, children: [
             Text(label,
