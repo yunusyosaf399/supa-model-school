@@ -36,3 +36,22 @@ Do not use binary floating point for money. Use PostgreSQL NUMERIC or integer mi
 - **Runtime still required:** source amounts/classifications, cross-domain
   atomic posting, race-proof balances, 2-campus authorizations and full RLS.
   Source: `../docs/35_DB06_FINANCE_CASHBOOK_DESIGN.md` (review draft).
+
+## DB07 inventory, canteen and uniform accounting boundary (2026-11-16)
+- Physical stock availability is derived from signed, campus+lot+item scoped
+  inventory movements. A purchase order or transfer request alone changes
+  neither cash nor inventory. Two-campus transfers require paired out/in.
+- Posted canteen and uniform sale totals must equal committed item totals,
+  but every POS settlement also requires a separate trusted DB06 cash/bank
+  journal posting. Sale income is recognized once, not again from funds
+  transfer or duplicate operation retries.
+- Stock cost at sale is recorded as COGS against inventory assets using an
+  approved FIFO/weighted-average valuation, not merely stock purchase cash
+  outflows. Uniform production transfers raw material cost to finished
+  goods; vehicle repair points to an EXISTING DB06 expense, not a second one.
+- DB06 currently does NOT accept DB07 sale, inventory, or COGS typed journal
+  sources. Extend and test the DB06 journal_kind/source-link checks and
+  typed school-contained FKs before deploying these domains.
+- Future server transactions enforce no-negative-stock, approved price,
+  refund + stock restoration, quantity integrity and DB08 approvals.
+See `../docs/36_DB07_BUSINESS_TRANSPORT_DESIGN.md` (design only).
