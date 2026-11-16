@@ -558,12 +558,41 @@ CREATE TABLE public.financial_operation_receipts (
   PRIMARY KEY (school_id,operation_id)
 );
 
+-- The initiating campus accounting period must be open before
+-- inserting a posted journal header. FOR SHARE prevents concurrent closing
+-- from racing a pending posting in this transaction.
+CREATE FUNCTION app_private.db06_require_open_journal_period()
+RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
+AS $
+DECLARE v_status text;
+BEGIN
+  SELECT p.status INTO v_status FROM public.accounting_periods p
+    WHERE p.id=NEW.accounting_period_id
+      AND p.school_id=NEW.school_id
+      AND p.campus_id=NEW.initiating_campus_id
+      AND p.period_month=NEW.period_month
+    FOR SHARE;
+  IF v_status IS DISTINCT FROM 'open' THEN
+    RAISE EXCEPTION 'Cannot post journal into closed accounting period'
+      USING ERRCODE='23514';
+  END IF;
+  RETURN NEW;
+END;
+$;
+CREATE TRIGGER db06_journal_open_period
+  BEFORE INSERT ON public.ledger_journals
+  FOR EACH ROW EXECUTE FUNCTION app_private.db06_require_open_journal_period();
+
 -- PostgreSQL checks account containment at the database level even if a
 -- future privileged posting caller forgets to check campus allocation.
 CREATE FUNCTION app_private.db06_check_ledger_line_scope()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
-AS $$
-DECLARE v_campus uuid; v_active boolean;
+AS $
+DECLARE
+  v_campus uuid;
+  v_active boolean;
+  v_month date;
+  v_period_status text;
 BEGIN
   SELECT a.campus_id,a.is_active INTO v_campus,v_active
     FROM public.ledger_accounts a
@@ -571,6 +600,18 @@ BEGIN
   IF NOT FOUND OR NOT v_active OR
      (v_campus IS NOT NULL AND v_campus<>NEW.campus_id) THEN
     RAISE EXCEPTION 'Ledger line references inactive or other-campus account'
+      USING ERRCODE='23514';
+  END IF;
+
+  -- A cross-campus transfer touches BOTH campuses' financial periods.
+  -- Check the line's own campus, not only the journal initiator campus.
+  SELECT j.period_month INTO v_month FROM public.ledger_journals j
+    WHERE j.id=NEW.journal_id AND j.school_id=NEW.school_id;
+  SELECT p.status INTO v_period_status FROM public.accounting_periods p
+    WHERE p.school_id=NEW.school_id AND p.campus_id=NEW.campus_id
+      AND p.period_month=v_month FOR SHARE;
+  IF v_period_status IS DISTINCT FROM 'open' THEN
+    RAISE EXCEPTION 'Ledger line campus period is not open'
       USING ERRCODE='23514';
   END IF;
   RETURN NEW;
@@ -836,6 +877,8 @@ REVOKE ALL ON
  public.bank_reconciliations,public.bank_reconciliation_matches,
  public.financial_operation_receipts
 FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION app_private.db06_require_open_journal_period()
+  FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION app_private.db06_check_ledger_line_scope()
   FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION app_private.db06_assert_journal_balanced()
