@@ -136,10 +136,13 @@ class _LoginPageState extends State<LoginPage> {
               ),
               if (desktop)
                 Positioned(
+                  // Reserve a clear row above the card for the appearance
+                  // and debug-preview icons, even in shorter Windows windows.
                   right: math.max(22, width * 0.021),
-                  top: math.max(24, height * 0.044),
-                  bottom: math.max(22, height * 0.073),
-                  width: math.min(550, width * 0.365),
+                  top: math.max(76, height * 0.108),
+                  bottom: math.max(18, height * 0.035),
+                  // Slightly narrower than the reference's first pass.
+                  width: math.min(470, width * 0.335),
                   child: Align(
                     alignment: Alignment.topCenter,
                     child: SingleChildScrollView(
@@ -202,7 +205,7 @@ class _LoginPageState extends State<LoginPage> {
     final cardColor = dark
         ? const Color(0xFF162B30).withValues(alpha: 0.97)
         : Colors.white.withValues(alpha: 0.97);
-    final space = mobile ? 11.0 : 16.0;
+    final space = mobile ? 11.0 : 12.0;
 
     return Material(
       key: const Key('login-form-card'),
@@ -212,8 +215,8 @@ class _LoginPageState extends State<LoginPage> {
       borderRadius: BorderRadius.circular(mobile ? 26 : 24),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          mobile ? 20 : 40, mobile ? 19 : 32,
-          mobile ? 20 : 40, mobile ? 16 : 28,
+          mobile ? 20 : 29, mobile ? 19 : 25,
+          mobile ? 20 : 29, mobile ? 16 : 18,
         ),
         child: Form(
           key: _formKey,
@@ -225,7 +228,7 @@ class _LoginPageState extends State<LoginPage> {
                 mobile ? 'Welcome back' : 'Sign In to Supa Model School',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: mobile ? 27 : 27,
+                  fontSize: mobile ? 27 : 24,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.8,
                   color: dark ? const Color(0xFF6ED5C9) : _teal,
@@ -239,7 +242,7 @@ class _LoginPageState extends State<LoginPage> {
                 textAlign: TextAlign.center,
                 style: TextStyle(color: muted, fontSize: mobile ? 14 : 15),
               ),
-              SizedBox(height: mobile ? 18 : 24),
+              SizedBox(height: mobile ? 18 : 19),
               _fieldLabel('School / Campus', Icons.account_balance_outlined,
                   onCard, mobile),
               const SizedBox(height: 5),
@@ -304,7 +307,7 @@ class _LoginPageState extends State<LoginPage> {
                         ? 'Enter your password'
                         : null,
               ),
-              SizedBox(height: mobile ? 6 : 10),
+              SizedBox(height: mobile ? 6 : 7),
               Row(
                 children: [
                   SizedBox(
@@ -344,9 +347,9 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ],
               ),
-              SizedBox(height: mobile ? 9 : 17),
+              SizedBox(height: mobile ? 9 : 11),
               SizedBox(
-                height: mobile ? 49 : 57,
+                height: mobile ? 49 : 52,
                 child: FilledButton.icon(
                   key: const Key('login-sign-in'),
                   onPressed: _working ? null : _submitSignIn,
@@ -371,13 +374,13 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
               ),
-              SizedBox(height: mobile ? 7 : 14),
+              SizedBox(height: mobile ? 7 : 8),
               Text(
                 'English first • Windows & Android',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: muted, fontSize: 12),
               ),
-              Divider(height: mobile ? 17 : 25, color: muted.withValues(alpha: 0.17)),
+              Divider(height: mobile ? 17 : 18, color: muted.withValues(alpha: 0.17)),
               Center(
                 child: TextButton.icon(
                   onPressed: _help,
