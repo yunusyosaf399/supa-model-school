@@ -2,7 +2,7 @@ domain,scope,design_status,live_deployment,baseline_table_count,next_action
 DB01,"School foundation; campuses; roles; academic structure",BASELINE_DEPLOYED,YES,"12+auxiliary","Complete role/catalog and RLS follow-up tests"
 DB02,"Students; admission; guardians; documents; enrollment",BASELINE_DEPLOYED,YES,13,"Complete document services and acceptance tests"
 DB03,"Fees; discounts; billing; receipt; credit",SQL_DRAFT_REVIEW,NO,18,"Run isolated PostgreSQL tests and design posting RPC/DB06 integration"
-DB04,"Attendance; school calendar; student/staff marks",NOT_FULLY_DESIGNED,NO,,"Next full schema design"
+DB04,"Attendance; school calendar; teacher duties; student/staff marks and corrections",SQL_DRAFT_REVIEW,NO,11,"Run isolated SQL/RLS tests; complete teacher role authorization and trusted submit/correction operations"
 DB05,"Employees; assignments; payroll; advances",NOT_FULLY_DESIGNED,NO,,"Full schema design"
 DB06,"Cash/bank; accounts; expenses; closings",NOT_FULLY_DESIGNED,NO,,"Full schema design linked to DB03"
 DB07,"Canteen; uniform; inventory; vehicles",NOT_FULLY_DESIGNED,NO,,"Full schema design"
