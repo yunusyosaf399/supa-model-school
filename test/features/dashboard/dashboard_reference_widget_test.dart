@@ -89,7 +89,7 @@ void main() {
     expect(find.text('Collect\nFee'), findsOneWidget);
     expect(find.text('Attendance'), findsOneWidget);
     expect(find.byKey(const Key('dashboard-demo-banner')), findsOneWidget);
-    expect(find.text('Not configured'), findsNothing);
+    expect(repo.queries, ['school-id/campus-a']);
   });
 
   testWidgets('live dashboard never fabricates finance and attendance values',
