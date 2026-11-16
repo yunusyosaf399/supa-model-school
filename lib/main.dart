@@ -624,8 +624,6 @@ class _SchoolShellState extends State<_SchoolShell> {
             onPressed: _showGlobalSearch,
             icon: const Icon(Icons.search),
           ),
-          // Appearance is configured in Settings, never per-feature.
-          if (selected == 10) _themeMenu(),
           IconButton(
             tooltip: 'Notifications (preview)',
             onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
