@@ -79,6 +79,19 @@ void main() {
     expect(find.byKey(const Key('wizard-next')), findsOneWidget);
   });
 
+  testWidgets('debug preview may inspect Review without enabling submission',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(412, 900));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(const MaterialApp(home: AdmissionWizardPage()));
+    await tester.tap(find.byKey(const Key('step-chip-5')));
+    await tester.pump();
+    expect(find.text('Review Application'), findsWidgets);
+    final submit = tester.widget<FilledButton>(
+      find.byKey(const Key('wizard-submit-disabled')));
+    expect(submit.onPressed, isNull);
+  });
+
   testWidgets('All six steps render their distinct form sections',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(1200, 900));
