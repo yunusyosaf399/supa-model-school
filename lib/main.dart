@@ -432,12 +432,6 @@ class _SchoolShellState extends State<_SchoolShell> {
               ),
           ],
         )),
-        if (extended && selected == 0)
-          SizedBox(
-            height: 143, width: double.infinity,
-            child: Image.asset('assets/dashboard/school_sidebar.jpg',
-              fit: BoxFit.cover, alignment: Alignment.bottomCenter),
-          ),
       ]),
     );
   }

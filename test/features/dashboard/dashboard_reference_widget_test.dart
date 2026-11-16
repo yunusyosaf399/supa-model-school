@@ -70,6 +70,7 @@ void main() {
     expect(repo.queries, ['school-id/campus-a']);
     expect(find.byKey(const Key('dashboard-page')), findsOneWidget);
     expect(find.byKey(const Key('dashboard-demo-banner')), findsOneWidget);
+    expect(find.byType(Image), findsNothing);
     expect(find.text('Dashboard'), findsOneWidget);
     expect(find.text('Active Students'), findsOneWidget);
     expect(find.text('Fee Collection Trend'), findsOneWidget);
@@ -85,6 +86,8 @@ void main() {
     await tester.pumpWidget(dashboard(repo));
     await tester.pumpAndSettle();
     expect(find.text('Good morning,'), findsOneWidget);
+    expect(find.byKey(const Key('dashboard-mobile-greeting')), findsOneWidget);
+    expect(find.byType(Image), findsNothing);
     expect(find.text('Supa Model School'), findsOneWidget);
     expect(find.text('Collect\nFee'), findsOneWidget);
     expect(find.text('Attendance'), findsOneWidget);
