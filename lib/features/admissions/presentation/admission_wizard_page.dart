@@ -270,7 +270,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
 
   @override
   Widget build(BuildContext context) {
-    final wide = MediaQuery.sizeOf(context).width >= 1050;
+    final wide = MediaQuery.sizeOf(context).width >= 1250;
     return Theme(
       data: Theme.of(context).copyWith(
         colorScheme: ColorScheme.fromSeed(seedColor: _teal),
@@ -326,29 +326,13 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     ],
   );
 
-  Widget _desktopLayout() => Column(children: [
-    Container(
-      height: 37,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [_teal, Color(0xFF004D4A)])),
-      child: const Row(children: [
-        Icon(Icons.school_outlined, size: 20, color: Colors.white),
-        SizedBox(width: 10),
-        Text('Supa Model School', style: TextStyle(
-            color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
-        SizedBox(width: 12),
-        Text('│  School Management System', style: TextStyle(
-            color: Colors.white, fontSize: 12)),
-      ]),
-    ),
-    Expanded(child: Row(children: [
-      _sidebar(),
-      Expanded(child: Column(children: [
-        _desktopToolbar(),
-        Expanded(child: _admissionScroll(wide: true)),
-      ])),
+  // The native Windows titlebar already displays the brand. Do not
+  // introduce a second dark green strip below it.
+  Widget _desktopLayout() => Row(children: [
+    _sidebar(),
+    Expanded(child: Column(children: [
+      _desktopToolbar(),
+      Expanded(child: _admissionScroll(wide: true)),
     ])),
   ]);
 
@@ -839,11 +823,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         key: const Key('date-of-birth'),
         onPressed: _chooseBirthDate,
         icon: const Icon(Icons.calendar_today_outlined, size: 17),
-        label: Expanded(child: Text(
-          _dateLabel(_draft.dateOfBirth),
+        label: Text(_dateLabel(_draft.dateOfBirth),
           overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.left,
-          style: const TextStyle(fontSize: 12))),
+          style: const TextStyle(fontSize: 12)),
       )),
     ]);
 
