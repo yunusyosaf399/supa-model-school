@@ -259,6 +259,8 @@ CREATE TABLE public.ledger_journals (
   explanation text NOT NULL CHECK (length(btrim(explanation)) BETWEEN 4 AND 1000),
   posted_by uuid NOT NULL REFERENCES auth.users(id),
   posted_at timestamptz NOT NULL DEFAULT now(),
+  -- Prevent later transactions adding lines to an already accepted journal.
+  creation_txid bigint NOT NULL DEFAULT pg_catalog.txid_current(),
   FOREIGN KEY (accounting_period_id,school_id,initiating_campus_id,period_month)
     REFERENCES public.accounting_periods
       (id,school_id,campus_id,period_month) ON DELETE RESTRICT,
@@ -593,6 +595,7 @@ DECLARE
   v_active boolean;
   v_month date;
   v_period_status text;
+  v_created_txid bigint;
 BEGIN
   SELECT a.campus_id,a.is_active INTO v_campus,v_active
     FROM public.ledger_accounts a
@@ -605,8 +608,13 @@ BEGIN
 
   -- A cross-campus transfer touches BOTH campuses' financial periods.
   -- Check the line's own campus, not only the journal initiator campus.
-  SELECT j.period_month INTO v_month FROM public.ledger_journals j
+  SELECT j.period_month,j.creation_txid INTO v_month,v_created_txid
+    FROM public.ledger_journals j
     WHERE j.id=NEW.journal_id AND j.school_id=NEW.school_id;
+  IF v_created_txid IS DISTINCT FROM pg_catalog.txid_current() THEN
+    RAISE EXCEPTION 'Cannot append to a previously posted journal'
+      USING ERRCODE='23514';
+  END IF;
   SELECT p.status INTO v_period_status FROM public.accounting_periods p
     WHERE p.school_id=NEW.school_id AND p.campus_id=NEW.campus_id
       AND p.period_month=v_month FOR SHARE;
@@ -620,6 +628,27 @@ $$;
 CREATE TRIGGER db06_line_scope
   BEFORE INSERT ON public.ledger_lines
   FOR EACH ROW EXECUTE FUNCTION app_private.db06_check_ledger_line_scope();
+
+-- A journal source must also arrive in the same posting transaction.
+-- Future operations cannot attach a source later to a committed journal.
+CREATE FUNCTION app_private.db06_check_source_creation_txid()
+RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
+AS $
+DECLARE v_created_txid bigint;
+BEGIN
+  SELECT j.creation_txid INTO v_created_txid
+    FROM public.ledger_journals j
+   WHERE j.id=NEW.journal_id AND j.school_id=NEW.school_id;
+  IF v_created_txid IS DISTINCT FROM pg_catalog.txid_current() THEN
+    RAISE EXCEPTION 'Journal source link must commit with its header'
+      USING ERRCODE='23514';
+  END IF;
+  RETURN NEW;
+END;
+$;
+CREATE TRIGGER db06_source_same_transaction
+  BEFORE INSERT ON public.ledger_source_links
+  FOR EACH ROW EXECUTE FUNCTION app_private.db06_check_source_creation_txid();
 
 -- A posted journal must include balanced positive debit/credit entries.
 -- Deferring validation to COMMIT permits header and lines inserted in the
@@ -882,6 +911,8 @@ REVOKE ALL ON FUNCTION app_private.db06_require_open_journal_period()
 REVOKE ALL ON FUNCTION app_private.db06_check_ledger_line_scope()
   FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION app_private.db06_assert_journal_balanced()
+  FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION app_private.db06_check_source_creation_txid()
   FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION app_private.db06_reject_posted_mutation()
   FROM PUBLIC,anon,authenticated;
