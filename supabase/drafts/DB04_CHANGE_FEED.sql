@@ -107,7 +107,7 @@ BEGIN
       'documents_state',NEW.documents_state,
       'missing_documents_due_on',NEW.missing_documents_due_on,
       'conditional_reason',NEW.conditional_reason,
-      'revision',NEW.revision,
+      'revision',NEW.revision::text,
       'updated_at',NEW.updated_at);
   END IF;
 
@@ -125,6 +125,21 @@ $$;
 CREATE TRIGGER admission_offline_change_capture
 AFTER INSERT OR UPDATE OR DELETE ON public.admission_applications
 FOR EACH ROW EXECUTE FUNCTION app_private.offline_capture_admission_change();
+
+-- TRUNCATE bypasses row-level triggers; fail closed rather than creating a
+-- false notion that the offline change log has no missing deletions.
+CREATE FUNCTION app_private.offline_block_admission_truncate()
+RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path = ''
+AS $
+BEGIN
+  RAISE EXCEPTION 'Bulk admission truncation bypasses change tracking'
+    USING ERRCODE='23514';
+END;
+$;
+CREATE TRIGGER admission_offline_no_truncate
+BEFORE TRUNCATE ON public.admission_applications
+FOR EACH STATEMENT
+EXECUTE FUNCTION app_private.offline_block_admission_truncate();
 
 -- Backfill already-existing admissions into the feed, if any. The preceding
 -- CREATE TRIGGER and this INSERT are in one migration transaction, so no
@@ -155,7 +170,7 @@ BEGIN
         'documents_state',r.documents_state,
         'missing_documents_due_on',r.missing_documents_due_on,
         'conditional_reason',r.conditional_reason,
-        'revision',r.revision,'updated_at',r.updated_at));
+        'revision',r.revision::text,'updated_at',r.updated_at));
   END LOOP;
 END;
 $bootstrap$;
@@ -276,6 +291,8 @@ $$;
 REVOKE ALL ON FUNCTION app_private.offline_change_log_immutable()
   FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION app_private.offline_capture_admission_change()
+  FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION app_private.offline_block_admission_truncate()
   FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION app_private.offline_pull_admission_changes(
   uuid,uuid,uuid,uuid,text,bigint,integer)
