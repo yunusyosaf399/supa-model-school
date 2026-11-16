@@ -214,7 +214,13 @@ class _SchoolShellState extends State<_SchoolShell> {
 
   void _newAdmission() {
     Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => const AdmissionWizardPage(),
+      builder: (_) => AdmissionWizardPage(
+        // Only a verified Owner receives real academic options. The
+        // unauthenticated debug preview intentionally has no sample IDs.
+        owner: widget.owner,
+        academicRepository:
+            widget.owner == null ? null : widget.academicRepository,
+      ),
     ));
   }
 
