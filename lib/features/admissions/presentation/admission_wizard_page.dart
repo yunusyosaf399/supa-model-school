@@ -14,7 +14,12 @@ class AdmissionWizardPage extends StatefulWidget {
     super.key,
     this.owner,
     this.academicRepository,
+    this.initialStep = AdmissionStep.student,
   });
+
+  /// Widget-test seam; production navigation always starts at Student.
+  @visibleForTesting
+  final AdmissionStep initialStep;
 
   /// Null means design preview; never substitute fictional academic IDs.
   final OwnerAccess? owner;
@@ -26,7 +31,7 @@ class AdmissionWizardPage extends StatefulWidget {
 
 class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   final AdmissionDraft _draft = AdmissionDraft();
-  int _step = 0;
+  late int _step;
   int _nextGuardianId = 2;
   String? _error;
   bool _allowExit = false;
@@ -73,6 +78,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   @override
   void initState() {
     super.initState();
+    _step = widget.initialStep.index;
     // The active year ID is verified from DB01. The user chooses a campus,
     // and only its scoped class/section records will then be queried.
     if (_academicReady) {
