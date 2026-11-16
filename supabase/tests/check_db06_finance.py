@@ -49,11 +49,20 @@ assert "UNIQUE (school_id,operation_id)" in sql
 assert "FOREIGN KEY (journal_id,school_id,journal_kind)" in sql
 assert "num_nonnulls(" in sql
 assert "db06_fee_receipt_school_key" in sql
+assert "db06_fee_adjustment_school_key" in sql
+assert "db06_payroll_entry_school_key" in sql
+assert "db06_payroll_adjustment_school_key" in sql
+assert "fee_charge_id uuid UNIQUE" in sql
+assert "payroll_entry_id uuid UNIQUE" in sql
+assert "journal_kind='fee_assessment'" in sql
+assert "journal_kind='payroll_accrual'" in sql
 assert "db06_salary_payment_school_key" in sql
 assert "db06_salary_advance_school_key" in sql
 assert "db06_admission_deposit_school_key" in sql
 assert "FROM PUBLIC,anon,authenticated" in sql
-assert "new bank" not in sql.lower() or True
+assert "Unmatched bank statement line blocks final reconciliation" in sql
+assert "Late bank import would change finalized statement" in sql
+assert "Cash denomination count only allowed before final close" in sql
 assert "Bank statement/ledger account or amount mismatch" in sql
 assert "FOREIGN KEY (ledger_line_id,school_id)" in sql
 assert "Cannot post journal into closed accounting period" in sql
@@ -70,7 +79,9 @@ assert "amount_minor bigint NOT NULL CHECK (amount_minor>0)" in sql
 assert "request_sha256 bytea NOT NULL" in sql
 
 triggers = re.findall(r"(?im)^CREATE (?:CONSTRAINT )?TRIGGER (\w+)\b",sql)
-assert len(triggers) == 41, len(triggers)
+assert len(triggers) == 43, len(triggers)
+assert len(re.findall(r"(?im)^AS \$\$\s*$",sql)) == 11
+assert len(re.findall(r"(?im)^\$\$;\s*$",sql)) == 11
 assert len([n for n in triggers if n.endswith("_immutable")]) == 13
 assert len([n for n in triggers if n.endswith("_no_truncate")]) == 16
 assert all(token in db03 for token in (
@@ -87,7 +98,10 @@ for mark in (
     "Orphan journal accepted", "Unbalanced ledger accepted",
     "Mismatched bank statement",
     "Cash closing finalized despite PENDING SYNC",
-    "Final bank reconciliation reopened", "New journal accepted in CLOSED period",
+    "Final bank reconciliation reopened",
+    "Late bank statement import changed a final reconciliation",
+    "Late cash denomination insert after final close accepted",
+    "New journal accepted in CLOSED period",
     "DB06 incomplete RLS", "SQLSTATE '23514'",
     "ROLLBACK;",
 ):
