@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
 
+import '../../academics/data/academic_structure_repository.dart';
+import '../../auth/data/owner_auth_gateway.dart';
 import '../models/admission_draft.dart';
 
 /// First-stage admissions UI for Windows and Android.
 ///
-/// This screen intentionally does NOT call Supabase, upload identity documents
-/// or store data in SQLite. Until DB01/DB02 migrations, permissions, and offline
-/// sync pass, any data entered here lives in memory and is discarded on exit.
+/// Only the academic selectors can load read-only, authorized DB01 records.
+/// The applicant form remains strictly in memory: no DB02 admission/identity
+/// writes, private document uploads, offline queue, or payment operations.
 class AdmissionWizardPage extends StatefulWidget {
-  const AdmissionWizardPage({super.key});
+  const AdmissionWizardPage({
+    super.key,
+    this.owner,
+    this.academicRepository,
+  });
+
+  /// Null means design preview; never substitute fictional academic IDs.
+  final OwnerAccess? owner;
+  final AcademicStructureRepository? academicRepository;
 
   @override
   State<AdmissionWizardPage> createState() => _AdmissionWizardPageState();
@@ -20,24 +30,105 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   int _nextGuardianId = 2;
   String? _error;
   bool _allowExit = false;
+  List<SchoolClassRecord> _academicClasses = const [];
+  bool _academicLoading = false;
+  String? _academicError;
+  int _academicLoadVersion = 0;
 
-  static const _sampleCampuses = <String, String>{
-    'sample-campus-a': 'Campus A (sample)',
-    'sample-campus-b': 'Campus B (sample)',
-  };
-  static const _sampleYears = <String, String>{
-    'sample-year-2026': '2026–2027 (sample)',
-    'sample-year-2027': '2027–2028 (sample)',
-  };
-  static const _sampleClasses = <String, String>{
-    'grade-1': 'Grade 1 (sample)',
-    'grade-5': 'Grade 5 (sample)',
-    'grade-10': 'Grade 10 (sample)',
-  };
-  static const _sampleSections = <String, String>{
-    'section-a': 'Section A (sample)',
-    'section-b': 'Section B (sample)',
-  };
+  bool get _academicReady =>
+      widget.owner?.setupComplete == true &&
+      widget.owner?.activeYearId != null &&
+      widget.owner?.campuses.isNotEmpty == true &&
+      widget.academicRepository != null;
+
+  Map<String, String> get _campusChoices => {
+        if (_academicReady)
+          for (final campus in widget.owner!.campuses)
+            campus.id: campus.name,
+      };
+
+  Map<String, String> get _yearChoices => {
+        if (_academicReady)
+          widget.owner!.activeYearId!: widget.owner!.activeYearLabel ??
+              'Current academic year',
+      };
+
+  Map<String, String> get _classChoices => {
+        for (final schoolClass in _academicClasses)
+          schoolClass.id: schoolClass.name,
+      };
+
+  Map<String, String> get _sectionChoices {
+    for (final schoolClass in _academicClasses) {
+      if (schoolClass.id == _draft.classId) {
+        return {
+          for (final section in schoolClass.sections)
+            section.id: section.name,
+        };
+      }
+    }
+    return {};
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // The active year ID is verified from DB01. The user chooses a campus,
+    // and only its scoped class/section records will then be queried.
+    if (_academicReady) {
+      _draft.academicYearId = widget.owner!.activeYearId;
+    }
+  }
+
+  void _chooseCampus(String? id) {
+    if (!_academicReady || (id != null && !_campusChoices.containsKey(id))) {
+      return;
+    }
+    ++_academicLoadVersion; // Invalidate any previous network reply.
+    setState(() {
+      _draft.campusId = id;
+      _draft.academicYearId = widget.owner!.activeYearId;
+      _draft.classId = null;
+      _draft.sectionId = null;
+      _academicClasses = const [];
+      _academicLoading = false;
+      _academicError = null;
+      _error = null;
+    });
+    if (id != null) _loadClasses(id);
+  }
+
+  Future<void> _loadClasses(String campusId) async {
+    if (!_academicReady || !_campusChoices.containsKey(campusId)) return;
+    final version = ++_academicLoadVersion;
+    setState(() {
+      _academicLoading = true;
+      _academicError = null;
+    });
+    try {
+      final rows = await widget.academicRepository!.listClasses(
+        campusId: campusId,
+        academicYearId: widget.owner!.activeYearId!,
+      );
+      if (!mounted || version != _academicLoadVersion ||
+          _draft.campusId != campusId) return;
+      setState(() {
+        _academicClasses = rows;
+        _academicLoading = false;
+      });
+    } catch (_) {
+      if (!mounted || version != _academicLoadVersion) return;
+      setState(() {
+        _academicClasses = const [];
+        _draft.classId = null;
+        _draft.sectionId = null;
+        _academicLoading = false;
+        _academicError =
+            'Class options could not be loaded. Check your network and '
+            'Owner campus permissions, then retry.';
+      });
+    }
+  }
 
   String _dateLabel(DateTime? date) {
     if (date == null) return 'Select date';
@@ -81,6 +172,28 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   }
 
   void _next() {
+    if (AdmissionStep.values[_step] == AdmissionStep.academic) {
+      if (!_academicReady) {
+        setState(() => _error =
+            'Complete Owner school setup and academic structure first.');
+        return;
+      }
+      if (_academicLoading || _academicError != null ||
+          !_campusChoices.containsKey(_draft.campusId) ||
+          _draft.academicYearId != widget.owner!.activeYearId ||
+          !_classChoices.containsKey(_draft.classId)) {
+        setState(() => _error =
+            'Select an authorized campus and a loaded class in the active '
+            'academic year before continuing.');
+        return;
+      }
+      if (_draft.sectionId != null &&
+          !_sectionChoices.containsKey(_draft.sectionId)) {
+        setState(() => _error =
+            'The selected section is no longer available.');
+        return;
+      }
+    }
     final error = _draft.validateStep(AdmissionStep.values[_step]);
     if (error != null) {
       setState(() => _error = error);
@@ -108,8 +221,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Discard admission preview?'),
         content: const Text(
-          'This form is not connected to the school database. '
-          'The information entered will be lost when you leave.',
+          'Only academic options may be read from your school database. '
+          'No admission details have been saved. All entered information '
+          'will be lost when you leave.',
         ),
         actions: [
           TextButton(
@@ -260,9 +374,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
                       SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'UI demonstration only. Sample campus/class choices '
-                          'are not real school records. No information is saved, '
-                          'uploaded or submitted.',
+                          'Admission preview only. Academic choices are '
+                          'loaded from authorized school records when signed in. '
+                          'No information is saved, uploaded or submitted.',
                         ),
                       ),
                     ],
@@ -488,48 +602,87 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         const Text('Class and campus allocation',
             style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text('Only sample choices are available until the school '
-            'database and campus permissions are connected.'),
-        const SizedBox(height: 16),
-        _choice(
-          label: 'Campus *',
-          current: _draft.campusId,
-          choices: _sampleCampuses,
-          onChanged: (value) => setState(() {
-            _draft.campusId = value;
-            _draft.classId = null;
-            _draft.sectionId = null;
-          }),
-        ),
-        const SizedBox(height: 16),
-        _choice(
-          label: 'Academic year *',
-          current: _draft.academicYearId,
-          choices: _sampleYears,
-          onChanged: (v) => setState(() => _draft.academicYearId = v),
-        ),
-        const SizedBox(height: 16),
-        _choice(
-          key: ValueKey('class-choice-${_draft.campusId}'),
-          label: 'Class *',
-          current: _draft.classId,
-          choices: _sampleClasses,
-          onChanged: (v) => setState(() {
-            _draft.classId = v;
-            _draft.sectionId = null;
-          }),
-        ),
-        const SizedBox(height: 16),
-        _choice(
-          key: ValueKey('section-choice-${_draft.classId}'),
-          label: 'Section (optional)',
-          current: _draft.sectionId,
-          choices: _sampleSections,
-          onChanged: (v) => setState(() => _draft.sectionId = v),
-        ),
+        if (!_academicReady) ...[
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: Text('No authorized academic options are available. '
+                  'Sign in as Owner, complete school setup, and create '
+                  'classes and sections before selecting a placement.'),
+            ),
+          ),
+        ] else ...[
+          const Text('The options below come from your school database. '
+              'Only the active academic year is available for new admissions.'),
+          const SizedBox(height: 16),
+          _choice(
+            key: const Key('admission-campus-choice'),
+            label: 'Campus *',
+            current: _draft.campusId,
+            choices: _campusChoices,
+            onChanged: _chooseCampus,
+          ),
+          const SizedBox(height: 16),
+          _choice(
+            key: const Key('admission-year-choice'),
+            label: 'Academic year *',
+            current: _draft.academicYearId,
+            choices: _yearChoices,
+            onChanged: (_) {}, // Server-selected active year only.
+          ),
+          if (_academicLoading) ...[
+            const SizedBox(height: 12),
+            const LinearProgressIndicator(
+              key: Key('admission-classes-loading'),
+            ),
+          ],
+          if (_academicError != null) ...[
+            const SizedBox(height: 12),
+            Text(_academicError!,
+                key: const Key('admission-classes-error'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            TextButton.icon(
+              onPressed: _draft.campusId == null
+                  ? null : () => _loadClasses(_draft.campusId!),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry class lookup'),
+            ),
+          ],
+          const SizedBox(height: 16),
+          _choice(
+            key: ValueKey('class-choice-${_draft.campusId}-'
+                '${_draft.academicYearId}-${_academicClasses.length}'),
+            label: 'Class *',
+            current: _draft.classId,
+            choices: _classChoices,
+            onChanged: (value) => setState(() {
+              _draft.classId = value;
+              _draft.sectionId = null;
+              _error = null;
+            }),
+          ),
+          if (!_academicLoading && _draft.campusId != null &&
+              _academicError == null && _academicClasses.isEmpty) ...[
+            const SizedBox(height: 8),
+            const Text('No classes exist for this campus and academic year. '
+                'Create them in Owner → Academic Setup.'),
+          ],
+          const SizedBox(height: 16),
+          _choice(
+            key: ValueKey('section-choice-${_draft.classId}'),
+            label: 'Section (optional)',
+            current: _draft.sectionId,
+            choices: _sectionChoices,
+            onChanged: (value) => setState(() {
+              _draft.sectionId = value;
+              _error = null;
+            }),
+          ),
+        ],
         const SizedBox(height: 12),
-        const Text('The permanent registration number is generated by the '
-            'trusted server after approval; it is not entered manually.'),
+        const Text('The permanent registration number will be generated by '
+            'the trusted server after admission approval; nothing is '
+            'submitted at this stage.'),
       ],
     );
   }
@@ -669,11 +822,10 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
             .map((g) => '${g.fullName} (${g.relationship}'
                 '${g.isPrimary ? ', primary' : ''})')
             .join(', ')),
-        _summaryRow('Campus', _sampleCampuses[_draft.campusId] ?? 'Not selected'),
-        _summaryRow('Year', _sampleYears[_draft.academicYearId] ?? 'Not selected'),
-        _summaryRow('Class', _sampleClasses[_draft.classId] ?? 'Not selected'),
-        _summaryRow('Section',
-            _sampleSections[_draft.sectionId] ?? 'Unassigned'),
+        _summaryRow('Campus', _campusChoices[_draft.campusId] ?? 'Not selected'),
+        _summaryRow('Year', _yearChoices[_draft.academicYearId] ?? 'Not selected'),
+        _summaryRow('Class', _classChoices[_draft.classId] ?? 'Not selected'),
+        _summaryRow('Section', _sectionChoices[_draft.sectionId] ?? 'Unassigned'),
         _summaryRow('Document state', 'Conditional — awaiting verification'),
         _summaryRow('Document deadline', _dateLabel(_draft.missingDocumentsDueOn)),
         _summaryRow('Admission fee', _draft.admissionFeeStatus),
@@ -715,14 +867,14 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   }) {
     return DropdownButtonFormField<String>(
       key: key,
-      initialValue: current,
+      initialValue: choices.containsKey(current) ? current : null,
       isExpanded: true,
       decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
       items: [
         for (final entry in choices.entries)
           DropdownMenuItem(value: entry.key, child: Text(entry.value)),
       ],
-      onChanged: onChanged,
+      onChanged: choices.isEmpty ? null : onChanged,
     );
   }
 
