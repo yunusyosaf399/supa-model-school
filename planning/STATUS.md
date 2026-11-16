@@ -220,3 +220,10 @@ Date: 2026-11-16
 - Structural source checks passed. **NOT executed:** actual Postgres DDL/fixtures, transactional posting/credit allocation concurrency, banker/parent upload controls, DB06 cash-account posting, Supabase migration/deployment.
 - **Nine schema-domain progress:** DB01+DB02 baseline deployed (2/9); DB03 source designed, UNDEPLOYED (1/9); **6 full schema designs remain DB04–DB09**; **7 domains require deployment DB03–DB09**. Distinct from the 114 project implementation tasks.
 - Next full schema to DESIGN is DB04 Student/Staff Attendance + School Calendar + Corrections, then DB05 Employees/Payroll, DB06 Finance Cashbook, DB07 Business/Inventory, DB08 Controls, DB09 Sync/Backup.
+
+## Session 2026-11-16 — Shared theme and clickable Admissions navigation
+- Fixed New Admission forcing light theme: removed its light-only ColorScheme/scaffold background and moved all panels/inputs/text/borders to inherited `MaterialApp` ThemeMode adaptive styling. Dashboard and Admissions now share Settings-selected Dark/Light/System appearance.
+- Moved in-shell appearance control into Settings; no extra AppBar appearance icon. Previously finalized login styling untouched.
+- Admissions New Screen still preserves the draft and 6-stage form, but now receives shell global search callback, verified campus context, and module navigation callback; Search is 46px-high with the Dashboard's shape/spacing and Ctrl+K hint; school campus dropdown is authorized and functional.
+- Desktop Admissions sidebar items now actually navigate after a discard confirmation, back to the existing shell page rather than opening another disconnected shell. Notifications show explicit not-configured notice; account Settings and return function. No DB/auth changes.
+- Added widget regression source for dark theme, global search and module navigation. No Flutter SDK in assistant environment to run analyze/tests/build. Full runbook `docs/32_SHARED_THEME_ADMISSION_NAVIGATION.md`.
