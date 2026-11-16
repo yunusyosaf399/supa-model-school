@@ -188,3 +188,8 @@ Date: 2026-11-16
 - **SECURITY TESTED:** Rollback-only `DB09_DASHBOARD_RLS_INTEGRATION.sql` passed: verified Owner only; anon and fake actor denied; secure switching to live mode after temporary setup/year/enrollment; financial and attendance fields null when not configured; all operational test writes rolled back.
 - **SOURCE / ART:** `lib/features/dashboard/data/dashboard_repository.dart`, `lib/features/dashboard/presentation/dashboard_page.dart`, `lib/main.dart`, `assets/dashboard/{school_hero,school_sidebar}.jpg` and `pubspec.yaml`; image crops extracted from supplied dashboard references. Regression source `test/features/dashboard/dashboard_reference_widget_test.dart`, Owner dashboard existing expectation adjusted.
 - **GATES:** Real fee collection/attendance/sync operations still unavailable; UI does not assert live transactions. Flutter compilation/analyzer/widget tests and device screenshots **not run** here (SDK unavailable). Full notes `docs/29_DASHBOARD_REFERENCE_DB09.md`.
+
+## Session 2026-11-16 — Dashboard decoration removed
+- **UI:** Removed dashboard building photos on Windows sidebar and Android welcome header; the Android greeting is now compact text with subtle gradient, while brand icon, KPI cards, actions, charts and navigation remain unchanged.
+- **REPO:** Deleted `assets/dashboard/school_hero.jpg` and `assets/dashboard/school_sidebar.jpg`; removed `assets/dashboard/` from Flutter asset manifest.
+- **REGRESSION:** Updated dashboard widget-test source to assert no `Image` widgets in either desktop or mobile dashboard. No DB migration, live dataset, auth or login design modified. Flutter runtime tests require local SDK.
