@@ -312,7 +312,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   Color get _surface => Theme.of(context).colorScheme.surface;
   Color get _subSurface => _dark ? Color(0xFF203740) : Color(0xFFF8FCFF);
   Color get _fieldSurface => _dark ? Color(0xFF20333C) : Colors.white;
-  Color get _muted => _dark ? Color(0xFFBDD2DC) : Color(0xFF5A7382);
+  Color get _muted => _dark ? Color(0xFFBDD2DC) : _muted;
   Color get _warningSurface => _dark ? Color(0xFF413621) : Color(0xFFFFF4DC);
 
   IconData _stepIcon(AdmissionStep step) => switch (step) {
@@ -670,7 +670,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         avatar: Icon(Icons.description_outlined, color: _teal, size: 18),
         label: Text('Draft', style: TextStyle(
             color: _teal, fontWeight: FontWeight.w700)),
-        backgroundColor: Color(0xFFFFF0D4),
+        backgroundColor: _warningSurface,
         side: BorderSide.none),
   ]);
 
@@ -694,7 +694,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
               CircleAvatar(
                 radius: wide ? 18 : 23,
                 backgroundColor: i == _step
-                    ? _teal : Colors.white,
+                    ? _teal : _surface,
                 child: wide
                   ? Text('${i + 1}', style: TextStyle(
                       color: i == _step ? Colors.white : _ink,
@@ -737,7 +737,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         fontSize: 19, fontWeight: FontWeight.w900, color: _teal))),
       if (trailing != null)
         Text(trailing, style: TextStyle(
-          fontSize: 12, color: Color(0xFF63798A))),
+          fontSize: 12, color: _muted)),
     ]);
 
   Widget _mainStepPanel() => _surfaceCard(
@@ -780,7 +780,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         _checkRow('Transfer Certificate'),
       SizedBox(height: 5),
       Text('Uploads and verification are not enabled.',
-        style: TextStyle(fontSize: 11, color: Color(0xFF617888))),
+        style: TextStyle(fontSize: 11, color: _muted)),
     ],
   ));
 
@@ -788,7 +788,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     padding: EdgeInsets.symmetric(vertical: 5),
     child: Row(children: [
       Icon(Icons.check_box_outline_blank,
-          size: 18, color: Color(0xFF8FA6B6)),
+          size: 18, color: _muted),
       SizedBox(width: 11),
       Expanded(child: Text(title,
           style: TextStyle(fontSize: 12))),
@@ -850,7 +850,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
 
   Widget _mobileActions() => Container(
     padding: EdgeInsets.fromLTRB(15, 11, 15, 12),
-    decoration: BoxDecoration(color: Colors.white,
+    decoration: BoxDecoration(color: _surface,
         border: Border(top: BorderSide(color: _line))),
     child: Row(children: [
       Expanded(child: OutlinedButton.icon(
@@ -989,7 +989,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           SizedBox(height: 4),
           Text('Coming soon\nJPG, PNG • max 2 MB',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 10, color: Color(0xFF587481))),
+            style: TextStyle(fontSize: 10, color: _muted)),
         ],
       ),
     ),
@@ -1150,7 +1150,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       SizedBox(height: 6),
       Text('One primary contact is required. Other guardians can '
         'be added for the same student.',
-        style: TextStyle(color: Color(0xFF5A7382), fontSize: 12)),
+        style: TextStyle(color: _muted, fontSize: 12)),
       SizedBox(height: 14),
       for (var i = 0; i < _draft.guardians.length; i++)
         _guardianCard(i, _draft.guardians[i]),
@@ -1262,7 +1262,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Text('Assign the academic year, campus, class and section.',
-        style: TextStyle(color: Color(0xFF587484), fontSize: 12)),
+        style: TextStyle(color: _muted, fontSize: 12)),
       SizedBox(height: 14),
       if (!_academicReady)
         Container(
@@ -1393,7 +1393,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       SizedBox(height: 7),
       Text('Documents are awaiting secure upload and verification. '
         'No file has been stored from this preview.',
-        style: TextStyle(fontSize: 12, color: Color(0xFF5B7380))),
+        style: TextStyle(fontSize: 12, color: _muted)),
       SizedBox(height: 14),
       for (final name in _draft.requiredDocumentNames)
         Container(
@@ -1418,7 +1418,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
                 SizedBox(height: 4),
                 Text('Not uploaded • Not verified',
                   style: TextStyle(
-                    color: Color(0xFF667E8B), fontSize: 11)),
+                    color: _muted, fontSize: 11)),
               ],
             )),
             Chip(
@@ -1448,7 +1448,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           Text('PDF, JPG, PNG • verification by authorized staff',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Color(0xFF607A87), fontSize: 11)),
+              color: _muted, fontSize: 11)),
         ]),
       ),
       SizedBox(height: 16),
@@ -1459,7 +1459,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       Text('Where required certificates are missing, the school may '
         'permit a deadline up to two calendar months. '
         'An overdue certificate never automatically deletes the student.',
-        style: TextStyle(fontSize: 12, color: Color(0xFF5A7280))),
+        style: TextStyle(fontSize: 12, color: _muted)),
       SizedBox(height: 13),
       OutlinedButton.icon(
         key: Key('document-deadline'),
@@ -1479,7 +1479,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       SizedBox(height: 12),
       Text('Deadline decisions and document verification will be '
         'audited when the trusted admissions service is enabled.',
-        style: TextStyle(fontSize: 11, color: Color(0xFF5A7280))),
+        style: TextStyle(fontSize: 11, color: _muted)),
     ],
   );
 
@@ -1492,7 +1492,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       SizedBox(height: 6),
       Text('Fee amounts and payment verification will come from '
         'authorized school plans. No money is collected on this screen.',
-        style: TextStyle(fontSize: 12, color: Color(0xFF617887))),
+        style: TextStyle(fontSize: 12, color: _muted)),
       SizedBox(height: 15),
       Container(
         padding: EdgeInsets.all(13),
@@ -1519,7 +1519,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
               () => _draft.admissionFeeStatus = v ?? 'not_recorded')),
           SizedBox(height: 8),
           Text('Selecting Paid does not record a payment or issue a receipt.',
-            style: TextStyle(fontSize: 11, color: Color(0xFF657C89))),
+            style: TextStyle(fontSize: 11, color: _muted)),
         ]),
       ),
       SizedBox(height: 12),
@@ -1607,7 +1607,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Text('Confirm the application details below before forwarding '
         'to the Principal.',
-        style: TextStyle(fontSize: 12, color: Color(0xFF587482))),
+        style: TextStyle(fontSize: 12, color: _muted)),
       SizedBox(height: 13),
       if (warning != null) ...[
         Container(
