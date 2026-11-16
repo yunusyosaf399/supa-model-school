@@ -532,7 +532,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         label: const Text('Cancel')),
     ] else
       Chip(
-        avatar: const Icon(Icons.edit_document, color: _teal, size: 18),
+        avatar: const Icon(Icons.description_outlined, color: _teal, size: 18),
         label: const Text('Draft', style: TextStyle(
             color: _teal, fontWeight: FontWeight.w700)),
         backgroundColor: const Color(0xFFFFF0D4),
