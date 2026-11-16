@@ -16,7 +16,7 @@ Future<void> main() async {
   const key = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
   OwnerAuthGateway gateway = const UnconfiguredOwnerAuthGateway();
   if (url.isNotEmpty && key.isNotEmpty) {
-    await Supabase.initialize(url: url, anonKey: key);
+    await Supabase.initialize(url: url, publishableKey: key);
     gateway = SupabaseOwnerAuthGateway(Supabase.instance.client);
   }
   runApp(SupaModelSchoolApp(authGateway: gateway));
