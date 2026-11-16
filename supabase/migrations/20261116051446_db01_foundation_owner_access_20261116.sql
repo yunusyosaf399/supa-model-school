@@ -2,9 +2,7 @@
 -- Applied version: 20261116051446, name db01_foundation_owner_access_20261116.
 -- Schema-only foundation. First Owner data seed is not part of this migration.
 -- This file mirrors the already-applied hosted migration for reproducibility.
--- REVIEW DRAFT ONLY. NOT EXECUTED OR DEPLOYED.
 -- DB01 Foundation / authorization. Requires Supabase PostgreSQL and auth schema.
--- Apply only after CLI-generated migration, local migration and RLS tests.
 
 create schema if not exists app_private;
 revoke all on schema app_private from public;
@@ -312,6 +310,6 @@ create policy device_read on public.registered_devices for select to authenticat
 -- 2a. Principal detailed report grants require separate server-side principal-role validation.
 -- 3. No CRUD policies until authenticated server operations are designed.
 -- 4. Validate PostgREST Data API exposure grants in target project.
--- 5. SQL has NOT been executed; migration ordering to be created by CLI.
+-- 5. This file corresponds to hosted migration version 20261116051446; no school-specific Owner seed is included.
 -- 6. School and campus settings remain owner-only until a deliberate non-sensitive projection is added.
 -- 7. role_permissions is a definition table; runtime role+campus authorization not implemented yet.
