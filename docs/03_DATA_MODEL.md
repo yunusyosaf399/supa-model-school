@@ -4,7 +4,7 @@ DB01 school foundation: schools, campuses, academic_years, classes, sections, us
 DB02 admissions: students, guardians, student_guardians, admission_applications, student_documents, student_document_uploads, student_document_reviews, admission_document_deadline_events, student_enrollments, campus_transfer_requests; transfer_receivables follows only after DB03 fee charges.
 DB03 fees: fee_categories, fee_plans, fee_plan_items, student_fee_rules, fee_discounts, fee_charges, fee_receipts, fee_allocations, student_credit_entries, fee_adjustments.
 DB04 attendance: school_calendar_days, attendance_policies, attendance_duties, attendance_registers, attendance_register_events, student_attendance_marks, attendance_correction_requests, attendance_correction_decisions, staff_attendance_records, staff_attendance_correction_requests, staff_attendance_correction_decisions.
-DB05 payroll: employees, employee_assignments, salary_settings, payroll_periods, payroll_entries, payroll_adjustments, salary_advances, advance_repayments, salary_payments.
+DB05 payroll: employee_departments, employee_positions, employees, employee_assignments, employee_teaching_assignments, payroll_components, salary_structures, salary_structure_lines, employee_leave_requests, employee_leave_days, payroll_periods, payroll_entries, payroll_entry_lines, payroll_cost_allocations, payroll_adjustments, salary_advances, advance_repayments, salary_payments, salary_payment_reversals, payroll_operation_receipts.
 DB06 money: financial_accounts, account_movements, account_transfers, expense_categories, expenses, capital_transactions, cash_closings, cash_closing_adjustments.
 DB07 business: canteen_products, stock_movements, canteen_sales, uniform_materials, production_batches, finished_stock_movements, uniform_sales, vehicles, vehicle_expenses.
 DB08 controls: approval_policies, approval_requests, approval_decisions, correction_requests, audit_events, document_templates, user_shortcuts.
@@ -43,3 +43,14 @@ linked to the future DB05 employee/assignment model. The currently deployed
 DB01 role constraint does not yet include a full Teacher role; the authorizing
 server RPCs are not implemented. See docs/33_DB04_ATTENDANCE_DESIGN.md.
 **5 domains remain to design (DB05–DB09), 7 remain undeployed (DB03–DB09).**
+
+## DB05 employee/payroll schema — design authored, not deployed (2026-11-16)
+Stacked DB05 draft contains 20 new public RLS-denied HR/payroll tables,
+employee/campus/position/teaching-assignment FKs, one original salary per
+employee per school month, earned/deducted component snapshots, signed
+adjustments, immutable salary payments and advance recoveries. The active
+Teacher role in deployed DB01, approved salary posting, salary confidentiality,
+leave-day validation, allocation/recovery sums and DB06 linked account
+movements remain pending. See docs/34_DB05_EMPLOYEES_PAYROLL_DESIGN.md.
+**4 full core schemas remain to design (DB06–DB09); 7 remain undeployed
+(DB03–DB09). No Flutter source changes or hosted SQL deployment.**
