@@ -58,7 +58,7 @@ id,week,day,title,status,depends_on,evidence
 "D10-T03","2","10","Mark provisional offline receipts","TODO","Day 09 prerequisite checks",""
 "D10-T04","2","10","Implement receipt numbering service","TODO","Day 09 prerequisite checks",""
 "D10-T05","2","10","Test print/export","TODO","Day 09 prerequisite checks",""
-"D11-T01","2","11","Implement attendance schema","TODO","Day 10 prerequisite checks",""
+"D11-T01","2","11","Author DB04 student/staff attendance schema and correction evidence model","DONE","DB03 draft enrollment composite FK from PR #25; teacher role & trusted operations remain future","Stacked draft PR #26: 11 attendance/calendar/teacher-duty/mark/correction tables, 11 deny-by-default RLS, 19 triggers, synthetic rollback PostgreSQL fixture and static guard; SQL/RLS tests NOT RUN, no Flutter changes, NO DEPLOYMENT"
 "D11-T02","2","11","Build student attendance UI","TODO","Day 10 prerequisite checks",""
 "D11-T03","2","11","Implement today-only and backdated rules","TODO","Day 10 prerequisite checks",""
 "D11-T04","2","11","Implement attendance correction audit","TODO","Day 10 prerequisite checks",""

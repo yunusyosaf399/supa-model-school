@@ -1,7 +1,7 @@
 # Development task tracker
 
 Last verified: 2026-11-16.
-**114 tasks: 26 DONE / 87 TODO / 1 IN_PROGRESS / 0 BLOCKED.**
+**114 tasks: 27 DONE / 86 TODO / 1 IN_PROGRESS / 0 BLOCKED.**
 Authoritative machine-readable status: [tasks.csv](tasks.csv).
 
 **Important:** D03-T03–T05 and D04-T01–T04 are DONE for code authoring/static source review only. The user reports Windows Flutter tests and build passed on 2026-11-15; logs were not independently inspected. Schema-first design is now prioritized: DB03 PR #25 is NOT deployed, and no Flutter changes are planned in this workstream. Android runtime, Flutter analyzer evidence, PostgreSQL RLS/Edge, offline security, and hosted deployment remain unfinished.
@@ -88,7 +88,7 @@ Authoritative machine-readable status: [tasks.csv](tasks.csv).
 - [ ] `D10-T05` Test print/export — **TODO**
 
 ## Day 11 — Week 2
-- [ ] `D11-T01` Implement attendance schema — **TODO**
+- [x] `D11-T01` Author DB04 campus attendance schema and immutable correction tables — **DONE (schema source only)**
 - [ ] `D11-T02` Build student attendance UI — **TODO**
 - [ ] `D11-T03` Implement today-only and backdated rules — **TODO**
 - [ ] `D11-T04` Implement attendance correction audit — **TODO**

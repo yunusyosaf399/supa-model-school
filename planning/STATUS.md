@@ -4,7 +4,7 @@ Date: 2026-11-16
 
 ## Verified
 - [x] **Current live status verified 2026-11-16:** DB01 foundation and DB02 restricted admissions **baseline deployed** (27 public tables with RLS); one school/campus, no student/enrollment data. Archived notes below claiming public school tables were empty predate these migrations.
-- [x] **Schema-first policy:** review database schemas DB01–DB09 before further deployment. DB03 is authored in [draft PR #25](https://github.com/yunusyosaf399/supa-model-school/pull/25); no new SQL deployment or Flutter code in this schema-design session. **6 full schema designs remain (DB04–DB09), 7 domains remain undeployed (DB03–DB09).**
+- [x] **Schema-first policy:** DB01/DB02 baseline deployed; DB03 [draft PR #25](https://github.com/yunusyosaf399/supa-model-school/pull/25) and DB04 [stacked draft PR #26](https://github.com/yunusyosaf399/supa-model-school/pull/26) are **authored, not deployed**. No Flutter code or new live SQL in this workstream. **5 full schema domains remain to design (DB05–DB09); 7 remain to deploy (DB03–DB09).**
 - [x] Supabase project `uebzvfzpbqqttbqyxxos` created in SUPA MODEL SCHOOL connection, ap-south-1; status ACTIVE_HEALTHY.
 - [x] Private GitHub repository `yunusyosaf399/supa-model-school` exists, push permission confirmed.
 - [x] README, Flutter Android/Windows project, UI preview source, schema drafts, test runbooks and task documentation committed; no GitHub Actions in use.
@@ -13,7 +13,7 @@ Date: 2026-11-16
 - [x] Machine-readable 114-task tracker is committed.
 
 ## Current count
-**26 complete, 87 pending, 1 in progress, 0 blocked (total 114).**
+**27 complete, 86 pending, 1 in progress, 0 blocked (total 114).**
 
 ## Remaining verification gates
 - User reported a successful Windows Flutter build and passing tests on 2026-11-15, after the admission wizard constructor fix. Logs not supplied for independent verification. Android build and explicit Flutter analyzer evidence remain pending; D02-T02 remains TODO.
@@ -220,3 +220,12 @@ Date: 2026-11-16
 - Structural source checks passed. **NOT executed:** actual Postgres DDL/fixtures, transactional posting/credit allocation concurrency, banker/parent upload controls, DB06 cash-account posting, Supabase migration/deployment.
 - **Nine schema-domain progress:** DB01+DB02 baseline deployed (2/9); DB03 source designed, UNDEPLOYED (1/9); **6 full schema designs remain DB04–DB09**; **7 domains require deployment DB03–DB09**. Distinct from the 114 project implementation tasks.
 - Next full schema to DESIGN is DB04 Student/Staff Attendance + School Calendar + Corrections, then DB05 Employees/Payroll, DB06 Finance Cashbook, DB07 Business/Inventory, DB08 Controls, DB09 Sync/Backup.
+
+## 2026-11-16 — DB04 Attendance schema source design, NOT deployed
+- Created [stacked draft PR #26](https://github.com/yunusyosaf399/supa-model-school/pull/26), based on DB03 draft PR #25. DB04 requires DB03's 6-column enrollment scope UNIQUE constraint; no standalone attempt against hosted DB02.
+- Authored `supabase/drafts/DB04_ATTENDANCE_SCHEMA.sql`: 11 RLS-denied tables for campus calendars, versioned attendance policy, scheduled primary/substitute teacher duties, class/section/date first-period + optional after-break registers, immutable original student marks, requested/decided corrections, staff marks and staff corrections. Four integrity functions, 19 triggers incl 8 append-only UPDATE/DELETE + 8 TRUNCATE guards.
+- Authored rollback-only local PostgreSQL fixture for campus/year/section FK, disabled/enabled after-break (no daily double-count), academic year/holiday guards, teacher duty attribution, rejected register regression, student/staff corrections and direct client RLS privileges; static checker and detailed docs/test runbook.
+- **Structural source inspection passed; PostgreSQL SQL execution and RLS/teacher-role/correction concurrency tests are NOT run.** Current deployed DB01 role enum lacks a real `teacher` role; expand roles and verify staff/class authorization before enabling any attendance endpoint. No verified attendance posting RPC, staff payroll integration, offline sync, or production use.
+- **No Flutter/Dart code written; no live database changes or GitHub Actions**.
+- **Schema progress:** 9 domains, DB01/DB02 baseline deployed, DB03/DB04 drafted but undeployed; **5 full schema designs remain (DB05–DB09)**, **7 domains remain undeployed (DB03–DB09)**. Overall 114 tasks: 27 DONE, 86 TODO, 1 IN_PROGRESS, 0 BLOCKED.
+- Next schema-only task: **DB05 — Employees, Campus Assignments, Salary Configuration, Payroll, Advances and Repayment**. Full-domain approval, local SQL/RLS/security tests and reviewed migrations must precede further deployment.
