@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'features/auth/data/owner_auth_gateway.dart';
 
 import 'features/admissions/presentation/admission_wizard_page.dart';
+import 'features/academics/data/academic_structure_repository.dart';
+import 'features/academics/presentation/academic_structure_page.dart';
 import 'features/auth/presentation/login_page.dart';
 import 'features/dashboard/presentation/dashboard_page.dart';
 import 'features/owner/presentation/owner_control_panel_page.dart';
@@ -16,6 +18,8 @@ Future<void> main() async {
   const url = String.fromEnvironment('SUPABASE_URL');
   const key = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
   OwnerAuthGateway gateway = const UnconfiguredOwnerAuthGateway();
+  AcademicStructureRepository academicRepo =
+      const UnconfiguredAcademicStructureRepository();
   if (url.isNotEmpty && key.isNotEmpty) {
     await Supabase.initialize(
       url: url,
@@ -28,8 +32,12 @@ Future<void> main() async {
       ),
     );
     gateway = SupabaseOwnerAuthGateway(Supabase.instance.client);
+    academicRepo = SupabaseAcademicStructureRepository(Supabase.instance.client);
   }
-  runApp(SupaModelSchoolApp(authGateway: gateway));
+  runApp(SupaModelSchoolApp(
+    authGateway: gateway,
+    academicRepository: academicRepo,
+  ));
 }
 
 /// The normal startup shows Login. startInPreview is for isolated widget tests.
@@ -38,9 +46,11 @@ class SupaModelSchoolApp extends StatefulWidget {
     super.key,
     this.startInPreview = false,
     this.authGateway,
+    this.academicRepository,
   });
   final bool startInPreview;
   final OwnerAuthGateway? authGateway;
+  final AcademicStructureRepository? academicRepository;
 
   @override
   State<SupaModelSchoolApp> createState() => _SupaModelSchoolAppState();
@@ -119,6 +129,8 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
               ? _SchoolShell(
                   key: ValueKey(_authorized?.userId ?? 'debug-preview'),
                   owner: _authorized,
+                  academicRepository: widget.academicRepository ??
+                      const UnconfiguredAcademicStructureRepository(),
                   themeMode: themeMode,
                   onThemeChanged: (mode) => setState(() => themeMode = mode),
                   onExit: _exitShell,
@@ -149,9 +161,11 @@ class _SchoolShell extends StatefulWidget {
     required this.onChangePassword,
     required this.onSaveSetup,
     required this.onPasswordChanged,
+    required this.academicRepository,
     this.owner,
   });
   final OwnerAccess? owner;
+  final AcademicStructureRepository academicRepository;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
   final VoidCallback onExit;
@@ -180,6 +194,7 @@ class _SchoolShellState extends State<_SchoolShell> {
   static const modules = <String>[
     'Dashboard', 'Students', 'Admissions', 'Fees', 'Attendance',
     'Employees', 'Payroll', 'Expenses', 'Reports', 'Sync Center', 'Settings',
+    'Academic Setup',
   ];
 
   static const icons = <IconData>[
@@ -194,6 +209,7 @@ class _SchoolShellState extends State<_SchoolShell> {
     Icons.bar_chart_outlined,
     Icons.sync,
     Icons.settings_outlined,
+    Icons.class_outlined,
   ];
 
   void _newAdmission() {
@@ -282,6 +298,13 @@ class _SchoolShellState extends State<_SchoolShell> {
         onSetupSaved: (updated) {
           setState(() => activeCampusId = updated.campuses.first.id);
         },
+        onOpenAcademicStructure: () => setState(() => selected = 11),
+      );
+    }
+    if (selected == 11 && widget.owner != null) {
+      return AcademicStructurePage(
+        owner: widget.owner!,
+        repository: widget.academicRepository,
       );
     }
     return _modulePreview();
