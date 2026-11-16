@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'features/auth/data/owner_auth_gateway.dart';
 
 import 'features/admissions/presentation/admission_wizard_page.dart';
 import 'features/auth/presentation/login_page.dart';
@@ -7,15 +9,28 @@ import 'features/students/presentation/student_directory_page.dart';
 import 'ui/school_brand.dart';
 import 'ui/school_theme.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const SupaModelSchoolApp());
+  // Only a public/publishable client key may be supplied to Flutter.
+  const url = String.fromEnvironment('SUPABASE_URL');
+  const key = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
+  OwnerAuthGateway gateway = const UnconfiguredOwnerAuthGateway();
+  if (url.isNotEmpty && key.isNotEmpty) {
+    await Supabase.initialize(url: url, anonKey: key);
+    gateway = SupabaseOwnerAuthGateway(Supabase.instance.client);
+  }
+  runApp(SupaModelSchoolApp(authGateway: gateway));
 }
 
 /// The normal startup shows Login. startInPreview is for isolated widget tests.
 class SupaModelSchoolApp extends StatefulWidget {
-  const SupaModelSchoolApp({super.key, this.startInPreview = false});
+  const SupaModelSchoolApp({
+    super.key,
+    this.startInPreview = false,
+    this.authGateway,
+  });
   final bool startInPreview;
+  final OwnerAuthGateway? authGateway;
 
   @override
   State<SupaModelSchoolApp> createState() => _SupaModelSchoolAppState();
@@ -24,6 +39,52 @@ class SupaModelSchoolApp extends StatefulWidget {
 class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
   ThemeMode themeMode = ThemeMode.system;
   bool? _preview;
+  OwnerAccess? _authorized;
+  bool _restoring = false;
+
+  OwnerAuthGateway get _gateway =>
+      widget.authGateway ?? const UnconfiguredOwnerAuthGateway();
+
+  @override
+  void initState() {
+    super.initState();
+    if (_gateway.configured && !widget.startInPreview) {
+      _restoring = true;
+      _restoreOwnerSession();
+    }
+  }
+
+  Future<void> _restoreOwnerSession() async {
+    OwnerAccess? authorized;
+    try {
+      authorized = await _gateway.restore();
+    } catch (_) {
+      // Invalid/revoked sessions never grant Owner access.
+    }
+    if (!mounted) return;
+    setState(() {
+      _authorized = authorized;
+      _restoring = false;
+    });
+  }
+
+  Future<void> _signIn(String email, String password) async {
+    final authorized = await _gateway.signIn(email, password);
+    if (!mounted) return;
+    setState(() {
+      _authorized = authorized;
+      _preview = false;
+    });
+  }
+
+  Future<void> _exitShell() async {
+    if (_authorized != null) await _gateway.signOut();
+    if (!mounted) return;
+    setState(() {
+      _authorized = null;
+      _preview = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,17 +95,24 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
       theme: SchoolTheme.light(),
       darkTheme: SchoolTheme.dark(),
       themeMode: themeMode,
-      home: preview
-          ? _SchoolShell(
-              themeMode: themeMode,
-              onThemeChanged: (mode) => setState(() => themeMode = mode),
-              onExit: () => setState(() => _preview = false),
-            )
-          : LoginPage(
-              themeMode: themeMode,
-              onThemeChanged: (mode) => setState(() => themeMode = mode),
-              onOpenDemo: () => setState(() => _preview = true),
-            ),
+      home: _restoring
+          ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+          : (_authorized != null || preview)
+              ? _SchoolShell(
+                  key: ValueKey(_authorized?.userId ?? 'debug-preview'),
+                  owner: _authorized,
+                  themeMode: themeMode,
+                  onThemeChanged: (mode) => setState(() => themeMode = mode),
+                  onExit: _exitShell,
+                )
+              : LoginPage(
+                  themeMode: themeMode,
+                  authConfigured: _gateway.configured,
+                  onSignIn: _signIn,
+                  onRecoverPassword: _gateway.sendRecovery,
+                  onThemeChanged: (mode) => setState(() => themeMode = mode),
+                  onOpenDemo: () => setState(() => _preview = true),
+                ),
     );
   }
 }
@@ -54,7 +122,9 @@ class _SchoolShell extends StatefulWidget {
     required this.themeMode,
     required this.onThemeChanged,
     required this.onExit,
+    this.owner,
   });
+  final OwnerAccess? owner;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
   final VoidCallback onExit;
@@ -65,6 +135,7 @@ class _SchoolShell extends StatefulWidget {
 
 class _SchoolShellState extends State<_SchoolShell> {
   int selected = 0;
+  String? activeCampusId;
 
   static const modules = <String>[
     'Dashboard', 'Students', 'Admissions', 'Fees', 'Attendance',
@@ -204,6 +275,11 @@ class _SchoolShellState extends State<_SchoolShell> {
     final desktop = MediaQuery.sizeOf(context).width >= 860;
     final extended = MediaQuery.sizeOf(context).width >= 1190;
     final content = _content();
+    final owner = widget.owner;
+    final activeCampus = owner == null ? null : owner.campuses.firstWhere(
+      (campus) => campus.id == activeCampusId,
+      orElse: () => owner.campuses.first,
+    );
     final mobileIndex = switch (selected) {
       0 => 0,
       1 => 1,
@@ -224,6 +300,17 @@ class _SchoolShellState extends State<_SchoolShell> {
             overflow: TextOverflow.ellipsis)),
         ]),
         actions: [
+          if (owner != null)
+            PopupMenuButton<String>(
+              key: const Key('owner-campus-selector'),
+              tooltip: 'Authorized campus',
+              icon: const Icon(Icons.location_city_outlined),
+              onSelected: (id) => setState(() => activeCampusId = id),
+              itemBuilder: (_) => [
+                for (final campus in owner.campuses)
+                  PopupMenuItem(value: campus.id, child: Text(campus.name)),
+              ],
+            ),
           IconButton(
             key: const Key('open-global-search'),
             tooltip: 'Global search',
@@ -245,14 +332,28 @@ class _SchoolShellState extends State<_SchoolShell> {
             onSelected: (v) {
               if (v == 'exit') widget.onExit();
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'exit', child: Text('Exit demo')),
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'exit',
+                  child: Text(owner == null ? 'Exit demo' : 'Sign out')),
             ],
             icon: const Icon(Icons.account_circle_outlined),
           ),
         ],
       ),
-      body: desktop
+      body: Column(children: [
+        if (owner != null)
+          Container(
+            width: double.infinity,
+            color: Theme.of(context).colorScheme.primaryContainer,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(
+              'Verified Owner: ${owner.displayName} • '
+              '${owner.schoolName} • ${activeCampus?.name ?? 'No campus'}'
+              '   |   Dashboard figures are still fictional previews.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        Expanded(child: desktop
           ? Row(children: [
               NavigationRail(
                 key: const Key('desktop-navigation'),
@@ -274,7 +375,8 @@ class _SchoolShellState extends State<_SchoolShell> {
               const VerticalDivider(width: 1),
               Expanded(child: content),
             ])
-          : content,
+          : content),
+      ]),
       bottomNavigationBar: desktop ? null : NavigationBar(
         key: const Key('mobile-navigation'),
         selectedIndex: mobileIndex,
