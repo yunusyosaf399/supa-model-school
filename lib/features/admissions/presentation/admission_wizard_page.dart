@@ -17,6 +17,10 @@ class AdmissionWizardPage extends StatefulWidget {
     this.owner,
     this.academicRepository,
     this.initialStep = AdmissionStep.student,
+    this.selectedCampusId,
+    this.onOpenSearch,
+    this.onCampusChanged,
+    this.onNavigateModule,
   });
 
   /// Widget-test seam; production navigation always starts at Student.
@@ -26,6 +30,10 @@ class AdmissionWizardPage extends StatefulWidget {
   /// Null means design preview; never substitute fictional academic IDs.
   final OwnerAccess? owner;
   final AcademicStructureRepository? academicRepository;
+  final String? selectedCampusId;
+  final VoidCallback? onOpenSearch;
+  final ValueChanged<String>? onCampusChanged;
+  final ValueChanged<int>? onNavigateModule;
 
   @override
   State<AdmissionWizardPage> createState() => _AdmissionWizardPageState();
@@ -85,6 +93,13 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     // and only its scoped class/section records will then be queried.
     if (_academicReady) {
       _draft.academicYearId = widget.owner!.activeYearId;
+      if (widget.selectedCampusId != null &&
+          _campusChoices.containsKey(widget.selectedCampusId)) {
+        _draft.campusId = widget.selectedCampusId;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _loadClasses(widget.selectedCampusId!);
+        });
+      }
     }
   }
 
@@ -224,7 +239,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     });
   }
 
-  Future<void> _confirmExit() async {
+  Future<void> _confirmExit({VoidCallback? onExited}) async {
     final discard = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -251,10 +266,39 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     // PopScope must rebuild with canPop=true before popping the route.
     // Otherwise a second interception can reopen the confirmation dialog.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) Navigator.of(context).pop();
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      onExited?.call();
     });
   }
 
+
+  // Route all navigation through the existing admission exit confirmation.
+  // No separate shell is created; the original draft is discarded explicitly.
+  void _openModule(int index) {
+    if (widget.onNavigateModule == null) {
+      _confirmExit();
+      return;
+    }
+    _confirmExit(onExited: () => widget.onNavigateModule?.call(index));
+  }
+
+  void _openSearch() {
+    final callback = widget.onOpenSearch;
+    if (callback != null) {
+      callback();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Global search is not configured in this preview.'),
+      ));
+    }
+  }
+
+  void _showNotifications() {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('Notifications are not connected to live data yet.'),
+    ));
+  }
 
   static const _teal = Color(0xFF00635D);
   static const _pale = Color(0xFFE7F5F6);
