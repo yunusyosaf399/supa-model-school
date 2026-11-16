@@ -1582,31 +1582,26 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     );
   }
 
-  Widget _actions() {
-    return Row(
-      children: [
-        OutlinedButton.icon(
-          onPressed: _step == 0 ? null : _previous,
-          icon: const Icon(Icons.chevron_left),
-          label: const Text('Back'),
-        ),
-        const Spacer(),
-        if (_step < AdmissionStep.values.length - 1)
-          FilledButton.icon(
-            key: const Key('wizard-next'),
-            onPressed: _next,
-            icon: const Icon(Icons.chevron_right),
-            iconAlignment: IconAlignment.end,
-            label: const Text('Next'),
-          )
-        else
-          FilledButton.icon(
-            key: const Key('wizard-submit-disabled'),
-            onPressed: null,
-            icon: const Icon(Icons.lock_outline),
-            label: const Text('Submit unavailable'),
-          ),
-      ],
-    );
-  }
+  Widget _actions() => Row(children: [
+    Expanded(child: OutlinedButton.icon(
+      onPressed: _step == 0 ? null : _previous,
+      icon: const Icon(Icons.arrow_back),
+      label: const Text('Back'),
+    )),
+    const SizedBox(width: 13),
+    Expanded(child: _step < AdmissionStep.values.length - 1
+      ? FilledButton.icon(
+          key: const Key('wizard-next'),
+          onPressed: _next,
+          icon: const Icon(Icons.arrow_forward),
+          iconAlignment: IconAlignment.end,
+          label: const Text('Next Step'))
+      : FilledButton.icon(
+          key: const Key('wizard-submit-disabled'),
+          onPressed: null,
+          icon: const Icon(Icons.lock_outline),
+          label: const Text('Submit unavailable')),
+    ),
+  ]);
+
 }
