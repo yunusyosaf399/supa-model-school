@@ -57,7 +57,9 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
+    // Never flash fictitious dashboard metrics as if they were account data.
     if (widget.owner != null) {
+      _data = _emptyOwnerSnapshot(widget.owner!);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _refresh();
       });
@@ -80,6 +82,20 @@ class _DashboardPageState extends State<DashboardPage> {
       }
     }
   }
+
+  DashboardSnapshot _emptyOwnerSnapshot(OwnerAccess owner) =>
+      DashboardSnapshot.fromJson({
+        'is_demo': false,
+        'source': 'loading',
+        'school_name': owner.schoolName,
+        'campus_name': owner.campuses.isEmpty
+            ? 'No campus' : owner.campuses.first.name,
+        'year_label': owner.activeYearLabel ?? 'Not configured',
+        'currency_code': owner.currencyCode,
+        'fee_trend': [],
+        'recent_admissions': [],
+        'sync_status': 'Not configured',
+      });
 
   String? get _campusId {
     final owner = widget.owner;
@@ -169,7 +185,7 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, bounds) {
-      final desktop = bounds.maxWidth >= 900;
+      final desktop = bounds.maxWidth >= 1060;
       final width = bounds.maxWidth;
       final pad = desktop ? 22.0 : 13.0;
       final contentsWidth = width - pad * 2;
@@ -243,12 +259,6 @@ class _DashboardPageState extends State<DashboardPage> {
                   Expanded(child: _sync()),
                 ],
               ),
-            ],
-            if (!desktop) ...[
-              const SizedBox(height: 14),
-              _feeTrend(),
-              const SizedBox(height: 14),
-              _attendance(),
             ],
             const SizedBox(height: 12),
             Text(
