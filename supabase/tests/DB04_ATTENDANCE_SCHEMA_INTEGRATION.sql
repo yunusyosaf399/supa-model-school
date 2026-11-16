@@ -28,6 +28,7 @@ DECLARE
   v_after uuid:='50000000-0000-4000-8000-000000000002';
   v_holiday_duty uuid:='50000000-0000-4000-8000-000000000003';
   v_register uuid:='60000000-0000-4000-8000-000000000001';
+  v_after_register uuid:='60000000-0000-4000-8000-000000000002';
   v_mark uuid:='70000000-0000-4000-8000-000000000001';
   v_request uuid:='80000000-0000-4000-8000-000000000001';
   v_staff uuid:='90000000-0000-4000-8000-000000000001';
@@ -173,6 +174,30 @@ BEGIN
     RAISE EXCEPTION 'CROSS CAMPUS mark accepted';
   EXCEPTION WHEN foreign_key_violation THEN NULL;
   END;
+  -- When campus policy enables after-break, a SECOND register is allowed.
+  -- Its marks must not double-count pupils in daily first-period totals.
+  UPDATE public.attendance_policies SET
+    after_break_enabled=true,after_break_submit_deadline='13:00:00'
+    WHERE campus_id=v_campus_a AND academic_year_id=v_year;
+  INSERT INTO public.attendance_registers
+    (id,school_id,campus_id,academic_year_id,class_id,section_id,
+     calendar_day_id,attendance_date,session_kind,duty_id,taken_by)
+    VALUES(v_after_register,v_school,v_campus_a,v_year,v_class,v_section_a,
+           v_day,'2026-04-06','after_break',v_after,v_actor);
+  INSERT INTO public.student_attendance_marks
+    (school_id,campus_id,academic_year_id,class_id,attendance_date,
+     session_kind,register_id,enrollment_id,student_id,mark_status,marked_by)
+    VALUES(v_school,v_campus_a,v_year,v_class,'2026-04-06',
+           'after_break',v_after_register,v_enrollment_a,v_student_a,
+           'present',v_actor);
+  IF (SELECT count(*) FROM public.student_attendance_marks
+      WHERE student_id=v_student_a AND attendance_date='2026-04-06')<>2
+     OR (SELECT count(*) FROM public.student_attendance_marks
+      WHERE student_id=v_student_a AND attendance_date='2026-04-06'
+        AND session_kind='first_period')<>1 THEN
+    RAISE EXCEPTION 'After-break double counted or first period lost';
+  END IF;
+
   BEGIN
     UPDATE public.student_attendance_marks
       SET mark_status='present' WHERE id=v_mark;
