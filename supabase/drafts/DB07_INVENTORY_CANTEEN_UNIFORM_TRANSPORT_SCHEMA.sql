@@ -836,7 +836,7 @@ CREATE TABLE public.db07_operation_receipts (
 -- Protect sale financial total against missing or altered line items.
 CREATE FUNCTION app_private.db07_validate_sale_line_tx()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
-AS $
+AS $$
 DECLARE v_creation_txid bigint;
 BEGIN
  IF TG_TABLE_NAME='canteen_sale_lines' THEN
@@ -852,7 +852,7 @@ BEGIN
  END IF;
  RETURN NEW;
 END;
-$;
+$$;
 CREATE TRIGGER db07_canteen_line_origin BEFORE INSERT ON public.canteen_sale_lines
  FOR EACH ROW EXECUTE FUNCTION app_private.db07_validate_sale_line_tx();
 CREATE TRIGGER db07_uniform_line_origin BEFORE INSERT ON public.uniform_sale_lines
@@ -860,7 +860,7 @@ CREATE TRIGGER db07_uniform_line_origin BEFORE INSERT ON public.uniform_sale_lin
 
 CREATE FUNCTION app_private.db07_verify_sale_total()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
-AS $
+AS $$
 DECLARE v_count bigint; v_sum numeric;
 BEGIN
  IF TG_TABLE_NAME='canteen_sales' THEN
@@ -876,7 +876,7 @@ BEGIN
  END IF;
  RETURN NULL;
 END;
-$;
+$$;
 CREATE CONSTRAINT TRIGGER db07_canteen_total
  AFTER INSERT ON public.canteen_sales
  DEFERRABLE INITIALLY DEFERRED
@@ -888,7 +888,7 @@ CREATE CONSTRAINT TRIGGER db07_uniform_total
 
 CREATE FUNCTION app_private.db07_validate_movement_source()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
-AS $
+AS $$
 DECLARE v_created_txid bigint;
 BEGIN
  SELECT m.creation_txid INTO v_created_txid
@@ -900,14 +900,14 @@ BEGIN
  END IF;
  RETURN NEW;
 END;
-$;
+$$;
 CREATE TRIGGER db07_stock_source_origin BEFORE INSERT
  ON public.inventory_movement_sources
  FOR EACH ROW EXECUTE FUNCTION app_private.db07_validate_movement_source();
 
 CREATE FUNCTION app_private.db07_require_movement_source()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
-AS $
+AS $$
 BEGIN
  IF NOT EXISTS (
   SELECT 1 FROM public.inventory_movement_sources s
@@ -918,7 +918,7 @@ BEGIN
  END IF;
  RETURN NULL;
 END;
-$;
+$$;
 CREATE CONSTRAINT TRIGGER db07_stock_source_commit
  AFTER INSERT ON public.inventory_stock_movements
  DEFERRABLE INITIALLY DEFERRED
@@ -926,12 +926,12 @@ CREATE CONSTRAINT TRIGGER db07_stock_source_commit
 
 CREATE FUNCTION app_private.db07_reject_posted_mutation()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
-AS $
+AS $$
 BEGIN
  RAISE EXCEPTION 'Posted inventory/retail/transport evidence is immutable'
    USING ERRCODE='23514';
 END;
-$;
+$$;
 CREATE TRIGGER db07_inv_goods_receipts_immutable BEFORE UPDATE OR DELETE ON public.inventory_goods_receipts
  FOR EACH ROW EXECUTE FUNCTION app_private.db07_reject_posted_mutation();
 CREATE TRIGGER db07_inv_goods_receipts_no_truncate BEFORE TRUNCATE ON public.inventory_goods_receipts
