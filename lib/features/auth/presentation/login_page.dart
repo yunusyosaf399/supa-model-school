@@ -114,6 +114,26 @@ class _LoginPageState extends State<LoginPage> {
               _background(desktop),
               if (Theme.of(context).brightness == Brightness.dark)
                 const ColoredBox(color: Color(0x33001620)),
+              Positioned(
+                top: desktop ? 7 : MediaQuery.paddingOf(context).top + 4,
+                right: 8,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _themeButton(const Color(0xFF005F5B)),
+                    if (kDebugMode)
+                      IconButton(
+                        key: const Key('open-demo-dashboard'),
+                        tooltip: 'Preview Dashboard',
+                        onPressed: widget.onOpenDemo,
+                        icon: const Icon(
+                          Icons.preview_outlined,
+                          color: Color(0xFF005F5B), size: 19),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                  ],
+                ),
+              ),
               if (desktop)
                 Positioned(
                   right: math.max(22, width * 0.021),
@@ -391,21 +411,6 @@ class _LoginPageState extends State<LoginPage> {
                     ],
                   ),
                 ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _themeButton(muted),
-                  if (kDebugMode)
-                    IconButton(
-                      key: const Key('open-demo-dashboard'),
-                      tooltip: 'Preview Dashboard',
-                      onPressed: widget.onOpenDemo,
-                      icon: Icon(Icons.preview_outlined,
-                          color: muted, size: 19),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                ],
-              ),
             ],
           ),
         ),
