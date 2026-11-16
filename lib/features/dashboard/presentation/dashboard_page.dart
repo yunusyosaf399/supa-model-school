@@ -493,47 +493,37 @@ class _DashboardPageState extends State<DashboardPage> {
     const SizedBox(height: 9),
     Align(alignment: Alignment.centerRight, child: _campusMenu(compact: true)),
     const SizedBox(height: 9),
+    // Compact text-only greeting: no decorative dashboard photography.
     Container(
-      height: 153,
-      clipBehavior: Clip.antiAlias,
+      key: const Key('dashboard-mobile-greeting'),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: const Color(0xFFE8F3FC),
-      ),
-      child: Stack(children: [
-        Positioned.fill(child: Image.asset(
-          'assets/dashboard/school_hero.jpg',
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        )),
-        Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              const Color(0xFFEFF8FE).withValues(alpha: 0.98),
-              const Color(0xFFEFF8FE).withValues(alpha: 0.82),
-              Colors.transparent,
-            ],
-            stops: const [0, 0.44, 0.83],
-          ),
-        ))),
-        Positioned(
-          left: 16, top: 14, right: 120,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Good morning,',
-                style: TextStyle(
-                  fontSize: 25, fontWeight: FontWeight.w900,
-                  color: _heading(context),
-                )),
-              const SizedBox(height: 5),
-              const Text('Here is today’s summary.',
-                style: TextStyle(color: _ink, fontSize: 13)),
-              const SizedBox(height: 10),
-              Container(width: 53, height: 3, color: _teal),
-            ],
-          ),
+        gradient: const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [Color(0xFFE5F5F5), Color(0xFFF2F9FC)],
         ),
-      ]),
+        border: Border.all(color: const Color(0xFFD6E8EA)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('Good morning,',
+            style: TextStyle(
+              fontSize: 25,
+              fontWeight: FontWeight.w900,
+              color: _heading(context),
+            )),
+          const SizedBox(height: 5),
+          const Text('Here is today’s summary.',
+            style: TextStyle(color: _ink, fontSize: 13)),
+          const SizedBox(height: 10),
+          Container(width: 53, height: 3, color: _teal),
+        ],
+      ),
     ),
   ]);
 
