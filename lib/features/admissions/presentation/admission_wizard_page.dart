@@ -719,7 +719,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   );
 
   Widget _surfaceCard({required Widget child,
-      EdgeInsetsGeometry padding = EdgeInsets.all(15)}) => Container(
+      EdgeInsetsGeometry padding = const EdgeInsets.all(15)}) => Container(
     decoration: BoxDecoration(
       color: _surface,
       borderRadius: BorderRadius.circular(15),
