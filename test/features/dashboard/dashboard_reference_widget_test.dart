@@ -98,7 +98,7 @@ void main() {
     expect(find.byType(Image), findsNothing);
     expect(find.byKey(const Key('dashboard-recent-admissions')), findsOneWidget);
     expect(find.byKey(const Key('dashboard-pending-approvals')), findsOneWidget);
-    expect(find.text('New\\nAdmission'), findsOneWidget);
+    expect(find.text('New\nAdmission'), findsOneWidget);
     expect(find.text('Supa Model School'), findsOneWidget);
     expect(find.text('Collect\nFee'), findsOneWidget);
     expect(find.text('Attendance'), findsOneWidget);
