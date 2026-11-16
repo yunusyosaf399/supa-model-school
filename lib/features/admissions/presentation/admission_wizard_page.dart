@@ -1002,7 +1002,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         ]);
       }),
     ]),
-  ));
+  );
 
   Widget _guardianFields() => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
