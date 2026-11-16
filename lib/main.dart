@@ -369,6 +369,79 @@ class _SchoolShellState extends State<_SchoolShell> {
     );
   }
 
+  Widget _desktopSidebar(bool extended) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      key: const Key('desktop-navigation'),
+      width: extended ? 244 : 68,
+      color: scheme.surface,
+      child: Column(children: [
+        if (extended)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 16, 8, 12),
+            child: Column(children: [
+              const SchoolMark(size: 65),
+              const SizedBox(height: 5),
+              Text('Supa Model School',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: scheme.primary, fontWeight: FontWeight.w900,
+                  fontSize: 18)),
+              const Text('School Management System',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11)),
+              const Divider(height: 24),
+            ]),
+          ),
+        Expanded(child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
+          children: [
+            for (var i = 0; i < modules.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Material(
+                  color: i == selected
+                      ? SchoolPalette.tealDark
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  child: InkWell(
+                    key: Key('dashboard-nav-$i'),
+                    onTap: () => setState(() => selected = i),
+                    borderRadius: BorderRadius.circular(10),
+                    child: SizedBox(height: 39,
+                      child: Row(children: [
+                        const SizedBox(width: 12),
+                        Icon(icons[i], size: 21,
+                          color: i == selected
+                              ? Colors.white : scheme.onSurface),
+                        if (extended) ...[
+                          const SizedBox(width: 13),
+                          Expanded(child: Text(modules[i],
+                            style: TextStyle(
+                              color: i == selected
+                                  ? Colors.white : scheme.onSurface,
+                              fontSize: 13,
+                              fontWeight: i == selected
+                                  ? FontWeight.w700 : FontWeight.w500,
+                            ))),
+                        ],
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        )),
+        if (extended && selected == 0)
+          SizedBox(
+            height: 143, width: double.infinity,
+            child: Image.asset('assets/dashboard/school_sidebar.jpg',
+              fit: BoxFit.cover, alignment: Alignment.bottomCenter),
+          ),
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final desktop = MediaQuery.sizeOf(context).width >= 860;
@@ -388,7 +461,30 @@ class _SchoolShellState extends State<_SchoolShell> {
     };
 
     return Scaffold(
-      appBar: AppBar(
+      // The supplied dashboard design has a slim teal desktop titlebar;
+      // its search/campus/notifications/account controls are inside the
+      // dashboard itself. Non-dashboard screens retain the existing toolbar.
+      appBar: selected == 0
+          ? (desktop
+              ? AppBar(
+                  toolbarHeight: 38,
+                  elevation: 0,
+                  backgroundColor: SchoolPalette.tealDark,
+                  foregroundColor: Colors.white,
+                  title: const Row(children: [
+                    Icon(Icons.school_outlined, color: Colors.white, size: 23),
+                    SizedBox(width: 10),
+                    Text('Supa Model School',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                    SizedBox(width: 14),
+                    Text('│', style: TextStyle(color: Color(0xFF95D0CD))),
+                    SizedBox(width: 14),
+                    Text('School Management System',
+                      style: TextStyle(fontSize: 13)),
+                  ]),
+                )
+              : null)
+          : AppBar(
         titleSpacing: 14,
         title: Row(mainAxisSize: MainAxisSize.min, children: [
           if (desktop) ...[
@@ -439,8 +535,9 @@ class _SchoolShellState extends State<_SchoolShell> {
           ),
         ],
       ),
+
       body: Column(children: [
-        if (owner != null)
+        if (owner != null && selected != 0)
           Container(
             width: double.infinity,
             color: Theme.of(context).colorScheme.primaryContainer,
@@ -454,23 +551,7 @@ class _SchoolShellState extends State<_SchoolShell> {
           ),
         Expanded(child: desktop
           ? Row(children: [
-              NavigationRail(
-                key: const Key('desktop-navigation'),
-                selectedIndex: selected,
-                onDestinationSelected: (i) => setState(() => selected = i),
-                extended: extended,
-                minExtendedWidth: 210,
-                scrollable: true,
-                backgroundColor: Theme.of(context).colorScheme.surface,
-                destinations: [
-                  for (var i = 0; i < modules.length; i++)
-                    NavigationRailDestination(
-                      icon: Icon(icons[i]),
-                      selectedIcon: Icon(icons[i]),
-                      label: Text(modules[i]),
-                    ),
-                ],
-              ),
+              _desktopSidebar(extended),
               const VerticalDivider(width: 1),
               Expanded(child: content),
             ])
