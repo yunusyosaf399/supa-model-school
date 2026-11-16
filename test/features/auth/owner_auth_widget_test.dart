@@ -38,6 +38,10 @@ class FakeOwnerAuth implements OwnerAuthGateway {
       throw StateError('Recovery not configured');
 
   @override
+  Future<OwnerAccess> completeInitialSetup(OwnerInitialSetupRequest request) async =>
+      throw StateError('Not implemented in fake');
+
+  @override
   Future<void> changePassword(String currentPassword, String newPassword) async {
     if (currentPassword != 'valid-passphrase' || newPassword.length < 12) {
       throw StateError('Denied');
