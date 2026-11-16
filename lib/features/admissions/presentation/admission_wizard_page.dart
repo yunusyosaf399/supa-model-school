@@ -166,9 +166,11 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     final chosen = await showDatePicker(
       context: context,
       initialDate: _draft.missingDocumentsDueOn ??
-          currentDay.add(const Duration(days: 60)),
+          DateTime(currentDay.year, currentDay.month + 1, currentDay.day),
       firstDate: currentDay,
-      lastDate: DateTime(today.year + 3, today.month, today.day),
+      // Match deployed DB02 conditional admission rule.
+      lastDate: DateTime(currentDay.year, currentDay.month + 2,
+          currentDay.day),
       helpText: 'Deadline for outstanding certificates',
     );
     if (!mounted || chosen == null) return;
