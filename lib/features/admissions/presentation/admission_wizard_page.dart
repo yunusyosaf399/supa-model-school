@@ -476,12 +476,22 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       const SizedBox(height: 15),
       if (wide)
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(flex: 7, child: _mainStepPanel()),
+          Expanded(flex: 7, child: Column(children: [
+            _mainStepPanel(),
+            if (_step == AdmissionStep.student) ...[
+              const SizedBox(height: 12),
+              _contactPanel(),
+            ],
+          ])),
           const SizedBox(width: 15),
           Expanded(flex: 3, child: _sideChecklist()),
         ])
       else ...[
         _mainStepPanel(),
+        if (_step == AdmissionStep.student) ...[
+          const SizedBox(height: 13),
+          _contactPanel(),
+        ],
         const SizedBox(height: 14),
         _mobileDocumentsChecklist(),
       ],
@@ -763,57 +773,252 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         AdmissionStep.review => _reviewFields(),
       };
 
-  Widget _studentFields() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text('Student identity', style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 16),
-        TextFormField(
-          key: const Key('student-name'),
-          initialValue: _draft.studentName,
-          maxLength: 200,
-          decoration: const InputDecoration(
-            labelText: 'Student full name *',
-            border: OutlineInputBorder(),
-          ),
-          textCapitalization: TextCapitalization.words,
-          onChanged: (value) => _draft.studentName = value,
-        ),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          key: const Key('date-of-birth'),
-          onPressed: _chooseBirthDate,
-          icon: const Icon(Icons.calendar_today_outlined),
-          label: Text('Date of birth *: ${_dateLabel(_draft.dateOfBirth)}'),
-        ),
-        const SizedBox(height: 16),
-        _choice(
-          label: 'Gender (optional)',
-          current: _draft.gender,
-          choices: const {
-            'unspecified': 'Prefer not to say',
-            'male': 'Male',
-            'female': 'Female',
-            'other': 'Other',
-          },
-          onChanged: (value) => setState(() => _draft.gender = value!),
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          key: const Key('previous-school'),
-          initialValue: _draft.previousSchool,
-          maxLength: 200,
-          decoration: const InputDecoration(
-            labelText: 'Previous school (if applicable)',
-            helperText: 'Determines whether a transfer/leaving certificate is required.',
-            border: OutlineInputBorder(),
-          ),
-          onChanged: (value) => _draft.previousSchool = value,
-        ),
-      ],
-    );
-  }
+
+  Widget _styledField({
+    required String label,
+    required IconData icon,
+    required ValueChanged<String> onChanged,
+    String initialValue = '',
+    Key? key,
+    String? hint,
+    bool required = false,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+  }) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Row(children: [
+      Icon(icon, color: _teal, size: 17),
+      const SizedBox(width: 7),
+      Flexible(child: Text(label,
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
+          color: _ink))),
+      if (required) const Text(' *', style: TextStyle(color: Colors.red)),
+    ]),
+    const SizedBox(height: 6),
+    TextFormField(
+      key: key, initialValue: initialValue,
+      onChanged: onChanged, maxLines: maxLines,
+      keyboardType: keyboardType,
+      textCapitalization: TextCapitalization.sentences,
+      decoration: InputDecoration(
+        hintText: hint,
+        border: const OutlineInputBorder()),
+    ),
+  ]);
+
+  Widget _styledChoice({
+    required String label,
+    required IconData icon,
+    required String? current,
+    required Map<String, String> options,
+    required ValueChanged<String?> onChanged,
+    bool required = false,
+  }) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Row(children: [
+      Icon(icon, color: _teal, size: 17),
+      const SizedBox(width: 7),
+      Text(label, style: const TextStyle(fontSize: 12,
+        fontWeight: FontWeight.w700, color: _ink)),
+      if (required) const Text(' *', style: TextStyle(color: Colors.red)),
+    ]),
+    const SizedBox(height: 6),
+    _choice(label: 'Choose $label', current: current,
+      choices: options, onChanged: onChanged),
+  ]);
+
+  Widget _dobField() => Column(crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Row(children: [
+        Icon(Icons.calendar_month_outlined, size: 17, color: _teal),
+        SizedBox(width: 7),
+        Text('Date of Birth', style: TextStyle(fontSize: 12,
+          fontWeight: FontWeight.w700, color: _ink)),
+        Text(' *', style: TextStyle(color: Colors.red)),
+      ]),
+      const SizedBox(height: 6),
+      SizedBox(height: 43, child: OutlinedButton.icon(
+        key: const Key('date-of-birth'),
+        onPressed: _chooseBirthDate,
+        icon: const Icon(Icons.calendar_today_outlined, size: 17),
+        label: Expanded(child: Text(
+          _dateLabel(_draft.dateOfBirth),
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.left,
+          style: const TextStyle(fontSize: 12))),
+      )),
+    ]);
+
+  Widget _photoPlaceholder() => Tooltip(
+    message: 'Photo uploads require the private admission upload service.',
+    child: Container(
+      key: const Key('admission-photo-placeholder'),
+      width: 140, height: 134,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFFEDFAF6),
+        border: Border.all(color: const Color(0xFFABDCD0),
+          style: BorderStyle.solid)),
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.cloud_upload_outlined, size: 35, color: _teal),
+          SizedBox(height: 8),
+          Text('Photo Upload', style: TextStyle(
+            fontWeight: FontWeight.w800, color: _teal, fontSize: 12)),
+          SizedBox(height: 4),
+          Text('Coming soon\nJPG, PNG • max 2 MB',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 10, color: Color(0xFF587481))),
+        ],
+      ),
+    ),
+  );
+
+  Widget _studentFields() => LayoutBuilder(builder: (context, constraints) {
+    final wide = constraints.maxWidth >= 660;
+    final name = _styledField(
+      key: const Key('student-name'), label: 'Full Name',
+      icon: Icons.person_outline, required: true,
+      hint: 'Student full name', initialValue: _draft.studentName,
+      onChanged: (v) => _draft.studentName = v);
+    final date = _dobField();
+    final gender = _styledChoice(
+      label: 'Gender', icon: Icons.groups_outlined,
+      current: _draft.gender,
+      options: const {
+        'unspecified': 'Prefer not to say',
+        'male': 'Male', 'female': 'Female', 'other': 'Other',
+      },
+      onChanged: (v) => setState(() => _draft.gender = v ?? 'unspecified'));
+    final previous = _styledField(
+      key: const Key('previous-school'),
+      label: 'Previous School', icon: Icons.account_balance_outlined,
+      hint: 'Previous school (if applicable)',
+      initialValue: _draft.previousSchool,
+      onChanged: (v) => setState(() => _draft.previousSchool = v));
+    final nationality = _styledField(
+      label: 'Nationality', icon: Icons.flag_outlined,
+      hint: 'Nationality', initialValue: _draft.nationality,
+      onChanged: (v) => _draft.nationality = v);
+    final religion = _styledField(
+      label: 'Religion (optional)', icon: Icons.account_balance_outlined,
+      hint: 'Optional', initialValue: _draft.religion,
+      onChanged: (v) => _draft.religion = v);
+    final language = _styledField(
+      label: 'Primary Language', icon: Icons.translate_outlined,
+      hint: 'e.g. English / Urdu',
+      initialValue: _draft.primaryLanguage,
+      onChanged: (v) => _draft.primaryLanguage = v);
+    final notes = _styledField(
+      label: 'Notes (Optional)', icon: Icons.notes_outlined,
+      maxLines: 2, initialValue: _draft.notes,
+      hint: 'Additional student information',
+      onChanged: (v) => _draft.notes = v);
+
+    if (wide) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(flex: 7, child: Column(children: [
+            Row(children: [
+              Expanded(flex: 2, child: name),
+              const SizedBox(width: 12),
+              Expanded(child: date),
+            ]),
+            const SizedBox(height: 13),
+            Row(children: [
+              Expanded(child: gender),
+              const SizedBox(width: 12),
+              Expanded(flex: 2, child: previous),
+            ]),
+          ])),
+          const SizedBox(width: 15),
+          _photoPlaceholder(),
+        ]),
+        const SizedBox(height: 13),
+        Row(children: [
+          Expanded(child: nationality),
+          const SizedBox(width: 12),
+          Expanded(child: religion),
+          const SizedBox(width: 12),
+          Expanded(child: language),
+        ]),
+        const SizedBox(height: 13),
+        notes,
+      ]);
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(width: 108, child: _photoPlaceholder()),
+        const SizedBox(width: 13),
+        Expanded(child: name),
+      ]),
+      const SizedBox(height: 14),
+      Row(children: [
+        Expanded(child: date),
+        const SizedBox(width: 12),
+        Expanded(child: gender),
+      ]),
+      const SizedBox(height: 14),
+      previous,
+      const SizedBox(height: 14),
+      Row(children: [
+        Expanded(child: nationality),
+        const SizedBox(width: 12),
+        Expanded(child: religion),
+      ]),
+      const SizedBox(height: 14),
+      language,
+      const SizedBox(height: 14),
+      notes,
+    ]);
+  });
+
+  Widget _contactPanel() => _surfaceCard(child: Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      _panelHeading(Icons.perm_contact_calendar_outlined,
+          'Contact / Identity Information'),
+      const Divider(height: 20, color: _line),
+      LayoutBuilder(builder: (context, c) {
+        final wide = c.maxWidth > 560;
+        final birth = _styledField(
+          label: 'Birth Certificate No.', icon: Icons.description_outlined,
+          initialValue: _draft.birthCertificateNumber,
+          onChanged: (v) => _draft.birthCertificateNumber = v);
+        final identity = _styledField(
+          label: 'B-Form / Identity No. (if applicable)',
+          icon: Icons.badge_outlined, initialValue: _draft.identityNumber,
+          onChanged: (v) => _draft.identityNumber = v);
+        return Column(children: [
+          if (wide)
+            Row(children: [
+              Expanded(child: birth), const SizedBox(width: 12),
+              Expanded(child: identity),
+            ])
+          else ...[
+            birth, const SizedBox(height: 12), identity,
+          ],
+          const SizedBox(height: 12),
+          _styledField(label: 'Address', icon: Icons.location_on_outlined,
+            initialValue: _draft.address,
+            onChanged: (v) => _draft.address = v),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(child: _styledField(
+              label: 'City', icon: Icons.location_city_outlined,
+              initialValue: _draft.city,
+              onChanged: (v) => _draft.city = v)),
+            const SizedBox(width: 12),
+            Expanded(child: _styledField(
+              label: 'Emergency Contact', icon: Icons.call_outlined,
+              keyboardType: TextInputType.phone,
+              initialValue: _draft.emergencyContact,
+              onChanged: (v) => _draft.emergencyContact = v)),
+          ]),
+        ]);
+      }),
+    ]),
+  ));
 
   Widget _guardianFields() {
     return Column(
