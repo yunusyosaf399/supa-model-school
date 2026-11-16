@@ -1,8 +1,8 @@
 -- DB01 FIRST OWNER ACTIVATION TEMPLATE (ADMIN SQL EDITOR ONLY).
 -- This is a privileged, one-time bootstrap operation and is NOT a migration.
 -- Do NOT run before the reviewed DB01 migration is applied and tested.
--- Invitation must be issued from Authentication > Users > Send invitation,
--- accepted by the intended Owner, and email_confirmed_at verified.
+-- Owner must already exist via the supported Supabase Auth dashboard/API,
+-- and email_confirmed_at must be verified. Do not manually edit auth.users.
 -- Never insert directly into auth.users; never set a password through SQL.
 --
 -- Replace ALL REPLACE_... variables and review before execution.
@@ -17,6 +17,8 @@ DECLARE
     v_currency text := 'REPLACE_WITH_ISO_4217_CURRENCY';
     v_timezone text := 'REPLACE_WITH_IANA_TIMEZONE';
     v_campus_name text := 'REPLACE_WITH_FIRST_CAMPUS_NAME';
+    -- If actual details are unknown, use XXX / Etc/UTC / Setup Pending only
+    -- as clearly marked INITIAL SETUP PLACEHOLDERS. Block finance until set.
     v_owner_id uuid;
     v_school_id uuid;
     v_campus_id uuid;
@@ -59,6 +61,7 @@ BEGIN
       FROM auth.users
      WHERE lower(email) = lower(btrim(v_owner_email))
        AND email_confirmed_at IS NOT NULL
+       AND deleted_at IS NULL
        AND is_anonymous IS NOT TRUE
      LIMIT 1;
 
@@ -82,6 +85,17 @@ BEGIN
     INSERT INTO public.user_roles(
       user_id,school_id,campus_id,role,is_active
     ) VALUES (v_owner_id,v_school_id,NULL,'owner',true);
+
+    -- Any non-final setup choices must be transparently recorded.
+    INSERT INTO public.school_settings(school_id,setting_key,setting_value)
+    VALUES (v_school_id,'initial_setup',jsonb_build_object(
+      'status', 'pending',
+      'currency_configured', (v_currency <> 'XXX'),
+      'timezone_configured', (v_timezone <> 'Etc/UTC'),
+      'campus_configured', (v_campus_name NOT LIKE '%Setup Pending%'),
+      'academic_year_configured', false,
+      'note', 'Confirm real school details before finances or attendance'
+    ));
 
     RAISE NOTICE 'First Owner provisioned. School: %, Campus: %, User: %',
       v_school_id, v_campus_id, v_owner_id;
