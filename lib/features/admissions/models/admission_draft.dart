@@ -144,6 +144,10 @@ class AdmissionDraft {
         if (DateTime(deadline.year, deadline.month, deadline.day).isBefore(day)) {
           return 'The document deadline cannot be in the past.';
         }
+        final latest = DateTime(day.year, day.month + 2, day.day);
+        if (deadline.isAfter(latest)) {
+          return 'Choose a document deadline within two calendar months.';
+        }
         if (conditionalReason.trim().length < 4) {
           return 'Explain why the documents will be supplied later.';
         }
