@@ -1,30 +1,37 @@
-# First School Owner — Secure Auth Bootstrap and Flutter Wiring
+# First Owner activation, Flutter login and Owner Control Panel
 
-**Status (2026-11-16): Source committed; LIVE account NOT provisioned.**
-**Project:** Supa Model School, Supabase ref `uebzvfzpbqqttbqyxxos`.
+**Updated:** 2026-11-16
 
-## Live readiness review
-- At inspection: zero `auth.users`, zero DB01 foundation tables, zero applied migrations.
-- The connected Supabase management plugin does not expose the Auth Admin `inviteUserByEmail` action.
-- No confirmed Owner email, first-campus name, school currency, or timezone was explicitly assigned by the school owner.
-- Do **not** make up an email/password, manually edit `auth.users`, or put a service-role/secret key into Flutter.
+## Hosted status — ACTIVATED
+- Project: Supa Model School, Supabase project `uebzvfzpbqqttbqyxxos`.
+- Existing Auth identity was verified (confirmed email, not deleted, not anonymous); no password was read or changed.
+- One school record `Supa Model School`, one first campus, one active profile and one active **school-wide Owner** role (`campus_id = NULL`) were created atomically through privileged SQL.
+- The DB01 migration `20261116051446_db01_foundation_owner_access_20261116` was applied successfully.
+- **12/12** DB01 exposed tables had RLS enabled at verification.
+- Positive Owner vs negative unknown-user RLS checks passed, including transaction-only test fixtures and live seeded owner. This is a focused smoke test, **not** the full seven-user integration catalog.
+- A dedicated `initial_setup` settings record marks school details still pending.
+- No real student, finance, attendance, payroll, admission or offline-sync data was generated.
 
-## What has been implemented in source
-- `lib/features/auth/data/owner_auth_gateway.dart`: production Supabase email/password authentication through `signInWithPassword`; `getUser()` verified identity; active `user_profiles`; unique active school-wide `owner` membership in `user_roles`; active `schools`; authorized active `campuses`; denial signs out the Auth session.
-- `lib/main.dart`: initialize with `SUPABASE_URL` and the **publishable** key supplied through Dart defines; restore an existing session only after revalidating Owner role. Distinct debug design preview mode. In-memory-only Auth storage with `EmptyLocalStorage`: sessions are intentionally not persisted across app restarts until encrypted platform-specific storage is tested. Owner's campus list only appears after authorization. Sign out removes authentication.
-- `lib/features/auth/presentation/login_page.dart`: real email/password sign-in callback, disabled sample campus selection for configured auth, errors that do not enumerate users, no fake sign-in.
-- `pubspec.yaml`: pinned stable `supabase_flutter 2.18.3` for Dart 3.9.
-- `supabase/drafts/DB01_FIRST_OWNER_ACTIVATION_TEMPLATE.sql`: privileged, one-use **data bootstrap template**, explicitly NOT a migration or an Auth user creation script. Fails closed for missing verified email, missing config, or pre-existing school/Owner.
+## Temporary initial setup
+The user has not specified the real school currency, timezone or campus name. Rather than guessing, activation used:
+- Currency: `XXX` (ISO 4217 no currency), **not final**.
+- Timezone: `Etc/UTC`, **not final**.
+- First campus display name: `Main Campus (Setup Pending)`, **not final**.
+- Academic year: **not yet created**; no year should be invented.
+- Finance and attendance entry must remain disabled until actual settings are supplied and respective domain migrations pass.
 
-## Required action to activate one real Owner (not yet performed)
-1. Review and execute DB01 foundation as a versioned migration in an isolated local Supabase stack. Run the existing `supabase/tests/DB01_RLS_INTEGRATION.sql` with its seven local fictional Auth accounts, and confirm campus/cross-school denials, settings privacy, and client write denial.
-2. Once tests pass, deploy DB01 foundation migration to the correct Supabase project; verify 12 RLS-enabled tables and security advisors. DB01 must be deployed before step 4.
-3. In [Supabase Authentication → Users](https://supabase.com/dashboard/project/uebzvfzpbqqttbqyxxos/auth/users), choose **Add user → Send invitation** for the intended Owner's specified email. The invite recipient must accept, verify their email, and choose a strong password. Do not share the password in chat.
-4. In the trusted **SQL editor** only, open `DB01_FIRST_OWNER_ACTIVATION_TEMPLATE.sql`. Replace the explicit Owner email, display name, school ISO currency code, IANA timezone, and first campus name. Run exactly once after verifying these inputs. The template creates the school, first campus, active profile, and exactly one school-wide `owner` role in an atomic transaction. The role must have `campus_id = NULL`.
-5. Verify the owner role row exists; test legitimate Owner campus access and negative account/campus access with real auth sessions. Confirm no anonymous client writes or self-grant route. Do not use live student records yet.
-6. Only then run the Flutter client with the project URL + publishable key provided by the project dashboard. Sign in using the Owner's chosen password.
+## Flutter source on auth/first-owner-bootstrap-20261116
+- `lib/features/auth/data/owner_auth_gateway.dart`: Supabase email/password sign-in, `getUser()` validation, active profile, exactly one active school-wide Owner role, active school, RLS-authorized active campus query, sign-out and password update with current password.
+- `lib/main.dart`: Supabase public/publishable key through Dart defines; Owner-gated shell; debug design preview separate. `EmptyLocalStorage` means tokens are not persisted across app restarts pending encrypted storage.
+- `lib/features/auth/presentation/login_page.dart`: live sign-in errors, actual campus choices only after authentication, password recovery still unavailable pending redirect setup.
+- `lib/features/owner/presentation/owner_control_panel_page.dart`: Owner-specific Settings view, read-only setup state and change-password form; clear credentials after success and require a new sign-in.
+- `test/features/auth/owner_auth_widget_test.dart`, `test/features/owner/owner_control_panel_widget_test.dart`: synthetic gateway/widget test sources, **not run** in assistant environment.
+- `supabase/migrations/20261116051446_db01_foundation_owner_access_20261116.sql`: mirrors the exact hosted migration version for reproducibility. School-specific Owner data must not be replayed as a migration on new projects.
+- `supabase/drafts/DB01_FIRST_OWNER_ACTIVATION_TEMPLATE.sql`: template for a new school project with an already verified Auth user. It is NOT to be run again on this project.
 
-### Local Flutter commands
+## How to run Windows preview with LIVE Owner sign-in
+In PowerShell:
+
 ```powershell
 git fetch origin
 git switch auth/first-owner-bootstrap-20261116
@@ -33,18 +40,25 @@ dart run build_runner build --delete-conflicting-outputs
 flutter analyze
 flutter test
 
-flutter run -d windows --dart-define=SUPABASE_URL=https://uebzvfzpbqqttbqyxxos.supabase.co --dart-define=SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+flutter run -d windows `
+  --dart-define=SUPABASE_URL=https://uebzvfzpbqqttbqyxxos.supabase.co `
+  --dart-define=SUPABASE_PUBLISHABLE_KEY=PASTE_PROJECT_PUBLISHABLE_KEY_HERE
 ```
 
-Use only the **public/publishable** key (or legacy anon key where necessary); never the service-role or `sb_secret_` key. Create local, uncommitted run settings for the public values as needed.
+Get the publishable client key from your project dashboard **Project Settings → API Keys**. Do not use the service-role or secret key in Flutter or GitHub.
 
-### Password changes
-The actual password is managed by Supabase Auth, **not** `user_profiles`, `user_roles`, or a custom school password column. The intended future path is **Settings → Account & Security → Change Password** using Supabase `updateUser()` for an authenticated Owner with an appropriate reauthentication policy. Until a tested recovery redirect route exists, the UI does **not** falsely claim password reset is enabled; the school administrator can use the Supabase Auth admin interface to send an invitation/recovery process. Secure email recovery and deep-link routes are still pending.
+Sign in with the password you created in Supabase Auth. The installed app has a functioning authentication path in source, but **no real password-based UI session has been exercised or independently verified** here.
 
-## Security and release gates
-- Do not deploy untested DB01 SQL to live or merge this PR into production without RLS evidence and a real invited account.
-- The debug `Preview Dashboard` route is not a substitute for a verified Owner session and remains removed from release builds.
-- Dashboard counts and other feature modules are still synthetic previews, even for an authenticated Owner.
-- School-owned settings and user role grants are Owner-only by intended policy but editing them is not implemented.
-- Real RLS and API grants, transaction integrity, audit, revocation, email verification, MFA and secure session storage require integration tests.
-- The exact email identity and campus/school configuration remain inputs, not guessed values.
+In the authorized Owner shell, open **Settings** from navigation (or **More → Settings** on Android). The password-change operation uses Supabase Auth `updateUser(UserAttributes(password: ..., currentPassword: ...))`, not a school database password field. Changing a password requires the current password and logs the user out on success.
+
+## Security audit observations
+The Supabase security advisor reported one WARNING: leaked-password protection disabled. See https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection. Enable if available for the project plan. No missing-RLS advisor findings were returned.
+
+Required before real school operation:
+1. User confirms campus name, actual currency, timezone and academic-year dates.
+2. Build audited Owner-only update pathway for school/campus settings and mark initial setup complete.
+3. Run full seven-user/two-campus negative RLS tests on local staging (existing SQL test includes seven fictional Auth identities).
+4. Finalize Auth sessions (encrypted storage), account recovery deep-links, MFA/password policy and user-management authorization.
+5. Deploy/test DB02 admissions, finance and attendance domain migrations and authorized projections, then replace all fictional dashboard data.
+
+**GitHub PRs remain draft**; Flutter compilation, analyzer/widget tests and release validation require local Windows/Android SDK execution. No GitHub Actions workflows were created.
