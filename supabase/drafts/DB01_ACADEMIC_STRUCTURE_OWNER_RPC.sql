@@ -62,7 +62,6 @@ declare
   v_campus public.campuses%rowtype;
   v_school public.schools%rowtype;
   v_setup jsonb;
-  v_section text;
   v_section_count integer;
   v_unique_count integer;
   v_sections jsonb;
@@ -91,15 +90,15 @@ begin
   end if;
 
   -- No blank/duplicate section labels, even if spelling/case differs.
-  select count(*), count(distinct lower(btrim(section_value)))
+  select count(*), count(distinct lower(btrim(parts.section_name)))
     into v_section_count,v_unique_count
-  from unnest(p_sections) as section_value;
+  from unnest(p_sections) as parts(section_name);
 
   if v_section_count <> cardinality(p_sections)
     or v_unique_count <> v_section_count
     or exists (
-      select 1 from unnest(p_sections) as name
-      where name is null or length(btrim(name)) not between 1 and 50
+      select 1 from unnest(p_sections) as parts(section_name)
+      where parts.section_name is null or length(btrim(parts.section_name)) not between 1 and 50
     )
   then
     raise exception 'Section labels must be 1-50 chars and unique'
@@ -148,8 +147,8 @@ begin
     returning id into v_class_id;
 
   insert into public.sections(class_id,name)
-    select v_class_id,btrim(section_value)
-    from unnest(p_sections) as section_value;
+    select v_class_id,btrim(parts.section_name)
+    from unnest(p_sections) as parts(section_name);
 
   select coalesce(
     jsonb_agg(jsonb_build_object('id',s.id,'name',s.name) order by s.name),
