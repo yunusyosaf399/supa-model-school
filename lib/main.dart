@@ -209,7 +209,7 @@ class _SchoolShellState extends State<_SchoolShell> {
     Icons.bar_chart_outlined,
     Icons.sync,
     Icons.settings_outlined,
-    Icons.class_outlined,
+    Icons.school_outlined,
   ];
 
   void _newAdmission() {
