@@ -30,12 +30,17 @@ class _AcademicStructurePageState extends State<AcademicStructurePage> {
   bool _loading = false;
   bool _saving = false;
   String? _error;
+  int _loadVersion = 0;
 
   @override
   void initState() {
     super.initState();
     _campusId = widget.owner.campuses.first.id;
-    if (_ready) _refresh();
+    if (_ready) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _refresh();
+      });
+    }
   }
 
   bool get _ready =>
@@ -51,25 +56,29 @@ class _AcademicStructurePageState extends State<AcademicStructurePage> {
 
   Future<void> _refresh() async {
     if (!_ready) return;
+    final version = ++_loadVersion;
+    final campusId = _campusId;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final results = await widget.repository.listClasses(
-        campusId: _campusId,
+        campusId: campusId,
         academicYearId: widget.owner.activeYearId!,
       );
-      if (!mounted) return;
+      if (!mounted || version != _loadVersion) return;
       setState(() => _classes = results);
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || version != _loadVersion) return;
       setState(() {
         _classes = const [];
         _error = 'Unable to load classes. Check network and Owner access.';
       });
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && version == _loadVersion) {
+        setState(() => _loading = false);
+      }
     }
   }
 
