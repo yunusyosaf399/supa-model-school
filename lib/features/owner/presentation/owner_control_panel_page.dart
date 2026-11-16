@@ -1,21 +1,26 @@
 import 'package:flutter/material.dart';
 
 import '../../auth/data/owner_auth_gateway.dart';
+import 'owner_initial_setup_form.dart';
 
-/// Authorized Owner settings. The database is read-only until audited settings
-/// mutations are deployed; only password changes use the Supabase Auth API.
+/// Owner Settings: atomic, audited one-time school setup; password management
+/// stays in Supabase Auth. Further school changes require a future workflow.
 class OwnerControlPanelPage extends StatefulWidget {
   const OwnerControlPanelPage({
     super.key,
     required this.owner,
     required this.onChangePassword,
     required this.onPasswordChanged,
+    required this.onSaveSetup,
+    required this.onSetupSaved,
   });
 
   final OwnerAccess owner;
   final Future<void> Function(String currentPassword, String newPassword)
       onChangePassword;
   final VoidCallback onPasswordChanged;
+  final Future<OwnerAccess> Function(OwnerInitialSetupRequest) onSaveSetup;
+  final ValueChanged<OwnerAccess> onSetupSaved;
 
   @override
   State<OwnerControlPanelPage> createState() =>
@@ -93,7 +98,7 @@ class _OwnerControlPanelPageState extends State<OwnerControlPanelPage> {
                 Text('School configuration',
                     style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
-                Text('Setup status: ${pendingCurrency || pendingTimezone || pendingCampus ? 'Pending' : 'Review required'}'),
+                Text('Setup status: ${owner.setupComplete ? 'Complete' : 'Pending'}'),
                 const SizedBox(height: 12),
                 _field('School', owner.schoolName),
                 _field('Currency', pendingCurrency
@@ -101,15 +106,31 @@ class _OwnerControlPanelPageState extends State<OwnerControlPanelPage> {
                 _field('Timezone', pendingTimezone
                     ? 'Not configured (Etc/UTC)' : owner.timezoneName),
                 _field('Campus', owner.campuses.map((c) => c.name).join(', ')),
+                _field('Academic year', owner.activeYearLabel ??
+                    'Not configured'),
+                if (owner.activeYearStartsOn != null)
+                  _field('Dates', '${owner.activeYearStartsOn} to '
+                      '${owner.activeYearEndsOn}'),
                 const SizedBox(height: 8),
-                const Text('School and campus changes are read-only for now. '
-                    'Owner-only updates, auditing and validations will be '
-                    'enabled after the Settings service passes security tests.'),
+                Text(owner.setupComplete
+                    ? 'Initial setup is complete. Future updates will use '
+                      'separately audited Owner Settings operations.'
+                    : 'Please enter actual school settings below. '
+                      'The temporary configuration cannot be used for '
+                      'real finance or attendance operations.'),
               ],
             ),
           ),
         ),
         const SizedBox(height: 12),
+        if (!owner.setupComplete) ...[
+          OwnerInitialSetupForm(
+            owner: owner,
+            onSave: widget.onSaveSetup,
+            onSaved: widget.onSetupSaved,
+          ),
+          const SizedBox(height: 12),
+        ],
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
