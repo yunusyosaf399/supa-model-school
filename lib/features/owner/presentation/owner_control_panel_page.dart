@@ -13,6 +13,7 @@ class OwnerControlPanelPage extends StatefulWidget {
     required this.onPasswordChanged,
     required this.onSaveSetup,
     required this.onSetupSaved,
+    required this.onOpenAcademicStructure,
   });
 
   final OwnerAccess owner;
@@ -21,6 +22,7 @@ class OwnerControlPanelPage extends StatefulWidget {
   final VoidCallback onPasswordChanged;
   final Future<OwnerAccess> Function(OwnerInitialSetupRequest) onSaveSetup;
   final ValueChanged<OwnerAccess> onSetupSaved;
+  final VoidCallback onOpenAcademicStructure;
 
   @override
   State<OwnerControlPanelPage> createState() =>
@@ -120,6 +122,32 @@ class _OwnerControlPanelPageState extends State<OwnerControlPanelPage> {
           ),
         ),
         const SizedBox(height: 12),
+        if (owner.setupComplete) ...[
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Academic Structure',
+                      style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 6),
+                  const Text('Create classes and sections for your active '
+                      'academic year. Student admissions will use these '
+                      'authorized campus/class/section records.'),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    key: const Key('open-academic-setup'),
+                    onPressed: widget.onOpenAcademicStructure,
+                    icon: const Icon(Icons.school_outlined),
+                    label: const Text('Manage Classes & Sections'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         if (!owner.setupComplete) ...[
           OwnerInitialSetupForm(
             owner: owner,
