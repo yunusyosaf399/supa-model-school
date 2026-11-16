@@ -53,3 +53,21 @@ DB06 account links require a separate local test/review phase.
 **No Flutter code or hosted Supabase changes** were made in DB04 design.
 5 of the 9 core domains still need full design (DB05–DB09), while 7
 DB03–DB09 domains remain undeployed.
+
+## DB05 employee and payroll schema (source draft only)
+- `drafts/DB05_EMPLOYEES_PAYROLL_SCHEMA.sql`: 20 new public RLS-denied HR
+  tables including school-wide employee identity, campus/teaching assignments,
+  approved versioned salary rates, one school-month payroll assessment,
+  partial salary payments, advances, repayment and immutable corrections.
+- `tests/DB05_PAYROLL_SCHEMA_INTEGRATION.sql`: fictional rollback-only SQL
+  acceptance suite for multi-campus assignment, salary uniqueness,
+  partial payments, repayment same-employee FK, money totals and RLS.
+- `tests/check_db05_payroll.py`: static structure checker (NOT runtime SQL).
+- `drafts/DB05_PAYROLL_RUNBOOK.md`: isolated local test and security gates.
+- `../docs/34_DB05_EMPLOYEES_PAYROLL_DESIGN.md`: payroll rules, DB06
+  cashbook/DB08 approval boundaries, unresolved authorization and balances.
+
+**No migration has been deployed, no production records created and no
+Flutter code changed.** DB05 is stacked on DB04/DB03 designs; use reviewed
+migration order after all nine core domains are designed.
+**4 full schemas remain to design (DB06–DB09); 7 remain undeployed (DB03–DB09).**
