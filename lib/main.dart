@@ -545,7 +545,7 @@ class _SchoolShellState extends State<_SchoolShell> {
             child: Text(
               'Verified Owner: ${owner.displayName} • '
               '${owner.schoolName} • ${activeCampus?.name ?? 'No campus'}'
-              '   |   Dashboard figures are still fictional previews.',
+              '   |   Only deployed modules have live data.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
