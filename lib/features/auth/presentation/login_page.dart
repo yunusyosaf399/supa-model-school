@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../../../ui/school_brand.dart';
@@ -48,7 +49,7 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: SafeArea(
         child: LayoutBuilder(builder: (context, limits) {
-          final wide = limits.maxWidth >= 900;
+          final wide = limits.maxWidth >= 900 && limits.maxHeight >= 720;
           if (wide) {
             return Row(children: [
               Expanded(
@@ -268,7 +269,7 @@ class _LoginPageState extends State<LoginPage> {
                 label: const Text('Sign In'),
               ),
               const SizedBox(height: 13),
-              OutlinedButton.icon(
+              if (kDebugMode) OutlinedButton.icon(
                 key: const Key('open-demo-dashboard'),
                 onPressed: widget.onOpenDemo,
                 icon: const Icon(Icons.visibility_outlined),
