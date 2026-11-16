@@ -41,9 +41,70 @@ void main() {
     await tester.tap(find.byKey(const Key('open-admission-wizard')));
     await tester.pumpAndSettle();
 
-    expect(find.text('New Student Admission'), findsOneWidget);
+    expect(find.text('New Admission'), findsOneWidget);
     expect(find.byKey(const Key('admission-save-draft-disabled')), findsOneWidget);
   });
+  testWidgets('Admission inherits app dark mode without a light override',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1366, 768));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(useMaterial3: true),
+      themeMode: ThemeMode.dark,
+      home: AdmissionWizardPage(),
+    ));
+    expect(Theme.of(tester.element(
+      find.byKey(const Key('admission-wizard-screen')))).brightness,
+      Brightness.dark);
+    final card = tester.widget<Container>(
+      find.ancestor(
+        of: find.text('Student Details'),
+        matching: find.byType(Container)).first);
+    expect(card, isNotNull);
+    expect(find.byKey(const Key('admission-global-search')),
+      findsOneWidget);
+  });
+
+  testWidgets('Admissions search uses existing shell callback',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1366, 768));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+    var searched = false;
+    await tester.pumpWidget(MaterialApp(home: AdmissionWizardPage(
+      onOpenSearch: () => searched = true,
+    )));
+    await tester.tap(find.byKey(const Key('admission-global-search')));
+    await tester.pump();
+    expect(searched, isTrue);
+  });
+
+  testWidgets('Admission sidebar navigation confirms discard and routes',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1366, 768));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+    int? destination;
+    await tester.pumpWidget(MaterialApp(
+      home: Builder(builder: (context) => Scaffold(
+        body: TextButton(
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+            builder: (_) => AdmissionWizardPage(
+              onNavigateModule: (index) => destination = index),
+          )),
+          child: const Text('Open admission'),
+        ),
+      )),
+    ));
+    await tester.tap(find.text('Open admission'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('admission-nav-0')));
+    await tester.pumpAndSettle();
+    expect(find.text('Discard admission preview?'), findsOneWidget);
+    await tester.tap(find.text('Discard preview'));
+    await tester.pumpAndSettle();
+    expect(destination, 0);
+  });
+
   testWidgets('Windows screenshot layout provides sidebar and document checklist',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(1648, 928));
