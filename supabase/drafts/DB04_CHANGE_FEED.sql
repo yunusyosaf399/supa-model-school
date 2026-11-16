@@ -237,10 +237,10 @@ BEGIN
     coalesce(
       pg_catalog.jsonb_agg(
         pg_catalog.jsonb_build_object(
-          'change_seq',change_seq,
+          'change_seq',change_seq::text,
           'event_type',event_type,
           'application_id',application_id,
-          'revision',revision,
+          'revision',revision::text,
           'payload',payload
         ) ORDER BY change_seq
       ) FILTER (WHERE rn <= p_page_size),
@@ -267,7 +267,7 @@ BEGIN
     'school_id',p_school,
     'campus_id',p_campus,
     'events',v_events,
-    'next_cursor',v_last,
+    'next_cursor',v_last::text,
     'has_more',v_count > p_page_size);
 END;
 $$;
