@@ -167,6 +167,16 @@ class _SchoolShellState extends State<_SchoolShell> {
   int selected = 0;
   String? activeCampusId;
 
+  @override
+  void initState() {
+    super.initState();
+    // The first verified Owner lands in setup until the real configuration
+    // is saved. The debug dashboard preview remains separate.
+    if (widget.owner != null && !widget.owner!.setupComplete) {
+      selected = 10; // Owner Control Panel / Settings.
+    }
+  }
+
   static const modules = <String>[
     'Dashboard', 'Students', 'Admissions', 'Fees', 'Attendance',
     'Employees', 'Payroll', 'Expenses', 'Reports', 'Sync Center', 'Settings',
