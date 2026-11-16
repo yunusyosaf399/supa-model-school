@@ -24,6 +24,7 @@ DECLARE
   salary uuid := '44444444-4444-4444-8444-111111111111';
   comp_basic uuid := '44444444-4444-4444-8444-222222222222';
   comp_ded uuid := '44444444-4444-4444-8444-333333333333';
+  comp_misc uuid := '44444444-4444-4444-8444-555555555555';
   period_a uuid := '55555555-5555-4555-8555-111111111111';
   period_b uuid := '55555555-5555-4555-8555-222222222222';
   period_may uuid := '55555555-5555-4555-8555-333333333333';
@@ -92,7 +93,8 @@ BEGIN
   id,school_id,code,name,component_kind)
  VALUES
   (comp_basic,s,'BASIC','Basic Salary','earning'),
-  (comp_ded,s,'DEDUCTION','Regular Deduction','deduction');
+  (comp_ded,s,'DEDUCTION','Regular Deduction','deduction'),
+  (comp_misc,s,'OTHER_EARN','Other Earning','earning');
  INSERT INTO public.salary_structures(
   id,school_id,campus_id,employee_id,employee_assignment_id,version_no,
   pay_basis,effective_from,status,approved_by)
@@ -104,7 +106,7 @@ BEGIN
  BEGIN
   INSERT INTO public.salary_structure_lines(
    school_id,salary_structure_id,component_id,component_kind,rate_minor)
-  VALUES(s,salary,comp_basic,'deduction',10000);
+  VALUES(s,salary,comp_misc,'deduction',10000);
   RAISE EXCEPTION 'Salary component kind mismatch accepted';
  EXCEPTION WHEN foreign_key_violation THEN NULL;
  END;
