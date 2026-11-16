@@ -46,8 +46,11 @@ void main() {
 
     final card = tester.getRect(find.byKey(const Key('login-form-card')));
     expect(card.left, greaterThan(900));
-    expect(card.top, greaterThan(10));
+    // Card must be below both top-right theme and preview icon controls.
+    expect(card.top, greaterThanOrEqualTo(90));
+    expect(card.width, lessThanOrEqualTo(470));
     expect(card.right, lessThanOrEqualTo(1536));
+    expect(card.bottom, lessThan(864));
   });
 
   testWidgets('Campus is not guessed before sign-in; password is maskable',
