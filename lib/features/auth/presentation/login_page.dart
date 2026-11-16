@@ -295,13 +295,13 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   Row(mainAxisSize: MainAxisSize.min, children: [
                     Checkbox(
-                      value: _remember,
+                      value: widget.authConfigured ? true : _remember,
                       onChanged: widget.authConfigured
                           ? null
                           : (v) => setState(() => _remember = v ?? false),
                     ),
                     Text(widget.authConfigured
-                        ? 'Remember me (future option)' : 'Remember me'),
+                        ? 'Stay signed in until Sign out' : 'Remember me'),
                   ]),
                   TextButton(
                     onPressed: _resetPassword,
