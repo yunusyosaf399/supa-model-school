@@ -12,8 +12,14 @@ class LoginPage extends StatefulWidget {
     required this.themeMode,
     required this.onThemeChanged,
     required this.onOpenDemo,
+    required this.onSignIn,
+    required this.onRecoverPassword,
+    required this.authConfigured,
   });
 
+  final Future<void> Function(String email, String password) onSignIn;
+  final Future<void> Function(String email) onRecoverPassword;
+  final bool authConfigured;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
   final VoidCallback onOpenDemo;
@@ -28,6 +34,7 @@ class _LoginPageState extends State<LoginPage> {
   final _password = TextEditingController();
   bool _remember = false;
   bool _showPassword = false;
+  bool _working = false;
   String _campus = 'campus-a';
 
   @override
@@ -37,11 +44,44 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _notConnected() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('Real sign-in is unavailable: Supabase Auth and RLS '
-          'have not been connected or tested. Use Preview Dashboard.'),
-    ));
+  Future<void> _submitSignIn() async {
+    if (!_formKey.currentState!.validate() || _working) return;
+    setState(() => _working = true);
+    try {
+      await widget.onSignIn(_email.text.trim(), _password.text);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(widget.authConfigured
+            ? 'Sign-in failed, or this account lacks active Owner access.'
+            : 'Supabase Auth is not configured in this build.'),
+      ));
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    final email = _email.text.trim();
+    if (!email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Enter your email address first.'),
+      ));
+      return;
+    }
+    try {
+      await widget.onRecoverPassword(email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('If an account exists, follow the recovery instructions.'),
+      ));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Password recovery is not yet configured. '
+            'Contact your administrator for secure assistance.'),
+      ));
+    }
   }
 
   @override
@@ -185,24 +225,31 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 key: const Key('login-campus'),
-                initialValue: _campus,
+                initialValue: widget.authConfigured ? 'after-auth' : _campus,
                 isExpanded: true,
-                items: const [
-                  DropdownMenuItem(
-                    value: 'campus-a',
-                    child: Text('Sample Campus A (demo)'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'campus-b',
-                    child: Text('Sample Campus B (demo)'),
-                  ),
-                ],
-                onChanged: (value) {
+                items: widget.authConfigured
+                    ? const [
+                        DropdownMenuItem(
+                          value: 'after-auth',
+                          child: Text('Campus chosen after secure sign-in'),
+                        ),
+                      ]
+                    : const [
+                        DropdownMenuItem(
+                          value: 'campus-a',
+                          child: Text('Sample Campus A (demo)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'campus-b',
+                          child: Text('Sample Campus B (demo)'),
+                        ),
+                      ],
+                onChanged: widget.authConfigured ? null : (value) {
                   if (value != null) setState(() => _campus = value);
                 },
               ),
               const SizedBox(height: 17),
-              const Text('Email or Username'),
+              Text(widget.authConfigured ? 'Email address' : 'Email or Username'),
               const SizedBox(height: 6),
               TextFormField(
                 key: const Key('login-email'),
@@ -210,7 +257,7 @@ class _LoginPageState extends State<LoginPage> {
                 keyboardType: TextInputType.emailAddress,
                 autofillHints: const [AutofillHints.username],
                 decoration: const InputDecoration(
-                  hintText: 'Enter your email or username',
+                  hintText: 'Enter your email address',
                   prefixIcon: Icon(Icons.person_outline),
                 ),
                 validator: (s) => (s == null || s.trim().isEmpty)
@@ -248,13 +295,16 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   Row(mainAxisSize: MainAxisSize.min, children: [
                     Checkbox(
-                      value: _remember,
-                      onChanged: (v) => setState(() => _remember = v ?? false),
+                      value: widget.authConfigured ? false : _remember,
+                      onChanged: widget.authConfigured
+                          ? null
+                          : (v) => setState(() => _remember = v ?? false),
                     ),
-                    const Text('Remember me'),
+                    Text(widget.authConfigured
+                        ? 'Remember me (disabled for security)' : 'Remember me'),
                   ]),
                   TextButton(
-                    onPressed: _notConnected,
+                    onPressed: _resetPassword,
                     child: const Text('Forgot Password?'),
                   ),
                 ],
@@ -262,11 +312,9 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 12),
               FilledButton.icon(
                 key: const Key('login-sign-in'),
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) _notConnected();
-                },
+                onPressed: _working ? null : _submitSignIn,
                 icon: const Icon(Icons.login),
-                label: const Text('Sign In'),
+                label: Text(_working ? 'Signing In...' : 'Sign In'),
               ),
               const SizedBox(height: 13),
               if (kDebugMode) OutlinedButton.icon(
@@ -276,7 +324,9 @@ class _LoginPageState extends State<LoginPage> {
                 label: const Text('Preview Dashboard'),
               ),
               const SizedBox(height: 12),
-              Text('DESIGN PREVIEW — no authenticated access',
+              Text(widget.authConfigured
+                  ? 'OWNER SIGN-IN • verified school role required'
+                  : 'DESIGN PREVIEW — no authenticated access',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.labelSmall),
               const Divider(height: 32),

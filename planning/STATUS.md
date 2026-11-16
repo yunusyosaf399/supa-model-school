@@ -122,3 +122,30 @@ Date: 2026-11-16
 - **Structural GitHub source readback: 19/19 targeted assertions passed.** PostgreSQL migration/RLS tests, concurrency fixture, Deno Edge invocation, device security, local SQLite event application and cursor atomically persisted have **not been executed or implemented**. User-reported Windows Flutter UI build success does NOT validate server sync.
 - No hosted Supabase DDL changes/deployments, no GitHub Actions. Live public school tables remain uncreated pending separate verification.
 - **Next D04-T05:** authorized Windows offline vertical slice: secure device credentials, encrypted persistence, dispatch/ingest receipt, local cloud UUID mapping, event apply + cursor in one local transaction, restart/conflict and device tests. D02-T04 local PostgreSQL RLS still IN_PROGRESS.
+
+## Session 2026-11-16 — First Owner Auth preparation (PR #15; source only)
+- **Not yet activated:** hosted Supabase Auth had 0 users and the DB01 foundation had 0 tables/0 migrations when checked. No Owner invitation, password, profile, role, school or campus has been created on the hosted project.
+- Added Owner Auth gateway and integrated email/password sign-in into Flutter. Login is allowed only after server-verified Auth identity, active profile, one school-wide Owner membership, active school and authorized campus membership are confirmed. Invalid session is signed out.
+- The configured login selects campus AFTER authentication and keeps the existing debug preview separate; real dashboard statistics remain fictional placeholders.
+- Supabase client uses the publishable key only, and `EmptyLocalStorage` disables persistence of Auth session tokens until encrypted storage is built/tested.
+- Added one-time privileged Owner bootstrap SQL template, verified-email requirement, detailed runbook and fake-gateway Flutter widget tests.
+- Static source checks only. Flutter analyzer, SDK dependency lock resolution, widget tests, DB01 RLS migration tests and actual auth/campus integration remain **NOT RUN**.
+- **Activation gate:** Owner email identity not yet explicitly specified; user must accept a trusted Supabase Auth invitation. DB01 migration/RLS tests, school currency/timezone, and first campus require explicit configuration. Do not use guessed credentials or manually insert auth.users.
+
+## Session 2026-11-16 — First Owner activation completed (live DB01)
+- **ACTIVATED:** The verified existing Supabase Auth user for the school was promoted to one active, school-wide `owner` role. No password was accessed or modified.
+- **MIGRATED:** Applied remote DB01 version `20261116051446` (`db01_foundation_owner_access_20261116`); 12 public tables, all with RLS enabled, confirmed against hosted database. Exact version mirrored under `supabase/migrations/`.
+- **TESTED IN POSTGRES:** Transactional create/rollback test for two in-school campuses and foreign school; Owner RLS read allowed both owned campuses and denied the foreign school. After seeding, privileged verification and Owner/unknown-JWT RLS checks passed. The original 7-user fixture remains unexecuted and is still required.
+- **INITIAL SETUP PENDING:** School `Supa Model School`, first campus `Main Campus (Setup Pending)`, currency `XXX` and timezone `Etc/UTC` as explicitly non-final placeholders; academic year not yet seeded. The `initial_setup` setting records pending status. No real finance, students or attendance data created.
+- **AUTH UI SOURCE:** PR #15 contains authenticated Owner login, authorized campus choice, signout, Owner Control Panel read-only setup summary and a Supabase Auth current-password-verified change-password screen.
+- **SECURITY ADVISOR:** Auth leaked-password protection disabled warning; Supabase advisor URL documented in docs/23.
+- **UNVERIFIED:** Flutter widget tests/analyzer/runtime (SDK not available), real password login by user, encrypted session storage, full seven-user RLS suite, auth recovery URLs, setup edit service and actual operational modules. No workflows triggered.
+
+## Session 2026-11-16 — Owner initial school setup backend and Flutter (stacked PR #15)
+- **DEPLOYED SQL:** remote Supabase migration `20261116061531_db01_owner_initial_setup_rpc_audit_20261116`; exact source mirrored in `supabase/migrations/`.
+- **DATABASE:** new RLS-enabled `public.owner_setup_audit_events` and secure `public.owner_complete_initial_setup` SECURITY INVOKER RPC backed by `app_private.complete_owner_initial_setup` SECURITY DEFINER. No unauthenticated execution or authenticated direct school/campus/year/audit writes.
+- **SQL TESTS PASSED:** transactional rollback-only (not actual school values): invalid/unknown user rejected, placeholder currency/unknown IANA timezone/stale revision rejected, Owner's atomic school+campus+year+settings+audit operation succeeded, duplicate setup blocked. Original real data still unchanged.
+- **LIVE STATUS:** school initial setup PENDING, currency XXX, timezone Etc/UTC, first campus still setup-pending, no academic year, zero setup audit records. Real values must be entered by Owner; no guessed calendar dates.
+- **FLUTTER SOURCE:** Owner signs in, is taken automatically to Owner Control Panel while setup pending, and can enter real school/campus name, currency, timezone, academic-year label and dates, then Save Setup. After Supabase RPC confirms success, refresh authorized school/year context and show completion; account/password controls remain.
+- **UNVERIFIED:** Flutter compilation/test commands and real Owner password session on Windows/Android. No Flutter SDK installed in assistant environment. Add credential storage hardening and full seven-account RLS harness before live school operations.
+- **DISABLED/UNIMPLEMENTED:** Fees, attendance, admission writes, finance, backups, sync and dashboards remain previews. School setup completion does not turn these on.
