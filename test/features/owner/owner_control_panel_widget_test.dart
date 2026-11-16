@@ -21,6 +21,7 @@ void main() {
           onPasswordChanged: () {},
           onSaveSetup: (request) async => owner,
           onSetupSaved: (_) {},
+          onOpenAcademicStructure: () {},
         ),
       ),
     ));
@@ -45,6 +46,7 @@ void main() {
           ),
           onSaveSetup: (request) async => owner,
           onSetupSaved: (_) {},
+          onOpenAcademicStructure: () {},
           onChangePassword: (current, next) async {
             expect(current, 'old-pass-12345');
             expect(next, 'a-longer-new-password-2026!');
