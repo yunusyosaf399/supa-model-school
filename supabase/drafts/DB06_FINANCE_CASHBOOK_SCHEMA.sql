@@ -540,6 +540,46 @@ CREATE TABLE public.bank_reconciliation_matches (
   UNIQUE (ledger_line_id)
 );
 
+-- Bank statement match must use the SAME physical asset account and
+-- amount/direction. Statement date may legitimately lag journal date.
+CREATE FUNCTION app_private.db06_validate_bank_match()
+RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
+AS $
+DECLARE
+  v_ledger_account uuid;
+  v_line_account uuid;
+  v_debit bigint;
+  v_credit bigint;
+  v_inflow bigint;
+  v_outflow bigint;
+BEGIN
+  SELECT fa.ledger_account_id INTO v_ledger_account
+    FROM public.financial_accounts fa
+   WHERE fa.id=NEW.bank_account_id AND fa.school_id=NEW.school_id;
+  SELECT ll.ledger_account_id,ll.debit_minor,ll.credit_minor
+    INTO v_line_account,v_debit,v_credit
+    FROM public.ledger_lines ll
+   WHERE ll.id=NEW.ledger_line_id AND ll.school_id=NEW.school_id;
+  SELECT bs.inflow_minor,bs.outflow_minor INTO v_inflow,v_outflow
+    FROM public.bank_statement_lines bs
+   WHERE bs.id=NEW.bank_statement_line_id
+     AND bs.school_id=NEW.school_id
+     AND bs.bank_account_id=NEW.bank_account_id;
+  IF v_ledger_account IS NULL OR v_line_account IS NULL
+    OR v_inflow IS NULL
+    OR v_line_account IS DISTINCT FROM v_ledger_account
+    OR v_debit IS DISTINCT FROM v_inflow
+    OR v_credit IS DISTINCT FROM v_outflow THEN
+    RAISE EXCEPTION 'Bank statement/ledger account or amount mismatch'
+      USING ERRCODE='23514';
+  END IF;
+  RETURN NEW;
+END;
+$;
+CREATE TRIGGER db06_bank_match_guard
+  BEFORE INSERT ON public.bank_reconciliation_matches
+  FOR EACH ROW EXECUTE FUNCTION app_private.db06_validate_bank_match();
+
 -- 20. Replay receipt for a trusted financial operation, same transaction
 -- as all journal lines+source and any fee, payroll or expense posting.
 CREATE TABLE public.financial_operation_receipts (
@@ -907,6 +947,8 @@ REVOKE ALL ON
  public.financial_operation_receipts
 FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION app_private.db06_require_open_journal_period()
+  FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION app_private.db06_validate_bank_match()
   FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION app_private.db06_check_ledger_line_scope()
   FROM PUBLIC,anon,authenticated;
