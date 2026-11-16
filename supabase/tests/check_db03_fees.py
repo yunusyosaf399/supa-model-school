@@ -52,7 +52,7 @@ sql_without_comments = "\n".join(
     line.split("--", 1)[0] for line in sql.splitlines()
 )
 assert not re.search(
-    r"(?im)\\b(?:float|double\\s+precision|real|money)\\b",
+    r"(?im)\b(?:float|double\s+precision|real|money)\b",
     sql_without_comments,
 ), "Floating-point/PG MONEY types are forbidden for fee amounts"
 assert len(re.findall(r"(?im)^CREATE TRIGGER \w+_immutable\b",sql)) == 10
