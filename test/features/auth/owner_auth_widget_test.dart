@@ -67,9 +67,9 @@ void main() {
     await tester.tap(find.byKey(const Key('login-sign-in')));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Verified Owner'), findsOneWidget);
     expect(find.byKey(const Key('owner-campus-selector')), findsOneWidget);
     expect(find.byKey(const Key('dashboard-page')), findsOneWidget);
+    expect(find.byKey(const Key('dashboard-demo-banner')), findsOneWidget);
     expect(find.textContaining('Dashboard figures are still fictional'),
         findsOneWidget);
 

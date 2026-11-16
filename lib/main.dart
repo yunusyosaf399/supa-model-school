@@ -7,6 +7,7 @@ import 'features/academics/data/academic_structure_repository.dart';
 import 'features/academics/presentation/academic_structure_page.dart';
 import 'features/auth/presentation/login_page.dart';
 import 'features/dashboard/presentation/dashboard_page.dart';
+import 'features/dashboard/data/dashboard_repository.dart';
 import 'features/owner/presentation/owner_control_panel_page.dart';
 import 'features/students/presentation/student_directory_page.dart';
 import 'ui/school_brand.dart';
@@ -20,6 +21,7 @@ Future<void> main() async {
   OwnerAuthGateway gateway = const UnconfiguredOwnerAuthGateway();
   AcademicStructureRepository academicRepo =
       const UnconfiguredAcademicStructureRepository();
+  DashboardRepository dashboardRepo = const UnconfiguredDashboardRepository();
   if (url.isNotEmpty && key.isNotEmpty) {
     await Supabase.initialize(
       url: url,
@@ -33,10 +35,12 @@ Future<void> main() async {
     );
     gateway = SupabaseOwnerAuthGateway(Supabase.instance.client);
     academicRepo = SupabaseAcademicStructureRepository(Supabase.instance.client);
+    dashboardRepo = SupabaseDashboardRepository(Supabase.instance.client);
   }
   runApp(SupaModelSchoolApp(
     authGateway: gateway,
     academicRepository: academicRepo,
+    dashboardRepository: dashboardRepo,
   ));
 }
 
@@ -47,10 +51,12 @@ class SupaModelSchoolApp extends StatefulWidget {
     this.startInPreview = false,
     this.authGateway,
     this.academicRepository,
+    this.dashboardRepository,
   });
   final bool startInPreview;
   final OwnerAuthGateway? authGateway;
   final AcademicStructureRepository? academicRepository;
+  final DashboardRepository? dashboardRepository;
 
   @override
   State<SupaModelSchoolApp> createState() => _SupaModelSchoolAppState();
@@ -131,6 +137,8 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   owner: _authorized,
                   academicRepository: widget.academicRepository ??
                       const UnconfiguredAcademicStructureRepository(),
+                  dashboardRepository: widget.dashboardRepository ??
+                      const UnconfiguredDashboardRepository(),
                   themeMode: themeMode,
                   onThemeChanged: (mode) => setState(() => themeMode = mode),
                   onExit: _exitShell,
@@ -163,10 +171,12 @@ class _SchoolShell extends StatefulWidget {
     required this.onSaveSetup,
     required this.onPasswordChanged,
     required this.academicRepository,
+    required this.dashboardRepository,
     this.owner,
   });
   final OwnerAccess? owner;
   final AcademicStructureRepository academicRepository;
+  final DashboardRepository dashboardRepository;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
   final VoidCallback onExit;
@@ -291,6 +301,14 @@ class _SchoolShellState extends State<_SchoolShell> {
         onFees: () => setState(() => selected = 3),
         onAttendance: () => setState(() => selected = 4),
         onExpenses: () => setState(() => selected = 7),
+        onAdmissions: () => setState(() => selected = 2),
+        onSearch: _showGlobalSearch,
+        onExit: widget.onExit,
+        owner: widget.owner,
+        selectedCampusId: activeCampusId,
+        onCampusChanged: (campusId) =>
+            setState(() => activeCampusId = campusId),
+        repository: widget.dashboardRepository,
       );
     }
     if (selected == 1) {
@@ -351,6 +369,79 @@ class _SchoolShellState extends State<_SchoolShell> {
     );
   }
 
+  Widget _desktopSidebar(bool extended) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      key: const Key('desktop-navigation'),
+      width: extended ? 244 : 68,
+      color: scheme.surface,
+      child: Column(children: [
+        if (extended)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 16, 8, 12),
+            child: Column(children: [
+              const SchoolMark(size: 65),
+              const SizedBox(height: 5),
+              Text('Supa Model School',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: scheme.primary, fontWeight: FontWeight.w900,
+                  fontSize: 18)),
+              const Text('School Management System',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11)),
+              const Divider(height: 24),
+            ]),
+          ),
+        Expanded(child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
+          children: [
+            for (var i = 0; i < modules.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Material(
+                  color: i == selected
+                      ? SchoolPalette.tealDark
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  child: InkWell(
+                    key: Key('dashboard-nav-$i'),
+                    onTap: () => setState(() => selected = i),
+                    borderRadius: BorderRadius.circular(10),
+                    child: SizedBox(height: 39,
+                      child: Row(children: [
+                        const SizedBox(width: 12),
+                        Icon(icons[i], size: 21,
+                          color: i == selected
+                              ? Colors.white : scheme.onSurface),
+                        if (extended) ...[
+                          const SizedBox(width: 13),
+                          Expanded(child: Text(modules[i],
+                            style: TextStyle(
+                              color: i == selected
+                                  ? Colors.white : scheme.onSurface,
+                              fontSize: 13,
+                              fontWeight: i == selected
+                                  ? FontWeight.w700 : FontWeight.w500,
+                            ))),
+                        ],
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        )),
+        if (extended && selected == 0)
+          SizedBox(
+            height: 143, width: double.infinity,
+            child: Image.asset('assets/dashboard/school_sidebar.jpg',
+              fit: BoxFit.cover, alignment: Alignment.bottomCenter),
+          ),
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final desktop = MediaQuery.sizeOf(context).width >= 860;
@@ -370,7 +461,30 @@ class _SchoolShellState extends State<_SchoolShell> {
     };
 
     return Scaffold(
-      appBar: AppBar(
+      // The supplied dashboard design has a slim teal desktop titlebar;
+      // its search/campus/notifications/account controls are inside the
+      // dashboard itself. Non-dashboard screens retain the existing toolbar.
+      appBar: selected == 0
+          ? (desktop
+              ? AppBar(
+                  toolbarHeight: 38,
+                  elevation: 0,
+                  backgroundColor: SchoolPalette.tealDark,
+                  foregroundColor: Colors.white,
+                  title: const Row(children: [
+                    Icon(Icons.school_outlined, color: Colors.white, size: 23),
+                    SizedBox(width: 10),
+                    Text('Supa Model School',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                    SizedBox(width: 14),
+                    Text('│', style: TextStyle(color: Color(0xFF95D0CD))),
+                    SizedBox(width: 14),
+                    Text('School Management System',
+                      style: TextStyle(fontSize: 13)),
+                  ]),
+                )
+              : null)
+          : AppBar(
         titleSpacing: 14,
         title: Row(mainAxisSize: MainAxisSize.min, children: [
           if (desktop) ...[
@@ -421,8 +535,9 @@ class _SchoolShellState extends State<_SchoolShell> {
           ),
         ],
       ),
+
       body: Column(children: [
-        if (owner != null)
+        if (owner != null && selected != 0)
           Container(
             width: double.infinity,
             color: Theme.of(context).colorScheme.primaryContainer,
@@ -430,29 +545,13 @@ class _SchoolShellState extends State<_SchoolShell> {
             child: Text(
               'Verified Owner: ${owner.displayName} • '
               '${owner.schoolName} • ${activeCampus?.name ?? 'No campus'}'
-              '   |   Dashboard figures are still fictional previews.',
+              '   |   Only deployed modules have live data.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
         Expanded(child: desktop
           ? Row(children: [
-              NavigationRail(
-                key: const Key('desktop-navigation'),
-                selectedIndex: selected,
-                onDestinationSelected: (i) => setState(() => selected = i),
-                extended: extended,
-                minExtendedWidth: 210,
-                scrollable: true,
-                backgroundColor: Theme.of(context).colorScheme.surface,
-                destinations: [
-                  for (var i = 0; i < modules.length; i++)
-                    NavigationRailDestination(
-                      icon: Icon(icons[i]),
-                      selectedIcon: Icon(icons[i]),
-                      label: Text(modules[i]),
-                    ),
-                ],
-              ),
+              _desktopSidebar(extended),
               const VerticalDivider(width: 1),
               Expanded(child: content),
             ])
