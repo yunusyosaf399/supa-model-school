@@ -48,7 +48,13 @@ assert "FOREIGN KEY (verified_receipt_id,school_id,student_id)" in sql
 assert "FROM PUBLIC,anon,authenticated" in sql
 assert not re.search(r"(?im)^\s*CREATE POLICY\s+.*\s+USING\s*\(\s*true\s*\)",sql)
 assert not re.search(r"(?im)^\s*GRANT\s+.*\s+TO\s+(anon|authenticated)\b",sql)
-assert "real" not in re.findall(r"(?im)\b(?:float|double precision|money)\b",sql)
+sql_without_comments = "\n".join(
+    line.split("--", 1)[0] for line in sql.splitlines()
+)
+assert not re.search(
+    r"(?im)\\b(?:float|double\\s+precision|real|money)\\b",
+    sql_without_comments,
+), "Floating-point/PG MONEY types are forbidden for fee amounts"
 assert len(re.findall(r"(?im)^CREATE TRIGGER \w+_immutable\b",sql)) == 10
 for item in ("UNIQUE","foreign key","discount","partial", "rollback",
              "CROSS CAMPUS","RLS","posted fee", "bank submission"):
