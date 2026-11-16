@@ -87,6 +87,14 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
     });
   }
 
+  Future<OwnerAccess> _saveInitialSetup(
+      OwnerInitialSetupRequest request) async {
+    final updated = await _gateway.completeInitialSetup(request);
+    if (!mounted) return updated;
+    setState(() => _authorized = updated);
+    return updated;
+  }
+
   Future<void> _exitShell() async {
     if (_authorized != null) await _gateway.signOut();
     if (!mounted) return;
@@ -115,6 +123,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   onThemeChanged: (mode) => setState(() => themeMode = mode),
                   onExit: _exitShell,
                   onChangePassword: _gateway.changePassword,
+                  onSaveSetup: _saveInitialSetup,
                   onPasswordChanged: () => setState(() {
                     _authorized = null;
                     _preview = false;
@@ -138,6 +147,7 @@ class _SchoolShell extends StatefulWidget {
     required this.onThemeChanged,
     required this.onExit,
     required this.onChangePassword,
+    required this.onSaveSetup,
     required this.onPasswordChanged,
     this.owner,
   });
@@ -146,6 +156,7 @@ class _SchoolShell extends StatefulWidget {
   final ValueChanged<ThemeMode> onThemeChanged;
   final VoidCallback onExit;
   final Future<void> Function(String, String) onChangePassword;
+  final Future<OwnerAccess> Function(OwnerInitialSetupRequest) onSaveSetup;
   final VoidCallback onPasswordChanged;
 
   @override
@@ -257,6 +268,10 @@ class _SchoolShellState extends State<_SchoolShell> {
         owner: widget.owner!,
         onChangePassword: widget.onChangePassword,
         onPasswordChanged: widget.onPasswordChanged,
+        onSaveSetup: widget.onSaveSetup,
+        onSetupSaved: (updated) {
+          setState(() => activeCampusId = updated.campuses.first.id);
+        },
       );
     }
     return _modulePreview();
