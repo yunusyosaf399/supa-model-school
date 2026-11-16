@@ -1247,56 +1247,104 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     ],
   );
 
-  Widget _documentFields() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text('Required certificates',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        const Text('Files cannot be uploaded or verified in this preview. '
-            'All required certificates must be treated as outstanding.'),
-        const SizedBox(height: 12),
-        for (final name in _draft.requiredDocumentNames)
-          ListTile(
-            leading: const Icon(Icons.description_outlined),
-            title: Text(name),
-            subtitle: const Text('Not uploaded or verified'),
-            trailing: const Chip(label: Text('Outstanding')),
-          ),
-        const Divider(height: 24),
-        const Text('Conditional documentation',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        const Text('School policy allows conditional admission with a deadline. '
-            'A late document does not automatically cancel enrollment.'),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          key: const Key('document-deadline'),
-          onPressed: _chooseDocumentDeadline,
-          icon: const Icon(Icons.calendar_month_outlined),
-          label: Text('Document deadline *: '
-              '${_dateLabel(_draft.missingDocumentsDueOn)}'),
+  Widget _documentFields() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const Text('Required Certificate Uploads',
+        style: TextStyle(color: _teal, fontSize: 15,
+          fontWeight: FontWeight.w900)),
+      const SizedBox(height: 7),
+      const Text('Documents are awaiting secure upload and verification. '
+        'No file has been stored from this preview.',
+        style: TextStyle(fontSize: 12, color: Color(0xFF5B7380))),
+      const SizedBox(height: 14),
+      for (final name in _draft.requiredDocumentNames)
+        Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(color: _line),
+            borderRadius: BorderRadius.circular(11),
+            color: const Color(0xFFF8FCFF)),
+          child: Row(children: [
+            Container(width: 44, height: 44,
+              decoration: BoxDecoration(
+                color: _pale, borderRadius: BorderRadius.circular(9)),
+              child: const Icon(Icons.description_outlined,
+                color: _teal)),
+            const SizedBox(width: 12),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(
+                  fontWeight: FontWeight.w800, fontSize: 13)),
+                const SizedBox(height: 4),
+                const Text('Not uploaded • Not verified',
+                  style: TextStyle(
+                    color: Color(0xFF667E8B), fontSize: 11)),
+              ],
+            )),
+            const Chip(
+              visualDensity: VisualDensity.compact,
+              backgroundColor: Color(0xFFFFE9C5),
+              side: BorderSide.none,
+              label: Text('Pending',
+                style: TextStyle(
+                  color: Color(0xFF986313), fontSize: 11))),
+          ]),
         ),
-        const SizedBox(height: 12),
-        TextFormField(
-          key: const Key('conditional-reason'),
-          initialValue: _draft.conditionalReason,
-          minLines: 2,
-          maxLines: 3,
-          decoration: const InputDecoration(
-            labelText: 'Reason for conditional admission *',
-            border: OutlineInputBorder(),
-            helperText: 'Saved in the server audit trail when the backend is ready.',
-          ),
-          onChanged: (v) => _draft.conditionalReason = v,
-        ),
-        const SizedBox(height: 10),
-        const Text('Verification and deadline extensions will require '
-            'authorized server operations and separate audit records.'),
-      ],
-    );
-  }
+      Container(
+        key: const Key('admission-upload-disabled'),
+        padding: const EdgeInsets.symmetric(vertical: 19, horizontal: 10),
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFFB3CDD8)),
+          color: const Color(0xFFF5FAFC),
+          borderRadius: BorderRadius.circular(12)),
+        child: const Column(children: [
+          Icon(Icons.cloud_upload_outlined, size: 39, color: _teal),
+          SizedBox(height: 5),
+          Text('Secure document upload coming soon',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: _teal,
+              fontWeight: FontWeight.w800)),
+          SizedBox(height: 4),
+          Text('PDF, JPG, PNG • verification by authorized staff',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF607A87), fontSize: 11)),
+        ]),
+      ),
+      const SizedBox(height: 16),
+      const Text('Conditional Document Submission',
+        style: TextStyle(color: _teal, fontSize: 15,
+          fontWeight: FontWeight.w900)),
+      const SizedBox(height: 6),
+      const Text('Where required certificates are missing, the school may '
+        'permit a deadline up to two calendar months. '
+        'An overdue certificate never automatically deletes the student.',
+        style: TextStyle(fontSize: 12, color: Color(0xFF5A7280))),
+      const SizedBox(height: 13),
+      OutlinedButton.icon(
+        key: const Key('document-deadline'),
+        onPressed: _chooseDocumentDeadline,
+        icon: const Icon(Icons.calendar_month_outlined, color: _teal),
+        label: Text('Submission Deadline *: '
+          '${_dateLabel(_draft.missingDocumentsDueOn)}'),
+      ),
+      const SizedBox(height: 13),
+      _styledField(
+        key: const Key('conditional-reason'),
+        label: 'Reason for Outstanding Documents', isRequired: true,
+        icon: Icons.notes_outlined,
+        initialValue: _draft.conditionalReason,
+        maxLines: 3,
+        onChanged: (v) => _draft.conditionalReason = v),
+      const SizedBox(height: 12),
+      const Text('Deadline decisions and document verification will be '
+        'audited when the trusted admissions service is enabled.',
+        style: TextStyle(fontSize: 11, color: Color(0xFF5A7280))),
+    ],
+  );
 
   Widget _feeFields() {
     return Column(
