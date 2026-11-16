@@ -229,3 +229,10 @@ Date: 2026-11-16
 - **No Flutter/Dart code written; no live database changes or GitHub Actions**.
 - **Schema progress:** 9 domains, DB01/DB02 baseline deployed, DB03/DB04 drafted but undeployed; **5 full schema designs remain (DB05–DB09)**, **7 domains remain undeployed (DB03–DB09)**. Overall 114 tasks: 27 DONE, 86 TODO, 1 IN_PROGRESS, 0 BLOCKED.
 - Next schema-only task: **DB05 — Employees, Campus Assignments, Salary Configuration, Payroll, Advances and Repayment**. Full-domain approval, local SQL/RLS/security tests and reviewed migrations must precede further deployment.
+
+## Session 2026-11-16 — Shared theme and clickable Admissions navigation
+- Fixed New Admission forcing light theme: removed its light-only ColorScheme/scaffold background and moved all panels/inputs/text/borders to inherited `MaterialApp` ThemeMode adaptive styling. Dashboard and Admissions now share Settings-selected Dark/Light/System appearance.
+- Moved in-shell appearance control into Settings; no extra AppBar appearance icon. Previously finalized login styling untouched.
+- Admissions New Screen still preserves the draft and 6-stage form, but now receives shell global search callback, verified campus context, and module navigation callback; Search is 46px-high with the Dashboard's shape/spacing and Ctrl+K hint; school campus dropdown is authorized and functional.
+- Desktop Admissions sidebar items now actually navigate after a discard confirmation, back to the existing shell page rather than opening another disconnected shell. Notifications show explicit not-configured notice; account Settings and return function. No DB/auth changes.
+- Added widget regression source for dark theme, global search and module navigation. No Flutter SDK in assistant environment to run analyze/tests/build. Full runbook `docs/32_SHARED_THEME_ADMISSION_NAVIGATION.md`.
