@@ -155,6 +155,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
 
 class _SchoolShell extends StatefulWidget {
   const _SchoolShell({
+    super.key,
     required this.themeMode,
     required this.onThemeChanged,
     required this.onExit,
