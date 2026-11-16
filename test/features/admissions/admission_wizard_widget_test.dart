@@ -32,7 +32,7 @@ void main() {
 
   testWidgets('students module opens admission wizard preview',
       (tester) async {
-    await tester.pumpWidget(const SupaModelSchoolApp());
+    await tester.pumpWidget(const SupaModelSchoolApp(startInPreview: true));
     await tester.tap(find.text('Students').first);
     await tester.pumpAndSettle();
 

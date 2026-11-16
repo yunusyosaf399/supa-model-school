@@ -1,120 +1,306 @@
 import 'package:flutter/material.dart';
+
 import 'features/admissions/presentation/admission_wizard_page.dart';
+import 'features/auth/presentation/login_page.dart';
+import 'features/dashboard/presentation/dashboard_page.dart';
 import 'features/students/presentation/student_directory_page.dart';
+import 'ui/school_brand.dart';
+import 'ui/school_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const SupaModelSchoolApp());
 }
 
-class SupaModelSchoolApp extends StatelessWidget {
-  const SupaModelSchoolApp({super.key});
+/// The normal startup shows Login. startInPreview is for isolated widget tests.
+class SupaModelSchoolApp extends StatefulWidget {
+  const SupaModelSchoolApp({super.key, this.startInPreview = false});
+  final bool startInPreview;
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-        title: 'Supa Model School',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff176b75)),
-        ),
-        home: const _SchoolShell(),
-      );
+  State<SupaModelSchoolApp> createState() => _SupaModelSchoolAppState();
+}
+
+class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
+  ThemeMode themeMode = ThemeMode.system;
+  bool? _preview;
+
+  @override
+  Widget build(BuildContext context) {
+    final preview = _preview ?? widget.startInPreview;
+    return MaterialApp(
+      title: 'Supa Model School',
+      debugShowCheckedModeBanner: false,
+      theme: SchoolTheme.light(),
+      darkTheme: SchoolTheme.dark(),
+      themeMode: themeMode,
+      home: preview
+          ? _SchoolShell(
+              themeMode: themeMode,
+              onThemeChanged: (mode) => setState(() => themeMode = mode),
+              onExit: () => setState(() => _preview = false),
+            )
+          : LoginPage(
+              themeMode: themeMode,
+              onThemeChanged: (mode) => setState(() => themeMode = mode),
+              onOpenDemo: () => setState(() => _preview = true),
+            ),
+    );
+  }
 }
 
 class _SchoolShell extends StatefulWidget {
-  const _SchoolShell();
+  const _SchoolShell({
+    required this.themeMode,
+    required this.onThemeChanged,
+    required this.onExit,
+  });
+  final ThemeMode themeMode;
+  final ValueChanged<ThemeMode> onThemeChanged;
+  final VoidCallback onExit;
+
   @override
   State<_SchoolShell> createState() => _SchoolShellState();
 }
 
 class _SchoolShellState extends State<_SchoolShell> {
   int selected = 0;
+
   static const modules = <String>[
-    'Dashboard', 'Students', 'Fees', 'Attendance', 'Employees',
-    'Payroll', 'Expenses', 'Cashbook', 'Approvals', 'Reports',
-    'Sync Center', 'Settings'
+    'Dashboard', 'Students', 'Admissions', 'Fees', 'Attendance',
+    'Employees', 'Payroll', 'Expenses', 'Reports', 'Sync Center', 'Settings',
   ];
+
+  static const icons = <IconData>[
+    Icons.dashboard_outlined,
+    Icons.groups_outlined,
+    Icons.school_outlined,
+    Icons.paid_outlined,
+    Icons.calendar_month_outlined,
+    Icons.badge_outlined,
+    Icons.account_balance_wallet_outlined,
+    Icons.receipt_long_outlined,
+    Icons.bar_chart_outlined,
+    Icons.sync,
+    Icons.settings_outlined,
+  ];
+
+  void _newAdmission() {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => const AdmissionWizardPage(),
+    ));
+  }
+
+  void _showGlobalSearch() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Global Search'),
+        content: const SizedBox(
+          width: 440,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(
+              key: Key('global-search-input'),
+              decoration: InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                hintText: 'Students, employees, invoices...',
+              ),
+            ),
+            SizedBox(height: 12),
+            Text('Preview only. Authorized server-side searching '
+                'will be added after RLS and domain modules are tested.'),
+          ]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _modulePreview() => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icons[selected], size: 48,
+            color: Theme.of(context).colorScheme.primary),
+        const SizedBox(height: 12),
+        Text(modules[selected],
+            style: Theme.of(context).textTheme.headlineMedium),
+        const SizedBox(height: 10),
+        const Text(
+          'Module preview only. No authenticated cloud operations, '
+          'financial posting, attendance entry or offline sync '
+          'are implemented on this screen.',
+          textAlign: TextAlign.center,
+        ),
+        if (selected == 2) ...[
+          const SizedBox(height: 18),
+          FilledButton.icon(
+            onPressed: _newAdmission,
+            icon: const Icon(Icons.person_add_alt_1),
+            label: const Text('New Admission (preview)'),
+          ),
+        ],
+      ]),
+    ),
+  );
+
+  Widget _content() {
+    if (selected == 0) {
+      return DashboardPage(
+        onNewAdmission: _newAdmission,
+        onStudents: () => setState(() => selected = 1),
+        onFees: () => setState(() => selected = 3),
+        onAttendance: () => setState(() => selected = 4),
+        onExpenses: () => setState(() => selected = 7),
+      );
+    }
+    if (selected == 1) {
+      return StudentDirectoryPage(onNewAdmission: _newAdmission);
+    }
+    return _modulePreview();
+  }
+
+  Widget _themeMenu() => PopupMenuButton<ThemeMode>(
+    tooltip: 'Change appearance',
+    icon: const Icon(Icons.contrast_outlined),
+    onSelected: widget.onThemeChanged,
+    itemBuilder: (_) => const [
+      PopupMenuItem(value: ThemeMode.system, child: Text('System')),
+      PopupMenuItem(value: ThemeMode.light, child: Text('Light')),
+      PopupMenuItem(value: ThemeMode.dark, child: Text('Dark')),
+    ],
+  );
+
+  void _openMore() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            for (var i = 0; i < modules.length; i++)
+              ListTile(
+                leading: Icon(icons[i]),
+                title: Text(modules[i]),
+                onTap: () {
+                  setState(() => selected = i);
+                  Navigator.pop(sheetContext);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final desktop = MediaQuery.sizeOf(context).width >= 820;
-    final content = selected == 1
-        ? StudentDirectoryPage(
-            onNewAdmission: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const AdmissionWizardPage(),
-              ),
-            ),
-          )
-        : Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    modules[selected],
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'UI scaffold only. Authentication, financial operations, '
-                    'offline database and cloud sync are not yet implemented.',
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          );
+    final desktop = MediaQuery.sizeOf(context).width >= 860;
+    final extended = MediaQuery.sizeOf(context).width >= 1190;
+    final content = _content();
+    final mobileIndex = switch (selected) {
+      0 => 0,
+      1 => 1,
+      3 => 2,
+      4 => 3,
+      _ => 4,
+    };
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Supa Model School')),
+      appBar: AppBar(
+        titleSpacing: 14,
+        title: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (desktop) ...[
+            const SchoolMark(size: 35),
+            const SizedBox(width: 8),
+          ],
+          const Flexible(child: Text('Supa Model School',
+            overflow: TextOverflow.ellipsis)),
+        ]),
+        actions: [
+          IconButton(
+            key: const Key('open-global-search'),
+            tooltip: 'Global search',
+            onPressed: _showGlobalSearch,
+            icon: const Icon(Icons.search),
+          ),
+          _themeMenu(),
+          IconButton(
+            tooltip: 'Notifications (preview)',
+            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text(
+                'Notifications are not connected to live data yet.',
+              )),
+            ),
+            icon: const Icon(Icons.notifications_outlined),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Account',
+            onSelected: (v) {
+              if (v == 'exit') widget.onExit();
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'exit', child: Text('Exit demo')),
+            ],
+            icon: const Icon(Icons.account_circle_outlined),
+          ),
+        ],
+      ),
       body: desktop
           ? Row(children: [
               NavigationRail(
+                key: const Key('desktop-navigation'),
                 selectedIndex: selected,
-                onDestinationSelected: (v) => setState(() => selected = v),
-                extended: MediaQuery.sizeOf(context).width >= 1150,
+                onDestinationSelected: (i) => setState(() => selected = i),
+                extended: extended,
+                minExtendedWidth: 210,
                 scrollable: true,
+                backgroundColor: Theme.of(context).colorScheme.surface,
                 destinations: [
-                  for (final m in modules)
+                  for (var i = 0; i < modules.length; i++)
                     NavigationRailDestination(
-                        icon: const Icon(Icons.school_outlined), label: Text(m))
+                      icon: Icon(icons[i]),
+                      selectedIcon: Icon(icons[i]),
+                      label: Text(modules[i]),
+                    ),
                 ],
               ),
               const VerticalDivider(width: 1),
-              Expanded(child: content)
+              Expanded(child: content),
             ])
           : content,
       bottomNavigationBar: desktop ? null : NavigationBar(
-        selectedIndex: selected < 4 ? selected : 4,
-        onDestinationSelected: (v) {
-          if (v < 4) {
-            setState(() => selected = v);
-          } else {
-            showModalBottomSheet<void>(
-              context: context,
-              builder: (sheetContext) => SafeArea(
-                child: ListView(shrinkWrap: true, children: [
-                  for (var i = 0; i < modules.length; i++)
-                    ListTile(
-                      title: Text(modules[i]),
-                      onTap: () {
-                        setState(() => selected = i);
-                        Navigator.pop(sheetContext);
-                      },
-                    )
-                ]),
-              ),
-            );
+        key: const Key('mobile-navigation'),
+        selectedIndex: mobileIndex,
+        onDestinationSelected: (i) {
+          switch (i) {
+            case 0:
+              setState(() => selected = 0);
+            case 1:
+              setState(() => selected = 1);
+            case 2:
+              setState(() => selected = 3);
+            case 3:
+              setState(() => selected = 4);
+            default:
+              _openMore();
           }
         },
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.school_outlined), label: 'Students'),
-          NavigationDestination(icon: Icon(Icons.receipt_outlined), label: 'Fees'),
-          NavigationDestination(icon: Icon(Icons.calendar_month), label: 'Attend'),
-          NavigationDestination(icon: Icon(Icons.menu), label: 'More'),
+          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
+          NavigationDestination(icon: Icon(Icons.groups_outlined),
+              label: 'Students'),
+          NavigationDestination(icon: Icon(Icons.paid_outlined), label: 'Fees'),
+          NavigationDestination(icon: Icon(Icons.event_available_outlined),
+              label: 'Attendance'),
+          NavigationDestination(icon: Icon(Icons.grid_view_outlined),
+              label: 'More'),
         ],
       ),
     );
