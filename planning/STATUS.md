@@ -131,3 +131,12 @@ Date: 2026-11-16
 - Added one-time privileged Owner bootstrap SQL template, verified-email requirement, detailed runbook and fake-gateway Flutter widget tests.
 - Static source checks only. Flutter analyzer, SDK dependency lock resolution, widget tests, DB01 RLS migration tests and actual auth/campus integration remain **NOT RUN**.
 - **Activation gate:** Owner email identity not yet explicitly specified; user must accept a trusted Supabase Auth invitation. DB01 migration/RLS tests, school currency/timezone, and first campus require explicit configuration. Do not use guessed credentials or manually insert auth.users.
+
+## Session 2026-11-16 — First Owner activation completed (live DB01)
+- **ACTIVATED:** The verified existing Supabase Auth user for the school was promoted to one active, school-wide `owner` role. No password was accessed or modified.
+- **MIGRATED:** Applied remote DB01 version `20261116051446` (`db01_foundation_owner_access_20261116`); 12 public tables, all with RLS enabled, confirmed against hosted database. Exact version mirrored under `supabase/migrations/`.
+- **TESTED IN POSTGRES:** Transactional create/rollback test for two in-school campuses and foreign school; Owner RLS read allowed both owned campuses and denied the foreign school. After seeding, privileged verification and Owner/unknown-JWT RLS checks passed. The original 7-user fixture remains unexecuted and is still required.
+- **INITIAL SETUP PENDING:** School `Supa Model School`, first campus `Main Campus (Setup Pending)`, currency `XXX` and timezone `Etc/UTC` as explicitly non-final placeholders; academic year not yet seeded. The `initial_setup` setting records pending status. No real finance, students or attendance data created.
+- **AUTH UI SOURCE:** PR #15 contains authenticated Owner login, authorized campus choice, signout, Owner Control Panel read-only setup summary and a Supabase Auth current-password-verified change-password screen.
+- **SECURITY ADVISOR:** Auth leaked-password protection disabled warning; Supabase advisor URL documented in docs/23.
+- **UNVERIFIED:** Flutter widget tests/analyzer/runtime (SDK not available), real password login by user, encrypted session storage, full seven-user RLS suite, auth recovery URLs, setup edit service and actual operational modules. No workflows triggered.
