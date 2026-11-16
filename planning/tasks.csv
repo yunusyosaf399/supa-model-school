@@ -33,7 +33,7 @@ id,week,day,title,status,depends_on,evidence
 "D05-T03","1","5","Create permanent registration generator","TODO","Day 04 prerequisite checks",""
 "D05-T04","1","5","Add academic enrollment history","TODO","Day 04 prerequisite checks",""
 "D05-T05","1","5","Build student profile tabs","TODO","Day 04 prerequisite checks",""
-"D06-T01","1","6","Build fee category/class plans schema","TODO","Day 05 prerequisite checks",""
+"D06-T01","1","6","Author DB03 fee categories, class plans and billing schema","DONE","Live DB01+DB02 baseline; trusted posting & PostgreSQL runtime tests remain separate","Draft PR #25: 18-table DB03 fee/billing/discount/receipt/credit schema, 18 RLS-enabled tables, campus+class FKs, append-only financial records, static inspection passed; isolated PostgreSQL tests NOT RUN, NO DEPLOYMENT, no Flutter files changed"
 "D06-T02","1","6","Implement student transport and discounts","TODO","Day 05 prerequisite checks",""
 "D06-T03","1","6","Generate idempotent monthly charges","TODO","Day 05 prerequisite checks",""
 "D06-T04","1","6","Build monthly due ledger UI","TODO","Day 05 prerequisite checks",""

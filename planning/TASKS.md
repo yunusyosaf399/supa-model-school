@@ -1,10 +1,10 @@
 # Development task tracker
 
 Last verified: 2026-11-16.
-**114 tasks: 25 DONE / 88 TODO / 1 IN_PROGRESS / 0 BLOCKED.**
+**114 tasks: 26 DONE / 87 TODO / 1 IN_PROGRESS / 0 BLOCKED.**
 Authoritative machine-readable status: [tasks.csv](tasks.csv).
 
-**Important:** D03-T03–T05 and D04-T01–T04 are DONE for code authoring/static source review only. The user reports Windows Flutter tests and build passed on 2026-11-15; logs were not independently inspected. Android runtime, Flutter analyzer evidence, PostgreSQL RLS/Edge, offline security, and hosted deployment remain unfinished.
+**Important:** D03-T03–T05 and D04-T01–T04 are DONE for code authoring/static source review only. The user reports Windows Flutter tests and build passed on 2026-11-15; logs were not independently inspected. Schema-first design is now prioritized: DB03 PR #25 is NOT deployed, and no Flutter changes are planned in this workstream. Android runtime, Flutter analyzer evidence, PostgreSQL RLS/Edge, offline security, and hosted deployment remain unfinished.
 
 ## Setup
 - [x] `SETUP-01` Identify Supabase link and organization — **DONE**
@@ -53,7 +53,7 @@ Authoritative machine-readable status: [tasks.csv](tasks.csv).
 - [ ] `D05-T05` Build student profile tabs — **TODO**
 
 ## Day 06 — Week 1
-- [ ] `D06-T01` Build fee category/class plans schema — **TODO**
+- [x] `D06-T01` Author DB03 fee category/class plans and complete 18-table fee/billing DDL — **DONE (schema source only)**
 - [ ] `D06-T02` Implement student transport and discounts — **TODO**
 - [ ] `D06-T03` Generate idempotent monthly charges — **TODO**
 - [ ] `D06-T04` Build monthly due ledger UI — **TODO**

@@ -3,6 +3,8 @@
 Date: 2026-11-16
 
 ## Verified
+- [x] **Current live status verified 2026-11-16:** DB01 foundation and DB02 restricted admissions **baseline deployed** (27 public tables with RLS); one school/campus, no student/enrollment data. Archived notes below claiming public school tables were empty predate these migrations.
+- [x] **Schema-first policy:** review database schemas DB01–DB09 before further deployment. DB03 is authored in [draft PR #25](https://github.com/yunusyosaf399/supa-model-school/pull/25); no new SQL deployment or Flutter code in this schema-design session. **6 full schema designs remain (DB04–DB09), 7 domains remain undeployed (DB03–DB09).**
 - [x] Supabase project `uebzvfzpbqqttbqyxxos` created in SUPA MODEL SCHOOL connection, ap-south-1; status ACTIVE_HEALTHY.
 - [x] Private GitHub repository `yunusyosaf399/supa-model-school` exists, push permission confirmed.
 - [x] README, Flutter Android/Windows project, UI preview source, schema drafts, test runbooks and task documentation committed; no GitHub Actions in use.
@@ -11,7 +13,7 @@ Date: 2026-11-16
 - [x] Machine-readable 114-task tracker is committed.
 
 ## Current count
-**25 complete, 88 pending, 1 in progress, 0 blocked (total 114).**
+**26 complete, 87 pending, 1 in progress, 0 blocked (total 114).**
 
 ## Remaining verification gates
 - User reported a successful Windows Flutter build and passing tests on 2026-11-15, after the admission wizard constructor fix. Logs not supplied for independent verification. Android build and explicit Flutter analyzer evidence remain pending; D02-T02 remains TODO.
@@ -209,3 +211,12 @@ Date: 2026-11-16
 - **GATED:** Admission entries stay local in memory. No DB02 admission write, storage upload, fee payment or Principal submit. Save Draft and Submit for Approval remain disabled; academic selector still requires Owner verified context. In debug mode the six stepper panels can be inspected for UI testing without satisfying submission rules.
 - **TESTS:** Updated widget tests for Windows/Android reference layout and all six stages plus Student/Guardian/Academic/Document/Fees/Review; extra conditional due-date tests. Static delimiter/quote scan of edited Dart source passed. Flutter analyzer, full widget test runtime and device rendering NOT RUN (Flutter SDK unavailable).
 - **DOC:** `docs/31_ADMISSIONS_WIZARD_SIX_STEP_REFERENCE.md`. Backend and actual school records unchanged.
+
+## 2026-11-16 — DB03 fee and billing schema design (no deployment)
+- Inspected merged UI work through PR #23 and relevant code models: live Owner setup/academic structure, admission fee preferences and dashboard demo. No Flutter code changed.
+- Inspected connected Supabase: 27 public tables, RLS enabled; DB01+DB02 baseline exists, school/campus 1 each, no academic year/students/enrollments. Older 2026-11-15 notes describing an empty school schema are historical and no longer current.
+- Authored 18-table PostgreSQL DB03 fee and billing DDL with 18 RLS statements and direct client grants revoked, 10 posted-finance immutable triggers and 10 TRUNCATE guards. Added same-campus/academic-year/class/enrollment composite FKs, fee plan versioning, student overrides/tuition discounts, billing cycles, scheduled charges, corrections, receipts, partial allocations, credit, bank-slip claims, preapproval deposits and debt collection responsibility history.
+- Draft [PR #25](https://github.com/yunusyosaf399/supa-model-school/pull/25) contains `supabase/drafts/DB03_FEES_BILLING_SCHEMA.sql`, rollback-only fake-data PostgreSQL fixture, static checker, `docs/31_SCHEMA_FIRST_ROADMAP.md`, `docs/32_DB03_FEES_BILLING_DESIGN.md` and `planning/SCHEMA_TRACKER.csv`.
+- Structural source checks passed. **NOT executed:** actual Postgres DDL/fixtures, transactional posting/credit allocation concurrency, banker/parent upload controls, DB06 cash-account posting, Supabase migration/deployment.
+- **Nine schema-domain progress:** DB01+DB02 baseline deployed (2/9); DB03 source designed, UNDEPLOYED (1/9); **6 full schema designs remain DB04–DB09**; **7 domains require deployment DB03–DB09**. Distinct from the 114 project implementation tasks.
+- Next full schema to DESIGN is DB04 Student/Staff Attendance + School Calendar + Corrections, then DB05 Employees/Payroll, DB06 Finance Cashbook, DB07 Business/Inventory, DB08 Controls, DB09 Sync/Backup.
