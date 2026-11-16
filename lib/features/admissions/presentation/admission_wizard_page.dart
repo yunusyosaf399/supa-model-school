@@ -637,7 +637,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       _panelHeading(Icons.description_outlined, 'Required Documents',
           trailing: 'Sample / preview'),
       const Divider(height: 15, color: _line),
-      _checkRow('Birth Certificate', required: true),
+      _checkRow('Birth Certificate', isRequired: true),
       _checkRow('Guardian Identity Document'),
       if (_draft.transferCertificateApplicable)
         _checkRow('Transfer Certificate'),
@@ -647,7 +647,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     ],
   ));
 
-  Widget _checkRow(String title, {bool required = false}) => Padding(
+  Widget _checkRow(String title, {bool isRequired = false}) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 5),
     child: Row(children: [
       const Icon(Icons.check_box_outline_blank,
@@ -655,7 +655,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       const SizedBox(width: 11),
       Expanded(child: Text(title,
           style: const TextStyle(fontSize: 12))),
-      if (required)
+      if (isRequired)
         const Text('*', style: TextStyle(color: Colors.red)),
     ]),
   );
@@ -767,7 +767,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     String initialValue = '',
     Key? key,
     String? hint,
-    bool required = false,
+    bool isRequired = false,
     int maxLines = 1,
     TextInputType? keyboardType,
   }) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -777,7 +777,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       Flexible(child: Text(label,
         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
           color: _ink))),
-      if (required) const Text(' *', style: TextStyle(color: Colors.red)),
+      if (isRequired) const Text(' *', style: TextStyle(color: Colors.red)),
     ]),
     const SizedBox(height: 6),
     TextFormField(
@@ -797,14 +797,14 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     required String? current,
     required Map<String, String> options,
     required ValueChanged<String?> onChanged,
-    bool required = false,
+    bool isRequired = false,
   }) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
     Row(children: [
       Icon(icon, color: _teal, size: 17),
       const SizedBox(width: 7),
       Text(label, style: const TextStyle(fontSize: 12,
         fontWeight: FontWeight.w700, color: _ink)),
-      if (required) const Text(' *', style: TextStyle(color: Colors.red)),
+      if (isRequired) const Text(' *', style: TextStyle(color: Colors.red)),
     ]),
     const SizedBox(height: 6),
     _choice(label: 'Choose $label', current: current,
@@ -862,7 +862,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     final wide = constraints.maxWidth >= 660;
     final name = _styledField(
       key: const Key('student-name'), label: 'Full Name',
-      icon: Icons.person_outline, required: true,
+      icon: Icons.person_outline, isRequired: true,
       hint: 'Student full name', initialValue: _draft.studentName,
       onChanged: (v) => _draft.studentName = v);
     final date = _dobField();
@@ -1058,7 +1058,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       const SizedBox(height: 12),
       _styledField(
         key: Key('guardian-name-${guardian.localId}'),
-        label: 'Full Name', required: true,
+        label: 'Full Name', isRequired: true,
         icon: Icons.person_outline,
         initialValue: guardian.fullName,
         onChanged: (v) => guardian.fullName = v),
@@ -1078,7 +1078,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           label: guardian.isPrimary
               ? 'Primary Guardian Phone' : 'Phone Number',
           icon: Icons.call_outlined,
-          required: guardian.isPrimary,
+          isRequired: guardian.isPrimary,
           keyboardType: TextInputType.phone,
           initialValue: guardian.phone,
           onChanged: (v) => guardian.phone = v);
