@@ -71,3 +71,24 @@ DB03–DB09 domains remain undeployed.
 Flutter code changed.** DB05 is stacked on DB04/DB03 designs; use reviewed
 migration order after all nine core domains are designed.
 **4 full schemas remain to design (DB06–DB09); 7 remain undeployed (DB03–DB09).**
+
+## DB06 financial accounts/cashbook — stacked source draft (NOT deployed)
+
+- `drafts/DB06_FINANCE_CASHBOOK_SCHEMA.sql`: 20 public RLS-denied tables,
+  immutable double-entry journals with deferred debit-credit/source checks,
+  DB03 fee/DB05 payroll accrual links, campus cash/bank accounts, expenses,
+  internal transfers, capital and opening balances, cash closing and bank
+  statement/reconciliation. No privileged client APIs are created.
+- `tests/DB06_FINANCE_SCHEMA_INTEGRATION.sql`: fictional rollback-only local
+  PostgreSQL suite for balanced/orphan journals, transfers not revenue,
+  capital not income, paid vs pending expense, provisional cash close and
+  bank reconciliation, RLS and closed-period guards (NOT EXECUTED).
+- `tests/check_db06_finance.py`: static source guard, not SQL runtime proof.
+- `drafts/DB06_FINANCE_RUNBOOK.md`: dependency, local tests, concurrency,
+  source amount authorization and DB08 approval gates.
+- `../docs/35_DB06_FINANCE_CASHBOOK_DESIGN.md`: detailed accounting rules.
+
+Schema-first progress: 2 baseline-deployed domains (DB01/DB02); 4 draft
+new domains (DB03–DB06) NOT deployed; **3 domains remain to design
+(DB07–DB09), 7 domains remain undeployed (DB03–DB09)**.
+No Flutter code or live Supabase schema changes in this workstream.
