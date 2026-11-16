@@ -16,7 +16,16 @@ Future<void> main() async {
   const key = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
   OwnerAuthGateway gateway = const UnconfiguredOwnerAuthGateway();
   if (url.isNotEmpty && key.isNotEmpty) {
-    await Supabase.initialize(url: url, publishableKey: key);
+    await Supabase.initialize(
+      url: url,
+      publishableKey: key,
+      // Session tokens must not be persisted in unencrypted preferences.
+      // Enable persistence only after a secure per-device storage adapter
+      // and revocation/recovery tests have been implemented.
+      authOptions: const FlutterAuthClientOptions(
+        localStorage: EmptyLocalStorage(),
+      ),
+    );
     gateway = SupabaseOwnerAuthGateway(Supabase.instance.client);
   }
   runApp(SupaModelSchoolApp(authGateway: gateway));
