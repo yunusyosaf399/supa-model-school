@@ -35,3 +35,21 @@ The authored DB03 files are:
 
 No client role has been given finance table access; all posting RPCs and
 DB06 account links require a separate local test/review phase.
+
+## DB04 Attendance schema design — STACKED DRAFT, NOT DEPLOYED
+
+- `drafts/DB04_ATTENDANCE_SCHEMA.sql` — 11 campus/year/section-scoped RLS
+  tables: attendance calendar, policies, teacher duties, student register,
+  immutable initial marks/correction requests/decisions, staff daily
+  attendance and immutable staff corrections; 4 integrity functions and
+  19 triggers. Depends on DB03 enrollment scoped UNIQUE constraint.
+- `tests/DB04_ATTENDANCE_SCHEMA_INTEGRATION.sql` — rollback-only fictional
+  campus/section/date/correction/RLS fixture, **not executed**.
+- `tests/check_db04_attendance.py` — source structural checks.
+- `drafts/DB04_ATTENDANCE_RUNBOOK.md` — local SQL testing and teacher role
+  authorization prerequisites.
+- `../docs/33_DB04_ATTENDANCE_DESIGN.md` — design contract and known gaps.
+
+**No Flutter code or hosted Supabase changes** were made in DB04 design.
+5 of the 9 core domains still need full design (DB05–DB09), while 7
+DB03–DB09 domains remain undeployed.
