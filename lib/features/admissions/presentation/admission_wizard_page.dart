@@ -118,7 +118,10 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       _academicError = null;
       _error = null;
     });
-    if (id != null) _loadClasses(id);
+    if (id != null) {
+      widget.onCampusChanged?.call(id);
+      _loadClasses(id);
+    }
   }
 
   Future<void> _loadClasses(String campusId) async {
@@ -389,101 +392,183 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   ]);
 
   Widget _sidebar() {
-    names = ['Dashboard', 'Students', 'Admissions', 'Fees',
-      'Attendance', 'Employees', 'Payroll', 'Expenses',
-      'Reports', 'Sync Center', 'Settings'];
-    icons = [Icons.home_outlined, Icons.groups_outlined,
+    const names = <String>['Dashboard', 'Students', 'Admissions', 'Fees',
+      'Attendance', 'Employees', 'Payroll', 'Expenses', 'Reports',
+      'Sync Center', 'Settings', 'Academic Setup'];
+    const icons = <IconData>[Icons.home_outlined, Icons.groups_outlined,
       Icons.school_outlined, Icons.savings_outlined,
       Icons.calendar_month_outlined, Icons.people_outline,
-      Icons.account_balance_wallet_outlined,
-      Icons.receipt_long_outlined, Icons.bar_chart_outlined,
-      Icons.sync_outlined, Icons.settings_outlined];
+      Icons.account_balance_wallet_outlined, Icons.receipt_long_outlined,
+      Icons.bar_chart_outlined, Icons.sync_outlined,
+      Icons.settings_outlined, Icons.school_outlined];
     return Container(
       key: Key('admission-desktop-sidebar'),
-      width: 244,
+      width: 248,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _surface,
         border: Border(right: BorderSide(color: _line))),
       child: Column(children: [
         Padding(
           padding: EdgeInsets.fromLTRB(12, 13, 12, 17),
           child: Column(children: [
-            SchoolMark(size: 68),
+            SchoolMark(size: 77),
             SizedBox(height: 5),
             Text('Supa Model School',
               style: TextStyle(color: _teal, fontWeight: FontWeight.w900,
-                  fontSize: 17)),
+                fontSize: 18)),
             Text('School Management System',
               style: TextStyle(fontSize: 11, color: _ink)),
-            Divider(height: 24),
-          ])),
-        Expanded(child: ListView(padding: EdgeInsets.symmetric(
-            horizontal: 13), children: [
-          for (var i = 0; i < names.length; i++)
-            Container(
-              height: 40, margin: EdgeInsets.only(bottom: 4),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(9),
-                gradient: i == 2 ? LinearGradient(colors: [
-                  Color(0xFF029B8A), Color(0xFF005B55)]) : null),
-              child: Row(children: [
-                SizedBox(width: 16),
-                Icon(icons[i], size: 21,
-                  color: i == 2 ? Colors.white : _ink),
-                SizedBox(width: 13),
-                Text(names[i], style: TextStyle(
-                  color: i == 2 ? Colors.white : _ink,
-                  fontWeight: i == 2 ? FontWeight.w800 : FontWeight.w500,
-                  fontSize: 13)),
-              ]),
-            ),
-        ])),
+            Divider(height: 24, color: _line),
+          ]),
+        ),
+        Expanded(child: ListView(
+          padding: EdgeInsets.symmetric(horizontal: 11),
+          children: [
+            for (var i = 0; i < names.length; i++)
+              Padding(
+                padding: EdgeInsets.only(bottom: 3),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    key: Key('admission-nav-$i'),
+                    onTap: i == 2 ? null : () => _openModule(i),
+                    borderRadius: BorderRadius.circular(9),
+                    child: Ink(
+                      height: 39,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(9),
+                        gradient: i == 2
+                            ? LinearGradient(colors: [
+                                Color(0xFF079989), Color(0xFF005651)])
+                            : null),
+                      child: Row(children: [
+                        SizedBox(width: 12),
+                        Icon(icons[i], size: 21,
+                          color: i == 2 ? Colors.white : _ink),
+                        SizedBox(width: 13),
+                        Expanded(child: Text(names[i],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: i == 2 ? Colors.white : _ink,
+                            fontWeight: i == 2
+                                ? FontWeight.w800 : FontWeight.w500,
+                            fontSize: 13))),
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        )),
       ]),
     );
   }
 
+  // Dimensions and search styling match the dashboard toolbar.
   Widget _desktopToolbar() => Container(
     height: 73,
     padding: EdgeInsets.symmetric(horizontal: 22),
     child: Row(children: [
-      Expanded(flex: 4, child: OutlinedButton.icon(
-        onPressed: () {},
-        icon: Icon(Icons.search_outlined),
-        label: Align(alignment: Alignment.centerLeft,
-          child: Text('Search students, staff, invoices, etc...',
-            overflow: TextOverflow.ellipsis)),
+      Expanded(flex: 4, child: SizedBox(
+        height: 46,
+        child: OutlinedButton(
+          key: Key('admission-global-search'),
+          onPressed: _openSearch,
+          style: OutlinedButton.styleFrom(
+            backgroundColor: _surface,
+            foregroundColor: _ink,
+            padding: EdgeInsets.symmetric(horizontal: 13),
+            side: BorderSide(color: _line),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(11))),
+          child: Row(children: [
+            Icon(Icons.search, size: 24),
+            SizedBox(width: 12),
+            Expanded(child: Text('Search students, staff, invoices, etc...',
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 13))),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+              decoration: BoxDecoration(
+                color: _pale,
+                borderRadius: BorderRadius.circular(12)),
+              child: Text('Ctrl + K',
+                style: TextStyle(color: _ink, fontSize: 11)),
+            ),
+          ]),
+        ),
       )),
-      SizedBox(width: 14),
-      _topPill(Icons.account_balance_outlined,
+      SizedBox(width: 20),
+      Container(width: 1, height: 32, color: _line),
+      SizedBox(width: 20),
+      PopupMenuButton<String>(
+        key: Key('admission-campus-selector'),
+        tooltip: 'Authorized campus',
+        enabled: (widget.owner?.campuses.length ?? 0) > 1,
+        onSelected: _chooseCampus,
+        itemBuilder: (_) => [
+          for (final campus in widget.owner?.campuses ?? <OwnerCampus>[])
+            PopupMenuItem(value: campus.id, child: Text(campus.name)),
+        ],
+        child: _topPill(Icons.location_city_outlined,
           widget.owner?.campuses.isNotEmpty == true
-            ? widget.owner!.campuses.first.name : 'School / Campus'),
+            ? widget.owner!.campuses.firstWhere(
+                (c) => c.id == _draft.campusId,
+                orElse: () => widget.owner!.campuses.first).name
+            : 'School / Campus'),
+      ),
       SizedBox(width: 12),
       _topPill(Icons.calendar_month_outlined,
-          widget.owner?.activeYearLabel ?? 'Academic Year'),
-      SizedBox(width: 13),
-      Icon(Icons.notifications_none_rounded, size: 26, color: _teal),
-      SizedBox(width: 14),
-      CircleAvatar(radius: 18,
-          child: Icon(Icons.person_outline)),
-      SizedBox(width: 8),
-      Flexible(child: Text('Administrator',
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+        widget.owner?.activeYearLabel ?? 'Academic Year'),
+      SizedBox(width: 12),
+      IconButton(
+        tooltip: 'Notifications (preview)',
+        onPressed: _showNotifications,
+        icon: Icon(Icons.notifications_none_rounded, color: _teal, size: 25)),
+      SizedBox(width: 10),
+      PopupMenuButton<String>(
+        tooltip: 'Account',
+        onSelected: (option) {
+          if (option == 'exit') _confirmExit();
+          if (option == 'settings') _openModule(10);
+        },
+        itemBuilder: (_) => [
+          PopupMenuItem(value: 'settings', child: Text('Settings')),
+          PopupMenuItem(value: 'exit', child: Text('Back to school')),
+        ],
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          CircleAvatar(radius: 19, backgroundColor: _pale,
+            child: Icon(Icons.person_outline, color: _teal)),
+          SizedBox(width: 7),
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: 115),
+            child: Text(widget.owner?.displayName ?? 'Demo Administrator',
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12,
+                color: _ink, fontWeight: FontWeight.w700))),
+          Icon(Icons.keyboard_arrow_down_rounded, size: 17, color: _ink),
+        ]),
+      ),
     ]),
   );
 
   Widget _topPill(IconData icon, String label) => Container(
-    constraints: BoxConstraints(maxWidth: 200),
-    padding: EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-    decoration: BoxDecoration(color: _surface,
-      borderRadius: BorderRadius.circular(9),
+    height: 43,
+    constraints: BoxConstraints(maxWidth: 215),
+    padding: EdgeInsets.symmetric(horizontal: 12),
+    decoration: BoxDecoration(
+      color: _surface,
+      borderRadius: BorderRadius.circular(10),
       border: Border.all(color: _line)),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
       Icon(icon, color: _teal, size: 20),
       SizedBox(width: 8),
-      Flexible(child: Text(label, overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 12))),
-      Icon(Icons.keyboard_arrow_down, size: 18),
+      Flexible(child: Text(label,
+        maxLines: 1, overflow: TextOverflow.ellipsis,
+        style: TextStyle(color: _ink, fontSize: 12))),
+      SizedBox(width: 7),
+      Icon(Icons.keyboard_arrow_down_rounded, color: _ink, size: 19),
     ]),
   );
 
@@ -492,7 +577,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       padding: EdgeInsets.fromLTRB(18, 9, 17, 7),
       child: Row(children: [
         Expanded(child: _brandRow(mobile: true)),
-        IconButton(onPressed: () {}, tooltip: 'Notifications (preview)',
+        IconButton(onPressed: _showNotifications, tooltip: 'Notifications (preview)',
           icon: Icon(Icons.notifications_none_rounded,
               color: _teal, size: 26)),
       ]),
