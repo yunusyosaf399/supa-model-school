@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../academics/data/academic_structure_repository.dart';
 import '../../auth/data/owner_auth_gateway.dart';
 import '../models/admission_draft.dart';
+import '../../../ui/school_brand.dart';
 
 /// First-stage admissions UI for Windows and Android.
 ///
@@ -252,180 +253,506 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     });
   }
 
+
+  static const _teal = Color(0xFF00635D);
+  static const _pale = Color(0xFFE7F5F6);
+  static const _ink = Color(0xFF193745);
+  static const _line = Color(0xFFD5E2E8);
+
+  IconData _stepIcon(AdmissionStep step) => switch (step) {
+    AdmissionStep.student => Icons.person_outline_rounded,
+    AdmissionStep.guardians => Icons.groups_outlined,
+    AdmissionStep.academic => Icons.school_outlined,
+    AdmissionStep.documents => Icons.description_outlined,
+    AdmissionStep.fees => Icons.savings_outlined,
+    AdmissionStep.review => Icons.check_rounded,
+  };
+
   @override
   Widget build(BuildContext context) {
-    final wide = MediaQuery.sizeOf(context).width >= 850;
-    return PopScope(
-      canPop: _allowExit,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) _confirmExit();
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('New Student Admission'),
-          leading: IconButton(
-            tooltip: 'Leave admission preview',
-            onPressed: _confirmExit,
-            icon: const Icon(Icons.arrow_back),
-          ),
-          actions: const [
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              child: Center(child: Text('Preview • Not saved')),
-            ),
-          ],
+    final wide = MediaQuery.sizeOf(context).width >= 1050;
+    return Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: ColorScheme.fromSeed(seedColor: _teal),
+        scaffoldBackgroundColor: const Color(0xFFF0F8FD),
+        inputDecorationTheme: InputDecorationTheme(
+          isDense: true,
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(
+              horizontal: 13, vertical: 12),
+          border: OutlineInputBorder(
+            borderSide: const BorderSide(color: _line),
+            borderRadius: BorderRadius.circular(7)),
         ),
-        body: SafeArea(
-          child: wide
-              ? Row(
-                  children: [
-                    SizedBox(width: 240, child: _stepNavigation(wide: true)),
-                    const VerticalDivider(width: 1),
-                    Expanded(child: _formScroll()),
-                  ],
-                )
-              : Column(
-                  children: [
-                    _stepNavigation(wide: false),
-                    const Divider(height: 1),
-                    Expanded(child: _formScroll()),
-                  ],
-                ),
+      ),
+      child: PopScope(
+        canPop: _allowExit,
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop) _confirmExit();
+        },
+        child: Scaffold(
+          key: const Key('admission-wizard-screen'),
+          resizeToAvoidBottomInset: true,
+          body: SafeArea(
+            child: wide ? _desktopLayout() : _mobileLayout(),
+          ),
+          bottomNavigationBar: wide ? _footerBar() : null,
         ),
       ),
     );
   }
 
-  Widget _stepNavigation({required bool wide}) {
-    final items = List.generate(AdmissionStep.values.length, (i) {
-      final step = AdmissionStep.values[i];
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-        child: wide
-            ? ListTile(
-                key: Key('step-tab-$i'),
-                leading: CircleAvatar(
-                  radius: 14,
-                  child: Text('${i + 1}'),
-                ),
-                title: Text(step.label),
-                selected: _step == i,
-                enabled: i <= _step,
-                onTap: i > _step
-                    ? null
-                    : () => setState(() {
-                          _step = i;
-                          _error = null;
-                        }),
-              )
-            : ChoiceChip(
-                key: Key('step-chip-$i'),
-                label: Text('${i + 1}. ${step.label}'),
-                selected: _step == i,
-                onSelected: i > _step
-                    ? null
-                    : (_) => setState(() {
-                          _step = i;
-                          _error = null;
-                        }),
-              ),
-      );
-    });
-
-    if (wide) {
-      return ListView(
-        padding: const EdgeInsets.all(12),
+  Widget _brandRow({bool mobile = false}) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      SchoolMark(size: mobile ? 57 : 65),
+      const SizedBox(width: 11),
+      Flexible(child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Padding(
-            padding: EdgeInsets.all(8),
-            child: Text('Admission stages',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          ...items,
+          Text('Supa Model School',
+            maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: _teal, fontWeight: FontWeight.w900,
+              fontSize: mobile ? 20 : 19)),
+          Text('School Management System',
+            maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: _ink, fontSize: mobile ? 12 : 11)),
         ],
-      );
-    }
+      )),
+    ],
+  );
 
-    return Column(
-      children: [
-        LinearProgressIndicator(
-          value: (_step + 1) / AdmissionStep.values.length,
-          minHeight: 3,
-        ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.all(8),
-          child: Row(children: items),
-        ),
+  Widget _desktopLayout() => Column(children: [
+    Container(
+      height: 37,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [_teal, Color(0xFF004D4A)])),
+      child: const Row(children: [
+        Icon(Icons.school_outlined, size: 20, color: Colors.white),
+        SizedBox(width: 10),
+        Text('Supa Model School', style: TextStyle(
+            color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+        SizedBox(width: 12),
+        Text('│  School Management System', style: TextStyle(
+            color: Colors.white, fontSize: 12)),
+      ]),
+    ),
+    Expanded(child: Row(children: [
+      _sidebar(),
+      Expanded(child: Column(children: [
+        _desktopToolbar(),
+        Expanded(child: _admissionScroll(wide: true)),
+      ])),
+    ])),
+  ]);
+
+  Widget _sidebar() {
+    const names = ['Dashboard', 'Students', 'Admissions', 'Fees',
+      'Attendance', 'Employees', 'Payroll', 'Expenses',
+      'Reports', 'Sync Center', 'Settings'];
+    const icons = [Icons.home_outlined, Icons.groups_outlined,
+      Icons.school_outlined, Icons.savings_outlined,
+      Icons.calendar_month_outlined, Icons.people_outline,
+      Icons.account_balance_wallet_outlined,
+      Icons.receipt_long_outlined, Icons.bar_chart_outlined,
+      Icons.sync_outlined, Icons.settings_outlined];
+    return Container(
+      key: const Key('admission-desktop-sidebar'),
+      width: 244,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(right: BorderSide(color: _line))),
+      child: Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 13, 12, 17),
+          child: Column(children: [
+            const SchoolMark(size: 68),
+            const SizedBox(height: 5),
+            const Text('Supa Model School',
+              style: TextStyle(color: _teal, fontWeight: FontWeight.w900,
+                  fontSize: 17)),
+            const Text('School Management System',
+              style: TextStyle(fontSize: 11, color: _ink)),
+            const Divider(height: 24),
+          ])),
+        Expanded(child: ListView(padding: const EdgeInsets.symmetric(
+            horizontal: 13), children: [
+          for (var i = 0; i < names.length; i++)
+            Container(
+              height: 40, margin: const EdgeInsets.only(bottom: 4),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(9),
+                gradient: i == 2 ? const LinearGradient(colors: [
+                  Color(0xFF029B8A), Color(0xFF005B55)]) : null),
+              child: Row(children: [
+                const SizedBox(width: 16),
+                Icon(icons[i], size: 21,
+                  color: i == 2 ? Colors.white : _ink),
+                const SizedBox(width: 13),
+                Text(names[i], style: TextStyle(
+                  color: i == 2 ? Colors.white : _ink,
+                  fontWeight: i == 2 ? FontWeight.w800 : FontWeight.w500,
+                  fontSize: 13)),
+              ]),
+            ),
+        ])),
+      ]),
+    );
+  }
+
+  Widget _desktopToolbar() => Container(
+    height: 73,
+    padding: const EdgeInsets.symmetric(horizontal: 22),
+    child: Row(children: [
+      Expanded(flex: 4, child: OutlinedButton.icon(
+        onPressed: () {},
+        icon: const Icon(Icons.search_outlined),
+        label: const Align(alignment: Alignment.centerLeft,
+          child: Text('Search students, staff, invoices, etc...',
+            overflow: TextOverflow.ellipsis)),
+      )),
+      const SizedBox(width: 14),
+      _topPill(Icons.account_balance_outlined,
+          widget.owner?.campuses.isNotEmpty == true
+            ? widget.owner!.campuses.first.name : 'School / Campus'),
+      const SizedBox(width: 12),
+      _topPill(Icons.calendar_month_outlined,
+          widget.owner?.activeYearLabel ?? 'Academic Year'),
+      const SizedBox(width: 13),
+      const Icon(Icons.notifications_none_rounded, size: 26, color: _teal),
+      const SizedBox(width: 14),
+      const CircleAvatar(radius: 18,
+          child: Icon(Icons.person_outline)),
+      const SizedBox(width: 8),
+      const Flexible(child: Text('Administrator',
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+    ]),
+  );
+
+  Widget _topPill(IconData icon, String label) => Container(
+    constraints: const BoxConstraints(maxWidth: 200),
+    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+    decoration: BoxDecoration(color: Colors.white,
+      borderRadius: BorderRadius.circular(9),
+      border: Border.all(color: _line)),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, color: _teal, size: 20),
+      const SizedBox(width: 8),
+      Flexible(child: Text(label, overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 12))),
+      const Icon(Icons.keyboard_arrow_down, size: 18),
+    ]),
+  );
+
+  Widget _mobileLayout() => Column(children: [
+    Container(
+      padding: const EdgeInsets.fromLTRB(18, 9, 17, 7),
+      child: Row(children: [
+        Expanded(child: _brandRow(mobile: true)),
+        IconButton(onPressed: () {}, tooltip: 'Notifications (preview)',
+          icon: const Icon(Icons.notifications_none_rounded,
+              color: _teal, size: 26)),
+      ]),
+    ),
+    Expanded(child: _admissionScroll(wide: false)),
+    _mobileActions(),
+  ]);
+
+  Widget _admissionScroll({required bool wide}) => SingleChildScrollView(
+    key: const Key('admission-scroll'),
+    padding: EdgeInsets.fromLTRB(wide ? 24 : 16, wide ? 8 : 8,
+        wide ? 24 : 16, 20),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _pageHeading(wide),
+      SizedBox(height: wide ? 16 : 13),
+      _progress(wide),
+      const SizedBox(height: 15),
+      if (wide)
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(flex: 7, child: _mainStepPanel()),
+          const SizedBox(width: 15),
+          Expanded(flex: 3, child: _sideChecklist()),
+        ])
+      else ...[
+        _mainStepPanel(),
+        const SizedBox(height: 14),
+        _mobileDocumentsChecklist(),
       ],
-    );
-  }
+      if (wide) ...[
+        const SizedBox(height: 16),
+        _actions(),
+      ],
+    ]),
+  );
 
-  Widget _formScroll() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 840),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                child: const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Admission preview only. Academic choices are '
-                          'loaded from authorized school records when signed in. '
-                          'No information is saved, uploaded or submitted.',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+  Widget _pageHeading(bool wide) => Row(children: [
+    if (!wide)
+      IconButton(
+        key: const Key('admission-back-button'),
+        onPressed: _step == 0 ? _confirmExit : _previous,
+        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+            color: _teal)),
+    Container(width: 5, height: wide ? 49 : 53,
+        decoration: BoxDecoration(
+          color: const Color(0xFF00A28E),
+          borderRadius: BorderRadius.circular(6))),
+    const SizedBox(width: 14),
+    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('New Admission', style: TextStyle(
+          color: _teal, fontSize: wide ? 31 : 29,
+          fontWeight: FontWeight.w900)),
+        Text(wide
+            ? '${widget.owner?.campuses.isNotEmpty == true
+                ? widget.owner!.campuses.first.name : 'School / Campus'} • '
+              '${widget.owner?.activeYearLabel ?? 'Academic year'}'
+            : widget.owner?.campuses.isNotEmpty == true
+              ? widget.owner!.campuses.first.name
+              : 'School / Campus',
+            maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: _ink, fontSize: 13)),
+      ])),
+    if (wide) ...[
+      OutlinedButton.icon(
+        key: const Key('admission-save-draft-disabled'),
+        onPressed: null, icon: const Icon(Icons.save_outlined),
+        label: const Text('Save Draft')),
+      const SizedBox(width: 10),
+      FilledButton.icon(
+        onPressed: null,
+        icon: const Icon(Icons.send_outlined),
+        label: const Text('Submit for Approval')),
+      const SizedBox(width: 10),
+      OutlinedButton.icon(
+        onPressed: _confirmExit,
+        icon: const Icon(Icons.close),
+        label: const Text('Cancel')),
+    ] else
+      Chip(
+        avatar: const Icon(Icons.edit_document, color: _teal, size: 18),
+        label: const Text('Draft', style: TextStyle(
+            color: _teal, fontWeight: FontWeight.w700)),
+        backgroundColor: const Color(0xFFFFF0D4),
+        side: BorderSide.none),
+  ]);
+
+  Widget _progress(bool wide) => _surfaceCard(
+    padding: EdgeInsets.symmetric(
+      horizontal: wide ? 15 : 7, vertical: wide ? 10 : 13),
+    child: Row(children: [
+      for (var i = 0; i < AdmissionStep.values.length; i++) ...[
+        if (i > 0)
+          Expanded(child: Container(height: 2, color: i <= _step
+            ? _teal : const Color(0xFFBFD1DA))),
+        Flexible(flex: wide ? 3 : 2,
+          child: InkWell(
+            key: Key(wide ? 'step-tab-$i' : 'step-chip-$i'),
+            onTap: i <= _step
+              ? () => setState(() { _step = i; _error = null; })
+              : null,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              CircleAvatar(
+                radius: wide ? 18 : 23,
+                backgroundColor: i == _step
+                    ? _teal : Colors.white,
+                child: wide
+                  ? Text('${i + 1}', style: TextStyle(
+                      color: i == _step ? Colors.white : _ink,
+                      fontWeight: FontWeight.w700))
+                  : Icon(_stepIcon(AdmissionStep.values[i]),
+                      color: i == _step ? Colors.white : _teal,
+                      size: 22),
               ),
-              const SizedBox(height: 16),
-              Text(
-                '${_step + 1}. ${AdmissionStep.values[_step].label}',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 12),
-              if (_error != null) ...[
-                Card(
-                  color: Theme.of(context).colorScheme.errorContainer,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Text(
-                      _error!,
-                      key: const Key('admission-validation-error'),
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onErrorContainer,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-              ],
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: _stepContent(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              _actions(),
-              const SizedBox(height: 24),
-            ],
+              const SizedBox(height: 6),
+              Text(AdmissionStep.values[i].label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                style: TextStyle(
+                  color: i == _step ? _teal : _ink,
+                  fontWeight: i == _step
+                      ? FontWeight.w800 : FontWeight.w500,
+                  fontSize: wide ? 12 : 10)),
+            ]),
+          )),
+      ],
+    ]),
+  );
+
+  Widget _surfaceCard({required Widget child,
+      EdgeInsetsGeometry padding = const EdgeInsets.all(15)}) => Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(15),
+      border: Border.all(color: _line),
+      boxShadow: const [BoxShadow(color: Color(0x10046D7B),
+        blurRadius: 11, offset: Offset(0, 4))]),
+    child: Padding(padding: padding, child: child),
+  );
+
+  Widget _panelHeading(IconData icon, String text, {String? trailing}) =>
+    Row(children: [
+      Icon(icon, color: _teal, size: 25),
+      const SizedBox(width: 10),
+      Expanded(child: Text(text, style: const TextStyle(
+        fontSize: 19, fontWeight: FontWeight.w900, color: _teal))),
+      if (trailing != null)
+        Text(trailing, style: const TextStyle(
+          fontSize: 12, color: Color(0xFF63798A))),
+    ]);
+
+  Widget _mainStepPanel() => _surfaceCard(
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _panelHeading(_stepIcon(AdmissionStep.values[_step]),
+            switch (AdmissionStep.values[_step]) {
+              AdmissionStep.student => 'Student Details',
+              AdmissionStep.guardians => 'Guardian Details',
+              AdmissionStep.academic => 'Academic Placement',
+              AdmissionStep.documents => 'Required Documents',
+              AdmissionStep.fees => 'Fee Setup',
+              AdmissionStep.review => 'Review Application',
+            }, trailing: 'Step ${_step + 1} of 6'),
+        const Divider(height: 21, color: _line),
+        if (_error != null) ...[
+          Container(
+            key: const Key('admission-validation-error'),
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFE9E7),
+              borderRadius: BorderRadius.circular(9)),
+            child: Text(_error!, style: const TextStyle(
+              color: Color(0xFFB01D24), fontWeight: FontWeight.w600))),
+          const SizedBox(height: 10),
+        ],
+        _stepContent(),
+      ]),
+  );
+
+  Widget _mobileDocumentsChecklist() => _surfaceCard(child: Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      _panelHeading(Icons.description_outlined, 'Required Documents',
+          trailing: 'Sample / preview'),
+      const Divider(height: 15, color: _line),
+      _checkRow('Birth Certificate', required: true),
+      _checkRow('Guardian Identity Document'),
+      if (_draft.transferCertificateApplicable)
+        _checkRow('Transfer Certificate'),
+      const SizedBox(height: 5),
+      const Text('Uploads and verification are not enabled.',
+        style: TextStyle(fontSize: 11, color: Color(0xFF617888))),
+    ],
+  ));
+
+  Widget _checkRow(String title, {bool required = false}) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Row(children: [
+      const Icon(Icons.check_box_outline_blank,
+          size: 18, color: Color(0xFF8FA6B6)),
+      const SizedBox(width: 11),
+      Expanded(child: Text(title,
+          style: const TextStyle(fontSize: 12))),
+      if (required)
+        const Text('*', style: TextStyle(color: Colors.red)),
+    ]),
+  );
+
+  Widget _sideChecklist() => Column(children: [
+    _surfaceCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _panelHeading(Icons.checklist_outlined, 'Admission Checklist'),
+        const Divider(color: _line),
+        for (final item in [
+          'Birth Certificate',
+          if (_draft.transferCertificateApplicable) 'Transfer Certificate',
+          'Guardian ID',
+          'Class Placement',
+          'Fee Setup'
+        ]) _checkRow(item),
+      ])),
+    const SizedBox(height: 11),
+    _surfaceCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _panelHeading(Icons.description_outlined, 'Required Documents'),
+        const Divider(color: _line),
+        for (final item in _draft.requiredDocumentNames)
+          ListTile(
+            dense: true, contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.description_outlined,
+                color: _teal, size: 19),
+            title: Text(item, style: const TextStyle(fontSize: 12)),
+            trailing: const Text('Pending', style: TextStyle(
+              color: Color(0xFFB47713), fontSize: 11)),
           ),
+      ])),
+    const SizedBox(height: 11),
+    _surfaceCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _panelHeading(Icons.school_outlined, 'Admission Status'),
+        const Divider(color: _line),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: const Color(0xFFE2F7EE),
+            borderRadius: BorderRadius.circular(10)),
+          child: const Row(children: [
+            Icon(Icons.hourglass_top_outlined, color: _teal),
+            SizedBox(width: 10),
+            Expanded(child: Text('Draft (In Progress)',
+              style: TextStyle(color: _teal, fontWeight: FontWeight.w800))),
+          ]),
         ),
-      ),
-    );
-  }
+        const SizedBox(height: 8),
+        const Text('No application has been saved. Uploads and '
+          'verification are pending.',
+          style: TextStyle(fontSize: 12)),
+      ])),
+  ]);
+
+  Widget _mobileActions() => Container(
+    padding: const EdgeInsets.fromLTRB(15, 11, 15, 12),
+    decoration: const BoxDecoration(color: Colors.white,
+        border: Border(top: BorderSide(color: _line))),
+    child: Row(children: [
+      Expanded(child: OutlinedButton.icon(
+        key: const Key('admission-save-draft-disabled'),
+        onPressed: null,
+        icon: const Icon(Icons.save_outlined),
+        label: const Text('Save Draft'))),
+      const SizedBox(width: 11),
+      Expanded(child: _step == AdmissionStep.review
+        ? FilledButton.icon(
+            key: const Key('wizard-submit-disabled'),
+            onPressed: null,
+            icon: const Icon(Icons.lock_outline),
+            label: const Text('Submit unavailable'))
+        : FilledButton.icon(
+            key: const Key('wizard-next'),
+            onPressed: _next,
+            icon: const Icon(Icons.arrow_forward),
+            label: const Text('Next Step'))),
+    ]),
+  );
+
+  Widget _footerBar() => Container(
+    height: 39,
+    color: const Color(0xFF005653),
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    child: const Row(children: [
+      Icon(Icons.verified_user_outlined, color: Colors.white, size: 18),
+      SizedBox(width: 9),
+      Expanded(child: Text('Secure access for authorized staff only',
+        style: TextStyle(color: Colors.white, fontSize: 11))),
+      Text('Supa Model School v1.0.0',
+        style: TextStyle(color: Colors.white, fontSize: 11)),
+    ]),
+  );
 
   Widget _stepContent() => switch (AdmissionStep.values[_step]) {
         AdmissionStep.student => _studentFields(),
