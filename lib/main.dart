@@ -7,6 +7,7 @@ import 'features/academics/data/academic_structure_repository.dart';
 import 'features/academics/presentation/academic_structure_page.dart';
 import 'features/auth/presentation/login_page.dart';
 import 'features/dashboard/presentation/dashboard_page.dart';
+import 'features/dashboard/presentation/dashboard_visuals.dart';
 import 'features/dashboard/data/dashboard_repository.dart';
 import 'features/owner/presentation/owner_control_panel_page.dart';
 import 'features/students/presentation/student_directory_page.dart';
@@ -370,69 +371,200 @@ class _SchoolShellState extends State<_SchoolShell> {
   }
 
   Widget _desktopSidebar(bool extended) {
-    final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final ink = Theme.of(context).colorScheme.onSurface;
     return Container(
       key: const Key('desktop-navigation'),
-      width: extended ? 244 : 68,
-      color: scheme.surface,
-      child: Column(children: [
-        if (extended)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 16, 8, 12),
-            child: Column(children: [
-              const SchoolMark(size: 65),
-              const SizedBox(height: 5),
-              Text('Supa Model School',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: scheme.primary, fontWeight: FontWeight.w900,
-                  fontSize: 18)),
-              const Text('School Management System',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 11)),
-              const Divider(height: 24),
-            ]),
+      width: extended ? 248 : 68,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: const Border(right: BorderSide(color: Color(0xFFDDE8ED))),
+      ),
+      child: Stack(children: [
+        if (selected == 0 && !dark)
+          const Positioned(
+            left: 0, right: 0, bottom: 0, height: 150,
+            child: DashboardWaveBackground(),
           ),
-        Expanded(child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
-          children: [
-            for (var i = 0; i < modules.length; i++)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 3),
-                child: Material(
-                  color: i == selected
-                      ? SchoolPalette.tealDark
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
+        Column(children: [
+          if (extended)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(9, 13, 9, 13),
+              child: Column(children: [
+                const SchoolMark(size: 77),
+                const SizedBox(height: 3),
+                Text('Supa Model School',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
+                    letterSpacing: -.5,
+                  )),
+                const SizedBox(height: 3),
+                Text('School Management System',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: ink, fontSize: 11)),
+                const SizedBox(height: 10),
+                const Divider(height: 1, indent: 11, endIndent: 11,
+                  color: Color(0xFFD3E2E9)),
+              ]),
+            )
+          else
+            const SizedBox(height: 18),
+          Expanded(child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
+            children: [
+              for (var i = 0; i < modules.length; i++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Ink(
+                      decoration: BoxDecoration(
+                        gradient: selected == i
+                            ? const LinearGradient(
+                                colors: [Color(0xFF079989), Color(0xFF005651)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : null,
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: InkWell(
+                        key: Key('dashboard-nav-$i'),
+                        onTap: () => setState(() => selected = i),
+                        borderRadius: BorderRadius.circular(9),
+                        child: SizedBox(height: 39, child: Row(children: [
+                          const SizedBox(width: 12),
+                          Icon(i == 0 && selected == i
+                                  ? Icons.home_rounded : icons[i],
+                            size: 21,
+                            color: selected == i ? Colors.white : ink),
+                          if (extended) ...[
+                            const SizedBox(width: 13),
+                            Expanded(child: Text(modules[i],
+                              style: TextStyle(
+                                color: selected == i ? Colors.white : ink,
+                                fontSize: 13,
+                                fontWeight: selected == i
+                                    ? FontWeight.w800 : FontWeight.w500,
+                              ),
+                            )),
+                          ],
+                        ])),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          )),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _dashboardFooter() => Container(
+    key: const Key('dashboard-desktop-footer'),
+    height: 43,
+    padding: const EdgeInsets.symmetric(horizontal: 24),
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Color(0xFF007B72), Color(0xFF004B48)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    ),
+    child: const Row(children: [
+      Icon(Icons.verified_user_outlined, size: 20, color: Colors.white),
+      SizedBox(width: 8),
+      Expanded(child: Text(
+        'Secure access for authorized staff only',
+        style: TextStyle(color: Colors.white, fontSize: 12),
+      )),
+      Text('│', style: TextStyle(color: Color(0xFF8AC7C5))),
+      SizedBox(width: 11),
+      Text('Supa Model School v1.0.0',
+        style: TextStyle(color: Colors.white, fontSize: 12)),
+    ]),
+  );
+
+  void _dashboardNavigate(int destination) {
+    switch (destination) {
+      case 0:
+        setState(() => selected = 0);
+      case 1:
+        setState(() => selected = 1);
+      case 2:
+        setState(() => selected = 3);
+      case 3:
+        setState(() => selected = 4);
+      default:
+        _openMore();
+    }
+  }
+
+  Widget _dashboardMobileNavigation() {
+    const items = <(String, IconData)>[
+      ('Home', Icons.home_rounded),
+      ('Students', Icons.groups_outlined),
+      ('Fees', Icons.savings_outlined),
+      ('Attendance', Icons.event_available_outlined),
+      ('More', Icons.grid_view_rounded),
+    ];
+    return SafeArea(
+      top: false,
+      child: Container(
+        key: const Key('mobile-navigation'),
+        height: 74,
+        padding: const EdgeInsets.fromLTRB(9, 7, 9, 6),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: Color(0xFFD7E3E8))),
+        ),
+        child: Row(children: [
+          for (var i = 0; i < items.length; i++)
+            Expanded(child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Material(
+                color: Colors.transparent,
+                child: Ink(
+                  decoration: BoxDecoration(
+                    gradient: i == 0
+                        ? const LinearGradient(
+                            colors: [Color(0xFF008D7E), Color(0xFF00534F)])
+                        : null,
+                    borderRadius: BorderRadius.circular(15),
+                  ),
                   child: InkWell(
-                    key: Key('dashboard-nav-$i'),
-                    onTap: () => setState(() => selected = i),
-                    borderRadius: BorderRadius.circular(10),
-                    child: SizedBox(height: 39,
-                      child: Row(children: [
-                        const SizedBox(width: 12),
-                        Icon(icons[i], size: 21,
-                          color: i == selected
-                              ? Colors.white : scheme.onSurface),
-                        if (extended) ...[
-                          const SizedBox(width: 13),
-                          Expanded(child: Text(modules[i],
-                            style: TextStyle(
-                              color: i == selected
-                                  ? Colors.white : scheme.onSurface,
-                              fontSize: 13,
-                              fontWeight: i == selected
-                                  ? FontWeight.w700 : FontWeight.w500,
-                            ))),
-                        ],
-                      ]),
+                    onTap: () => _dashboardNavigate(i),
+                    borderRadius: BorderRadius.circular(15),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(items[i].$2,
+                          color: i == 0
+                              ? Colors.white : const Color(0xFF53626D),
+                          size: 24),
+                        const SizedBox(height: 3),
+                        Text(items[i].$1,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: i == 0
+                                ? Colors.white : const Color(0xFF53626D),
+                            fontSize: 11,
+                            fontWeight: i == 0
+                                ? FontWeight.w800 : FontWeight.w500,
+                          )),
+                      ],
                     ),
                   ),
                 ),
               ),
-          ],
-        )),
-      ]),
+            )),
+        ]),
+      ),
     );
   }
 
@@ -551,7 +683,11 @@ class _SchoolShellState extends State<_SchoolShell> {
             ])
           : content),
       ]),
-      bottomNavigationBar: desktop ? null : NavigationBar(
+      bottomNavigationBar: desktop
+          ? (selected == 0 ? _dashboardFooter() : null)
+          : selected == 0
+              ? _dashboardMobileNavigation()
+              : NavigationBar(
         key: const Key('mobile-navigation'),
         selectedIndex: mobileIndex,
         onDestinationSelected: (i) {

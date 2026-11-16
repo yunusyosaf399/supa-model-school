@@ -193,3 +193,12 @@ Date: 2026-11-16
 - **UI:** Removed dashboard building photos on Windows sidebar and Android welcome header; the Android greeting is now compact text with subtle gradient, while brand icon, KPI cards, actions, charts and navigation remain unchanged.
 - **REPO:** Deleted `assets/dashboard/school_hero.jpg` and `assets/dashboard/school_sidebar.jpg`; removed `assets/dashboard/` from Flutter asset manifest.
 - **REGRESSION:** Updated dashboard widget-test source to assert no `Image` widgets in either desktop or mobile dashboard. No DB migration, live dataset, auth or login design modified. Flutter runtime tests require local SDK.
+
+## Session 2026-11-16 — Dashboard UI V2 pixel-guided Flutter recreation
+- **CODED:** Replaced simplified Windows and Android dashboards with a faithful widget-based implementation based on supplied reference screenshots: detailed desktop KPI cards, structured Recent Admissions table, fee bars + trend-line chart with axes and total panel, attendance donut, pending approvals and sync cards; mobile greeting waves, 2x2 compact KPI tiles, four quick actions, list-style admissions and fixed teal Home bottom navigation.
+- **WINDOWS SHELL:** Updated dashboard sidebar brand/menu gradient/soft abstract painter and teal footer security/version; desktop toolbar has global search, verified campus/year, alerts preview and account popup.
+- **IMAGES:** Zero background or school photos; imagery is entirely vector Flutter icons, charts and custom-painted pastel curves. Login remains unchanged.
+- **DATA:** Uses existing scoped Supabase Owner RPC and isolated TEST DATA snapshot (no real student or fee insertion). Compact clearly marked TEST DATA badge appears where screenshots have no demo notice. Real disabled modules show Not configured, not fabricated sync/fees.
+- **TEST SOURCE:** Updated Owner and widget smoke tests plus dashboard reference test assertions for real Flutter chart, donut, cards and both layouts.
+- **CI LIMIT:** Experimental GitHub workflow failed without executing any job steps (likely runner/account condition), and was removed; Flutter analyzer/test Windows build have not been executed by assistant. User should run local commands.
+- **DOCS:** `docs/30_DASHBOARD_PIXEL_REFERENCE_FLUTTER.md`.

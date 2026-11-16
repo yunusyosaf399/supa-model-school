@@ -2,14 +2,14 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../ui/school_brand.dart';
 import '../../auth/data/owner_auth_gateway.dart';
 import '../data/dashboard_repository.dart';
-import '../../../ui/school_brand.dart';
-import '../../../ui/school_theme.dart';
+import 'dashboard_visuals.dart';
 
-/// Responsive Windows / Android dashboard based on the supplied reference
-/// screens. Only Owner-scoped summaries are loaded from Supabase; the separate
-/// demo fixture is visibly labeled. Disabled modules never claim live data.
+/// Pixel-guided recreation of the approved desktop and Android dashboard.
+/// It uses actual Flutter widgets (not a flattened screenshot) and retains
+/// school-scoped, read-only data and explicit TEST DATA disclosure.
 class DashboardPage extends StatefulWidget {
   const DashboardPage({
     super.key,
@@ -45,21 +45,23 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  static const _deep = Color(0xFF005957);
-  static const _teal = Color(0xFF008E80);
-  static const _pale = Color(0xFFE5F7F2);
-  static const _ink = Color(0xFF142F37);
   DashboardSnapshot _data = DashboardSnapshot.preview();
   bool _loading = false;
   String? _error;
-  int _version = 0;
+  int _loadSequence = 0;
+
+  bool get _dark => Theme.of(context).brightness == Brightness.dark;
+  Color get _deep => _dark ? const Color(0xFF6BDBD0) : DashboardColors.deep;
+  Color get _text => _dark ? Colors.white : DashboardColors.ink;
+  Color get _secondary =>
+      _dark ? const Color(0xFFC2D4DA) : DashboardColors.muted;
 
   @override
   void initState() {
     super.initState();
-    // Never flash fictitious dashboard metrics as if they were account data.
     if (widget.owner != null) {
-      _data = _emptyOwnerSnapshot(widget.owner!);
+      // Do not briefly show demo numbers to an actual school account.
+      _data = _emptySnapshot(widget.owner!);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _refresh();
       });
@@ -69,13 +71,16 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void didUpdateWidget(covariant DashboardPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.owner?.userId != oldWidget.owner?.userId ||
-        widget.selectedCampusId != oldWidget.selectedCampusId ||
-        widget.repository != oldWidget.repository) {
+    if (oldWidget.selectedCampusId != widget.selectedCampusId ||
+        oldWidget.owner?.userId != widget.owner?.userId ||
+        oldWidget.repository != widget.repository) {
       if (widget.owner == null) {
-        ++_version;
+        ++_loadSequence;
         _data = DashboardSnapshot.preview();
+        _loading = false;
       } else {
+        // Clear values from the previous campus before the new read.
+        _data = _emptySnapshot(widget.owner!);
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _refresh();
         });
@@ -83,18 +88,21 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  DashboardSnapshot _emptyOwnerSnapshot(OwnerAccess owner) =>
+  DashboardSnapshot _emptySnapshot(OwnerAccess owner) =>
       DashboardSnapshot.fromJson({
         'is_demo': false,
         'source': 'loading',
         'school_name': owner.schoolName,
         'campus_name': owner.campuses.isEmpty
-            ? 'No campus' : owner.campuses.first.name,
+            ? 'No campus'
+            : owner.campuses.firstWhere(
+                (c) => c.id == widget.selectedCampusId,
+                orElse: () => owner.campuses.first,
+              ).name,
         'year_label': owner.activeYearLabel ?? 'Not configured',
         'currency_code': owner.currencyCode,
-        'fee_trend': [],
-        'recent_admissions': [],
-        'sync_status': 'Not configured',
+        'fee_trend': <Object>[],
+        'recent_admissions': <Object>[],
       });
 
   String? get _campusId {
@@ -110,10 +118,10 @@ class _DashboardPageState extends State<DashboardPage> {
     final owner = widget.owner;
     final campus = _campusId;
     if (owner == null || campus == null) {
-      setState(() => _data = DashboardSnapshot.preview());
+      if (mounted) setState(() => _data = DashboardSnapshot.preview());
       return;
     }
-    final request = ++_version;
+    final request = ++_loadSequence;
     setState(() {
       _loading = true;
       _error = null;
@@ -123,274 +131,308 @@ class _DashboardPageState extends State<DashboardPage> {
         schoolId: owner.schoolId,
         campusId: campus,
       );
-      if (!mounted || request != _version) return;
+      if (!mounted || request != _loadSequence) return;
       setState(() {
         _data = result;
         _loading = false;
       });
     } catch (_) {
-      if (!mounted || request != _version) return;
+      if (!mounted || request != _loadSequence) return;
       setState(() {
+        _data = _emptySnapshot(owner);
         _loading = false;
-        _error = 'Could not load the school dashboard. '
-            'Check your network and Owner access, then retry.';
-        // Never show old campus numbers after a failed load.
-        _data = DashboardSnapshot.fromJson({
-          'is_demo': false,
-          'school_name': owner.schoolName,
-          'campus_name': owner.campuses.firstWhere(
-            (c) => c.id == campus, orElse: () => owner.campuses.first,
-          ).name,
-          'year_label': owner.activeYearLabel ?? 'Not configured',
-          'currency_code': owner.currencyCode,
-          'source': 'unavailable',
-          'fee_trend': [],
-          'recent_admissions': [],
-          'sync_status': 'Not configured',
-        });
+        _error = 'Dashboard data could not be loaded. '
+            'Check the network and Owner access, then retry.';
       });
     }
   }
 
-  String _number(num? value) {
-    if (value == null) return '—';
-    final s = value.toStringAsFixed(0);
-    return s.replaceAllMapped(
-        RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',');
+  String _count(num? amount) {
+    if (amount == null) return '—';
+    return amount.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'\B(?=(\d{3})+(?!\d))'),
+      (_) => ',',
+    );
   }
 
-  String _currency(num? value) =>
-      value == null ? 'Not configured' :
-      '${_data.currencyCode == 'XXX' ? '' : _data.currencyCode} ${_number(value)}'.trim();
+  String _money(num? amount) {
+    if (amount == null) return 'Not configured';
+    final currency = _data.currencyCode;
+    final prefix = switch (currency) {
+      'PKR' => 'Rs',
+      'NGN' => '₦',
+      'GHS' => 'GH₵',
+      'USD' => '\$',
+      'SAR' => 'SAR',
+      'XXX' => '',
+      _ => currency,
+    };
+    return '$prefix ${_count(amount)}'.trim();
+  }
 
-  String _percent(int? present, int? total) {
+  String _attendancePercent() {
+    final present = _data.attendancePresent;
+    final total = _data.attendanceTotal;
     if (present == null || total == null || total == 0) return '—';
-    return '${present * 100 / total >= 100 ? '100.0' : (present * 100 / total).toStringAsFixed(1)}%';
+    return '${(100 * present / total).toStringAsFixed(1)}%';
   }
 
-  Color _surface(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF142D33) : Colors.white;
-
-  Color _heading(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF73D8CB) : _deep;
-
-  void _notConfigured(String module) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('$module is not connected to live records yet.'),
-    ));
-  }
+  void _notAvailable(String item) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('$item is not connected to live records yet.'),
+      ));
 
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, bounds) {
-      final desktop = bounds.maxWidth >= 1060;
-      final width = bounds.maxWidth;
-      final pad = desktop ? 22.0 : 13.0;
-      final contentsWidth = width - pad * 2;
-      return RefreshIndicator(
-        onRefresh: _refresh,
-        child: ListView(
-          key: const Key('dashboard-page'),
-          padding: EdgeInsets.fromLTRB(pad, desktop ? 15 : 0, pad, 26),
-          children: [
-            if (desktop) ...[
-              _desktopToolbar(),
-              const SizedBox(height: 18),
-              _desktopHeading(),
-            ] else ...[
-              _mobileHero(),
-            ],
-            if (_loading) ...[
-              const SizedBox(height: 8),
-              const LinearProgressIndicator(key: Key('dashboard-loading')),
-            ],
-            if (_error != null) ...[
-              const SizedBox(height: 10),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.error_outline, color: Colors.red),
-                  title: Text(_error!),
-                  trailing: TextButton(
-                    onPressed: _refresh, child: const Text('Retry')),
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, bounds) {
+      final desktop = bounds.maxWidth >= 850;
+      final sidePadding = desktop ? 22.0 : 13.0;
+      final contentWidth = math.max(0, bounds.maxWidth - 2 * sidePadding);
+      return Stack(children: [
+        Positioned.fill(child: ColoredBox(
+          color: _dark ? const Color(0xFF10202A) : DashboardColors.background,
+        )),
+        const Positioned.fill(child: DashboardWaveBackground()),
+        RefreshIndicator(
+          onRefresh: _refresh,
+          child: ListView(
+            key: const Key('dashboard-page'),
+            padding: EdgeInsets.fromLTRB(
+              sidePadding, desktop ? 15 : 0, sidePadding, desktop ? 16 : 22),
+            children: [
+              if (desktop) ...[
+                _desktopToolbar(),
+                const SizedBox(height: 22),
+                _desktopTitleAndActions(),
+              ] else
+                _mobileWelcome(),
+              if (_loading) ...[
+                const SizedBox(height: 8),
+                const LinearProgressIndicator(key: Key('dashboard-loading')),
+              ],
+              if (_error != null) ...[
+                const SizedBox(height: 8),
+                Material(
+                  color: const Color(0xFFFFF5EA),
+                  borderRadius: BorderRadius.circular(9),
+                  child: ListTile(
+                    leading: const Icon(Icons.error_outline, color: Colors.red),
+                    title: Text(_error!, style: const TextStyle(fontSize: 12)),
+                    trailing: TextButton(
+                      onPressed: _refresh, child: const Text('Retry')),
+                  ),
                 ),
-              ),
+              ],
+              const SizedBox(height: 15),
+              _statGrid(contentWidth, desktop),
+              if (!desktop) ...[
+                const SizedBox(height: 12),
+                _mobileActionGrid(contentWidth),
+              ],
+              const SizedBox(height: 15),
+              if (desktop) ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 5, child: _admissionsPanel(desktop: true)),
+                    const SizedBox(width: 15),
+                    Expanded(flex: 7, child: _trendPanel()),
+                  ],
+                ),
+                const SizedBox(height: 15),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _attendancePanel()),
+                    const SizedBox(width: 15),
+                    Expanded(child: _approvalsPanel(desktop: true)),
+                    const SizedBox(width: 15),
+                    Expanded(child: _syncPanel(desktop: true)),
+                  ],
+                ),
+              ] else ...[
+                _admissionsPanel(desktop: false),
+                const SizedBox(height: 13),
+                _approvalsPanel(desktop: false),
+                const SizedBox(height: 13),
+                _syncPanel(desktop: false),
+                // On phones these secondary reports live below the primary
+                // reference cards, rather than crowding the first screen.
+                const SizedBox(height: 13),
+                _trendPanel(),
+                const SizedBox(height: 13),
+                _attendancePanel(),
+              ],
             ],
-            if (_data.isDemo) ...[
-              const SizedBox(height: 10),
-              _demoNotice(),
-            ] else if (!_loading) ...[
-              const SizedBox(height: 8),
-            ],
-            const SizedBox(height: 12),
-            _stats(contentsWidth, desktop),
-            if (!desktop) ...[
-              const SizedBox(height: 13),
-              _quickActionTiles(contentsWidth),
-            ],
-            const SizedBox(height: 14),
-            if (desktop)
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(flex: 5, child: _recentAdmissions()),
-                  const SizedBox(width: 14),
-                  Expanded(flex: 7, child: _feeTrend()),
-                ],
-              )
-            else ...[
-              _recentAdmissions(),
-              const SizedBox(height: 13),
-            ],
-            if (!desktop) ...[
-              _approvals(),
-              const SizedBox(height: 13),
-              _sync(),
-            ] else ...[
-              const SizedBox(height: 14),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: _attendance()),
-                  const SizedBox(width: 14),
-                  Expanded(child: _approvals()),
-                  const SizedBox(width: 14),
-                  Expanded(child: _sync()),
-                ],
-              ),
-            ],
-            const SizedBox(height: 12),
-            Text(
-              _data.isDemo
-                  ? 'TEST DASHBOARD • This is sample data, not actual student or payment activity.'
-                  : 'Live summary • unavailable modules do not display fabricated data.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ),
-          ],
+          ),
         ),
-      );
-    });
-  }
+      ]);
+    },
+  );
 
-  Widget _demoNotice() => Container(
-    key: const Key('dashboard-demo-banner'),
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    decoration: BoxDecoration(
-      color: const Color(0xFFFFF4D9),
-      borderRadius: BorderRadius.circular(9),
-      border: Border.all(color: const Color(0xFFFFE0A1)),
-    ),
-    child: Row(children: [
-      const Icon(Icons.science_outlined, size: 19, color: Color(0xFF8B6100)),
-      const SizedBox(width: 8),
-      const Expanded(child: Text(
-        'TEST DATA — Dashboard figures are still fictional previews. '
-        'No real students, fees, attendance or approvals were created.',
-        style: TextStyle(color: Color(0xFF714F00), fontSize: 12),
-      )),
-      TextButton(
-        onPressed: _refresh,
-        child: const Text('Refresh', style: TextStyle(fontSize: 12)),
+  Widget _demoBadge() => Tooltip(
+    message: 'TEST DATA: these figures are demonstrations, not school records.',
+    child: Container(
+      key: const Key('dashboard-demo-banner'),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF0CC),
+        border: Border.all(color: const Color(0xFFF2CF88)),
+        borderRadius: BorderRadius.circular(20),
       ),
+      child: const Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.science_outlined, size: 15, color: Color(0xFF805508)),
+        SizedBox(width: 4),
+        Text('TEST DATA', style: TextStyle(
+          fontSize: 10, fontWeight: FontWeight.w800,
+          color: Color(0xFF805508),
+        )),
+      ]),
+    ),
+  );
+
+  Widget _desktopToolbar() => SizedBox(
+    height: 46,
+    child: Row(children: [
+      Expanded(
+        flex: 4,
+        child: OutlinedButton(
+          key: const Key('open-global-search'),
+          onPressed: widget.onSearch ?? () => _notAvailable('Global search'),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: _dark ? const Color(0xFF18303A) : Colors.white,
+            foregroundColor: _text,
+            padding: const EdgeInsets.symmetric(horizontal: 13),
+            side: const BorderSide(color: Color(0xFFC4D4E0)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(11),
+            ),
+          ),
+          child: Row(children: [
+            const Icon(Icons.search, size: 24),
+            const SizedBox(width: 12),
+            const Expanded(child: Text(
+              'Search students, staff, invoices, etc...',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+            )),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE4ECF2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text('Ctrl + K', style: TextStyle(
+                color: DashboardColors.ink, fontSize: 11)),
+            ),
+          ]),
+        ),
+      ),
+      const SizedBox(width: 20),
+      Container(width: 1, height: 32, color: const Color(0xFFB6C8D2)),
+      const SizedBox(width: 20),
+      _campusSelector(),
+      const SizedBox(width: 12),
+      _yearSelector(),
+      const SizedBox(width: 16),
+      _notificationButton(),
+      const SizedBox(width: 12),
+      Container(width: 1, height: 28, color: const Color(0xFFBBCDD5)),
+      const SizedBox(width: 13),
+      _accountButton(desktop: true),
     ]),
   );
 
-  Widget _desktopToolbar() => Row(children: [
-    Expanded(
-      flex: 4,
-      child: OutlinedButton.icon(
-        key: const Key('open-global-search'),
-        onPressed: widget.onSearch ??
-            () => _notConfigured('Global search'),
-        style: OutlinedButton.styleFrom(
-          alignment: Alignment.centerLeft,
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-          backgroundColor: _surface(context),
-          side: const BorderSide(color: Color(0xFFC3D4DA)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        icon: const Icon(Icons.search, size: 22),
-        label: const Text('Search students, staff, invoices, etc...   Ctrl + K',
-            overflow: TextOverflow.ellipsis),
-      ),
-    ),
-    const SizedBox(width: 18),
-    _campusMenu(),
-    const SizedBox(width: 12),
-    Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
-      decoration: BoxDecoration(
-        color: _surface(context),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFC3D4DA)),
-      ),
-      child: Row(children: [
-        const Icon(Icons.calendar_month_outlined, size: 20, color: _deep),
-        const SizedBox(width: 9),
-        Text(_data.yearLabel, style: const TextStyle(fontSize: 13)),
-        const SizedBox(width: 7),
-        const Icon(Icons.keyboard_arrow_down_rounded, size: 17),
-      ]),
-    ),
-    const SizedBox(width: 12),
-    _notification(),
-    const SizedBox(width: 7),
-    _accountMenu(desktop: true),
-  ]);
-
-  Widget _campusMenu({bool compact = false}) {
-    final owner = widget.owner;
-    final campuses = owner?.campuses ?? const <OwnerCampus>[];
+  Widget _campusSelector({bool mobile = false}) {
+    final campuses = widget.owner?.campuses ?? const <OwnerCampus>[];
     return PopupMenuButton<String>(
       key: const Key('owner-campus-selector'),
-      tooltip: 'Authorized campus',
       enabled: campuses.length > 1,
+      tooltip: 'Authorized campus',
       onSelected: widget.onCampusChanged,
       itemBuilder: (context) => [
-        for (final campus in campuses)
-          PopupMenuItem(value: campus.id, child: Text(campus.name)),
+        for (final c in campuses)
+          PopupMenuItem<String>(value: c.id, child: Text(c.name)),
       ],
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 12, vertical: 11),
+        height: mobile ? 36 : 43,
+        constraints: BoxConstraints(maxWidth: mobile ? 146 : 215),
+        padding: EdgeInsets.symmetric(horizontal: mobile ? 9 : 12),
         decoration: BoxDecoration(
-          color: _surface(context),
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: const Color(0xFFC4D1D8)),
+          color: _dark ? const Color(0xFF19323A) : Colors.white,
+          borderRadius: BorderRadius.circular(mobile ? 23 : 10),
+          border: Border.all(color: const Color(0xFFBDD0DB)),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.location_city_outlined, size: 20, color: _deep),
+          Icon(Icons.location_city_outlined, size: mobile ? 17 : 21,
+              color: _deep),
           const SizedBox(width: 7),
-          ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: compact ? 110 : 154),
-            child: Text(_data.campusName,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-          ),
-          const SizedBox(width: 6),
-          const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
+          Flexible(child: Text(_data.campusName,
+            maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: _text, fontSize: mobile ? 11 : 12,
+              fontWeight: FontWeight.w600,
+            ),
+          )),
+          const SizedBox(width: 7),
+          Icon(Icons.keyboard_arrow_down_rounded,
+              color: _text, size: mobile ? 17 : 20),
         ]),
       ),
     );
   }
 
-  Widget _notification() => IconButton(
-    tooltip: 'Notifications (preview)',
-    onPressed: () => _notConfigured('Notifications'),
-    icon: const Badge(
-      smallSize: 9,
-      child: Icon(Icons.notifications_none_rounded, color: _deep, size: 26),
+  Widget _yearSelector() => Container(
+    height: 43,
+    padding: const EdgeInsets.symmetric(horizontal: 12),
+    decoration: BoxDecoration(
+      color: _dark ? const Color(0xFF19323A) : Colors.white,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: const Color(0xFFBDD0DB)),
     ),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(Icons.calendar_month_outlined, size: 20, color: _deep),
+      const SizedBox(width: 8),
+      ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 115),
+        child: Text(_data.yearLabel,
+          maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 12, color: _text,
+              fontWeight: FontWeight.w600)),
+      ),
+      const SizedBox(width: 8),
+      Icon(Icons.keyboard_arrow_down_rounded, size: 19, color: _text),
+    ]),
   );
 
-  Widget _accountMenu({bool desktop = false}) => PopupMenuButton<String>(
+  Widget _notificationButton() => IconButton.filledTonal(
+    tooltip: 'Notifications (preview)',
+    style: IconButton.styleFrom(
+      backgroundColor: _dark ? const Color(0xFF1E3A41) : Colors.white,
+      foregroundColor: _deep,
+      fixedSize: const Size(42, 42),
+    ),
+    onPressed: () => _notAvailable('Notifications'),
+    icon: Stack(clipBehavior: Clip.none, children: [
+      const Icon(Icons.notifications_none_outlined, size: 25),
+      if (_data.isDemo)
+        Positioned(right: -7, top: -8, child: Container(
+          width: 18, height: 18,
+          decoration: const BoxDecoration(
+              color: Color(0xFFDE2526), shape: BoxShape.circle),
+          child: const Center(child: Text('3',
+            style: TextStyle(color: Colors.white,
+                fontSize: 10, fontWeight: FontWeight.w800))),
+        )),
+    ]),
+  );
+
+  Widget _accountButton({bool desktop = false}) => PopupMenuButton<String>(
     tooltip: 'Account',
-    onSelected: (choice) {
-      if (choice == 'exit') widget.onExit?.call();
+    onSelected: (value) {
+      if (value == 'exit') widget.onExit?.call();
     },
-    itemBuilder: (_) => [
+    itemBuilder: (context) => [
       PopupMenuItem<String>(
         value: 'exit',
         child: Text(widget.owner == null ? 'Exit demo' : 'Sign out'),
@@ -398,486 +440,735 @@ class _DashboardPageState extends State<DashboardPage> {
     ],
     child: Row(mainAxisSize: MainAxisSize.min, children: [
       CircleAvatar(
-        radius: desktop ? 19 : 18,
-        backgroundColor: _pale,
-        child: const Icon(Icons.person_rounded, color: _deep),
+        radius: desktop ? 21 : 18,
+        backgroundColor: const Color(0xFFB8E5DF),
+        child: Icon(Icons.person, size: desktop ? 24 : 21,
+            color: DashboardColors.deep),
       ),
       if (desktop) ...[
-        const SizedBox(width: 7),
+        const SizedBox(width: 8),
         ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 130),
+          constraints: const BoxConstraints(maxWidth: 118),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(widget.owner?.displayName ?? 'Demo Administrator',
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-              const Text('Administrator', style: TextStyle(fontSize: 11)),
+                maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: _text,
+                    fontWeight: FontWeight.w800, fontSize: 12)),
+              Text('Administrator', style: TextStyle(
+                  color: _secondary, fontSize: 11)),
             ],
           ),
         ),
-        const Icon(Icons.keyboard_arrow_down_rounded, size: 17),
+        Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: _text),
       ],
     ]),
   );
 
-  Widget _desktopHeading() => Row(children: [
-    Expanded(child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(children: [
-          Container(width: 5, height: 43,
-              decoration: BoxDecoration(color: _teal,
-                  borderRadius: BorderRadius.circular(5))),
-          const SizedBox(width: 15),
-          Text('Dashboard',
-              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  color: _heading(context), fontWeight: FontWeight.w900)),
-        ]),
-        const SizedBox(height: 3),
-        Text('${_data.campusName} • ${_data.yearLabel}',
-            style: Theme.of(context).textTheme.bodyMedium),
-      ],
-    )),
-    _headingAction('New Admission', Icons.person_add_alt_1_outlined,
-        widget.onNewAdmission, primary: true),
-    const SizedBox(width: 9),
-    _headingAction('Collect Fee', Icons.savings_outlined, widget.onFees),
-    const SizedBox(width: 9),
-    _headingAction('Take Attendance', Icons.calendar_month_outlined,
-        widget.onAttendance),
-    const SizedBox(width: 9),
-    _headingAction('Record Expense', Icons.receipt_long_outlined,
-        widget.onExpenses),
-  ]);
-
-  Widget _headingAction(String label, IconData icon, VoidCallback tap,
-      {bool primary = false}) =>
-      SizedBox(height: 46, child: primary
-        ? FilledButton.icon(
-          key: const Key('dashboard-new-admission'),
-          onPressed: tap,
-          icon: Icon(icon, size: 19),
-          label: Text(label, style: const TextStyle(fontSize: 12)),
-        )
-        : OutlinedButton.icon(
-          onPressed: tap,
-          style: OutlinedButton.styleFrom(
-            backgroundColor: _surface(context),
-            foregroundColor: _heading(context),
-          ),
-          icon: Icon(icon, size: 18),
-          label: Text(label, style: const TextStyle(fontSize: 12)),
-        ));
-
-  Widget _mobileHero() => Column(children: [
-    const SizedBox(height: 9),
-    Row(children: [
-      const SchoolMark(size: 52),
-      const SizedBox(width: 6),
+  Widget _desktopTitleAndActions() => Row(
+    children: [
+      Container(width: 5, height: 57,
+        decoration: BoxDecoration(
+          color: DashboardColors.teal,
+          borderRadius: BorderRadius.circular(6),
+        )),
+      const SizedBox(width: 16),
       Expanded(child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Supa Model School',
-            maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900,
-                color: _heading(context))),
-          Text('School Management System',
-              maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11)),
+          Text('Dashboard', style: TextStyle(
+            fontSize: 35, height: 1, color: _deep,
+            fontWeight: FontWeight.w900, letterSpacing: -1.2,
+          )),
+          const SizedBox(height: 6),
+          Row(children: [
+            Flexible(child: Text('${_data.campusName} • ${_data.yearLabel}',
+              style: TextStyle(color: _secondary, fontSize: 14),
+              maxLines: 1, overflow: TextOverflow.ellipsis)),
+            if (_data.isDemo) ...[
+              const SizedBox(width: 9),
+              _demoBadge(),
+            ],
+          ]),
         ],
       )),
-      _notification(),
-      _accountMenu(),
-    ]),
-    const SizedBox(height: 9),
-    Align(alignment: Alignment.centerRight, child: _campusMenu(compact: true)),
-    const SizedBox(height: 9),
-    // Compact text-only greeting: no decorative dashboard photography.
-    Container(
-      key: const Key('dashboard-mobile-greeting'),
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Color(0xFFE5F5F5), Color(0xFFF2F9FC)],
-        ),
-        border: Border.all(color: const Color(0xFFD6E8EA)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('Good morning,',
-            style: TextStyle(
-              fontSize: 25,
-              fontWeight: FontWeight.w900,
-              color: _heading(context),
+      const SizedBox(width: 8),
+      _topAction('New Admission', Icons.person_add_alt_1_outlined,
+          widget.onNewAdmission, primary: true),
+      const SizedBox(width: 9),
+      _topAction('Collect Fee', Icons.savings_outlined, widget.onFees),
+      const SizedBox(width: 9),
+      _topAction('Take Attendance', Icons.calendar_month_outlined,
+          widget.onAttendance),
+      const SizedBox(width: 9),
+      _topAction('Record Expense', Icons.receipt_long_outlined,
+          widget.onExpenses),
+    ],
+  );
+
+  Widget _topAction(String label, IconData icon, VoidCallback onTap,
+      {bool primary = false}) {
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(10),
+    );
+    return SizedBox(
+      height: 46,
+      child: primary
+          ? FilledButton.icon(
+              key: const Key('dashboard-new-admission'),
+              style: FilledButton.styleFrom(
+                backgroundColor: DashboardColors.deep,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 15),
+                shape: shape,
+              ),
+              onPressed: onTap,
+              icon: Icon(icon, size: 20),
+              label: Text(label, style: const TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w700)),
+            )
+          : OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                backgroundColor: _dark ? const Color(0xFF172C34) : Colors.white,
+                foregroundColor: _deep,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                side: const BorderSide(color: Color(0xFFC4D4E1)),
+                shape: shape,
+              ),
+              onPressed: onTap,
+              icon: Icon(icon, size: 19),
+              label: Text(label, style: const TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w700)),
+            ),
+    );
+  }
+
+  Widget _mobileWelcome() => Column(children: [
+    Stack(children: [
+      Positioned.fill(child: DashboardWaveBackground(mobile: true)),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(7, 11, 7, 9),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const SchoolMark(size: 47),
+            const SizedBox(width: 6),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Supa Model School', maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: _deep, fontSize: 17,
+                      fontWeight: FontWeight.w900, letterSpacing: -.35)),
+                Text('School Management System', maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: _secondary, fontSize: 10)),
+              ],
             )),
-          const SizedBox(height: 5),
-          const Text('Here is today’s summary.',
-            style: TextStyle(color: _ink, fontSize: 13)),
-          const SizedBox(height: 10),
-          Container(width: 53, height: 3, color: _teal),
-        ],
+            _notificationButton(),
+            const SizedBox(width: 2),
+            _accountButton(),
+          ]),
+          const SizedBox(height: 6),
+          Align(alignment: Alignment.centerRight,
+              child: _campusSelector(mobile: true)),
+          const SizedBox(height: 9),
+          Container(
+            key: const Key('dashboard-mobile-greeting'),
+            padding: const EdgeInsets.fromLTRB(11, 3, 5, 9),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Good morning,', style: TextStyle(
+                  fontSize: 27, fontWeight: FontWeight.w900,
+                  letterSpacing: -.7, color: _deep,
+                )),
+                const SizedBox(height: 3),
+                Text('Here is today’s summary.', style: TextStyle(
+                  fontSize: 16, color: _secondary,
+                )),
+                const SizedBox(height: 8),
+                Container(width: 43, height: 3,
+                  decoration: BoxDecoration(
+                    color: DashboardColors.teal,
+                    borderRadius: BorderRadius.circular(4),
+                  )),
+                if (_data.isDemo) ...[
+                  const SizedBox(height: 9),
+                  _demoBadge(),
+                ],
+              ],
+            ),
+          ),
+        ]),
       ),
-    ),
+    ]),
   ]);
 
-  Widget _stats(double availableWidth, bool desktop) {
+  Widget _statGrid(double width, bool desktop) {
     final columns = desktop ? 4 : 2;
-    const gap = 11.0;
-    final width = (availableWidth - (columns - 1) * gap) / columns;
-    final children = [
-      _stat('Active Students', _number(_data.activeStudents),
-          Icons.groups_rounded, _teal, 'Current campus'),
-      _stat('Fee Collected', _currency(_data.feeCollected),
-          Icons.savings_outlined, const Color(0xFF13965E), 'Total collection'),
-      _stat('Outstanding Fees', _currency(_data.feesOutstanding),
-          Icons.warning_amber_rounded, const Color(0xFFD38921), 'Pending'),
-      _stat('Today Attendance',
-          _percent(_data.attendancePresent, _data.attendanceTotal),
-          Icons.event_available_outlined, const Color(0xFF008D65),
-          _data.attendanceTotal == null ? 'Not configured'
-             : '${_number(_data.attendancePresent)} of ${_number(_data.attendanceTotal)}'),
-    ];
+    final gap = desktop ? 15.0 : 10.0;
+    final cardWidth = math.max(80.0, (width - gap * (columns - 1)) / columns);
+    final height = desktop ? 119.0 : 91.0;
     return Wrap(spacing: gap, runSpacing: gap, children: [
-      for (final child in children)
-        SizedBox(width: width, height: desktop ? 122 : 108, child: child),
+      SizedBox(width: cardWidth, height: height,
+        child: _metricCard(
+          desktop: desktop,
+          icon: Icons.groups_rounded,
+          label: 'Active Students',
+          value: _count(_data.activeStudents),
+          color: DashboardColors.teal,
+          badge: _data.isDemo ? (desktop ? '▲ +3.6%' : '↑ +12') : null,
+          detail: desktop ? (_data.isDemo ? 'vs. last term' : 'Current campus') : null,
+          badgeColor: const Color(0xFF16853B),
+        ),
+      ),
+      SizedBox(width: cardWidth, height: height,
+        child: _metricCard(
+          desktop: desktop,
+          icon: Icons.savings_outlined,
+          label: 'Fee Collected',
+          value: _money(_data.feeCollected),
+          color: const Color(0xFF119D63),
+          badge: _data.isDemo ? (desktop ? '▲ +12.4%' : '76%') : null,
+          detail: desktop ? (_data.isDemo ? 'vs. last term' : null) : null,
+          badgeColor: const Color(0xFF16853B),
+        ),
+      ),
+      SizedBox(width: cardWidth, height: height,
+        child: _metricCard(
+          desktop: desktop,
+          icon: Icons.warning_amber_rounded,
+          label: 'Outstanding Fees',
+          value: _money(_data.feesOutstanding),
+          color: desktop ? DashboardColors.amber : DashboardColors.danger,
+          badge: _data.isDemo ? (desktop ? '▲ +5.8%' : '24%') : null,
+          detail: desktop ? (_data.isDemo ? 'vs. last term' : null) : null,
+          badgeColor: DashboardColors.danger,
+        ),
+      ),
+      SizedBox(width: cardWidth, height: height,
+        child: _metricCard(
+          desktop: desktop,
+          icon: Icons.event_available_outlined,
+          label: 'Today Attendance',
+          value: desktop
+              ? _attendancePercent()
+              : (_data.attendancePresent == null ||
+                      _data.attendanceTotal == null)
+                  ? '—'
+                  : '${_count(_data.attendancePresent)} / ${_count(_data.attendanceTotal)}',
+          color: const Color(0xFF009D6B),
+          badge: desktop ? null :
+              _data.attendanceTotal == null ? null : _attendancePercent(),
+          detail: desktop && _data.attendanceTotal != null
+              ? '(${_count(_data.attendancePresent)} of ${_count(_data.attendanceTotal)})'
+              : null,
+          badgeColor: const Color(0xFF16853B),
+        ),
+      ),
     ]);
   }
 
-  Widget _stat(String label, String value, IconData icon, Color accent,
-      String subtitle) => _card(
-    padding: const EdgeInsets.all(13),
+  Widget _metricCard({
+    required bool desktop,
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+    required Color badgeColor,
+    String? badge,
+    String? detail,
+  }) => DashboardPanel(
+    padding: EdgeInsets.all(desktop ? 13 : 10),
     child: Row(children: [
-      Container(
-        width: 48, height: 49,
-        decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(13),
-        ),
-        child: Icon(icon, size: 28, color: accent),
+      DashboardIconTile(
+        icon: icon, color: color,
+        background: color.withValues(alpha: .11),
+        size: desktop ? 58 : 40,
       ),
-      const SizedBox(width: 10),
+      SizedBox(width: desktop ? 13 : 8),
       Expanded(child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 4),
+          Text(label, maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: _text, fontSize: desktop ? 13 : 11,
+                fontWeight: FontWeight.w600)),
+          const SizedBox(height: 5),
           FittedBox(fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(value,
-              style: TextStyle(
-                fontSize: 23, fontWeight: FontWeight.w900,
-                color: _heading(context),
-              ))),
-          const SizedBox(height: 2),
-          Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelSmall),
+            child: Text(value, maxLines: 1,
+              style: TextStyle(color: _deep,
+                fontWeight: FontWeight.w900,
+                fontSize: desktop ? 27 : 19, letterSpacing: -.6)),
+          ),
+          if (desktop && (badge != null || detail != null)) ...[
+            const SizedBox(height: 5),
+            Row(children: [
+              if (badge != null) Flexible(child: Text(badge,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: badgeColor,
+                    fontSize: 11, fontWeight: FontWeight.bold))),
+              if (detail != null) ...[
+                const SizedBox(width: 3),
+                Flexible(child: Text(detail,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: _secondary, fontSize: 10))),
+              ],
+            ]),
+          ] else if (!desktop && badge != null) ...[
+            const SizedBox(height: 5),
+            Align(alignment: Alignment.centerRight,
+              child: _metricPill(badge, badgeColor)),
+          ],
         ],
       )),
     ]),
   );
 
-  Widget _quickActionTiles(double availableWidth) {
-    const gap = 9.0;
-    final cell = (availableWidth - gap * 3) / 4;
-    final actions = [
-      ('New\nAdmission', Icons.person_add_alt_1_outlined, widget.onNewAdmission),
-      ('Collect\nFee', Icons.savings_outlined, widget.onFees),
-      ('Attendance', Icons.event_available_outlined, widget.onAttendance),
-      ('Expenses', Icons.receipt_long_outlined, widget.onExpenses),
+  Widget _metricPill(String value, Color fg) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+    decoration: BoxDecoration(
+      color: fg.withValues(alpha: .11),
+      borderRadius: BorderRadius.circular(18),
+    ),
+    child: Text(value, style: TextStyle(
+      color: fg, fontWeight: FontWeight.w800, fontSize: 11)),
+  );
+
+  Widget _mobileActionGrid(double width) {
+    const gap = 8.0;
+    final cell = (width - gap * 3) / 4;
+    const actions = <(String, IconData)>[
+      ('New\nAdmission', Icons.person_add_alt_1_outlined),
+      ('Collect\nFee', Icons.savings_outlined),
+      ('Attendance', Icons.event_available_outlined),
+      ('Expenses', Icons.receipt_long_outlined),
     ];
-    return Wrap(spacing: gap, runSpacing: gap, children: [
-      for (var i = 0; i < actions.length; i++)
-        SizedBox(width: cell, height: 108,
-          child: _card(padding: EdgeInsets.zero,
+    final callbacks = <VoidCallback>[
+      widget.onNewAdmission,
+      widget.onFees,
+      widget.onAttendance,
+      widget.onExpenses,
+    ];
+    return Row(children: [
+      for (var i = 0; i < actions.length; i++) ...[
+        SizedBox(width: cell, height: 80,
+          child: DashboardPanel(
+            padding: EdgeInsets.zero,
             child: InkWell(
-              borderRadius: BorderRadius.circular(17),
-              onTap: actions[i].$3,
+              borderRadius: BorderRadius.circular(15),
+              onTap: callbacks[i],
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(actions[i].$2, size: 30, color: _teal),
-                  const SizedBox(height: 9),
+                  Icon(actions[i].$2,
+                    size: 28, color: DashboardColors.teal),
+                  const SizedBox(height: 7),
                   Text(actions[i].$1, textAlign: TextAlign.center,
-                    maxLines: 2, style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w600, height: 1.05)),
+                    maxLines: 2, style: TextStyle(
+                      color: _text, fontSize: 11,
+                      height: 1.05, fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
           ),
         ),
+        if (i != actions.length - 1) const SizedBox(width: gap),
+      ],
     ]);
   }
 
-  Widget _card({required Widget child, EdgeInsetsGeometry? padding}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _surface(context),
-        borderRadius: BorderRadius.circular(17),
-        border: Border.all(color: const Color(0xFFD7E6EB)),
-        boxShadow: const [
-          BoxShadow(color: Color(0x14046B72), blurRadius: 11, offset: Offset(0, 4)),
-        ],
-      ),
-      child: Padding(padding: padding ?? const EdgeInsets.all(14), child: child),
-    );
-  }
+  Widget _panelHeading(String title, IconData icon, {Widget? trailing}) =>
+    Row(children: [
+      Icon(icon, color: DashboardColors.teal, size: 25),
+      const SizedBox(width: 9),
+      Expanded(child: Text(title, maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(color: _deep,
+          fontWeight: FontWeight.w900, fontSize: 17))),
+      if (trailing != null) trailing,
+    ]);
 
-  Widget _panel(String heading, IconData icon, Widget child,
-      {Widget? trailing}) => _card(
-    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(children: [
-        Icon(icon, color: _teal, size: 24),
-        const SizedBox(width: 9),
-        Expanded(child: Text(heading, maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: _heading(context), fontWeight: FontWeight.w900, fontSize: 18))),
-        if (trailing != null) trailing,
-      ]),
-      const Divider(height: 17, color: Color(0xFFDDE8ED)),
-      child,
-    ]),
-  );
-
-  Widget _recentAdmissions() => _panel(
-    'Recent Admissions',
-    Icons.person_add_alt_1_outlined,
-    Column(children: [
-      if (_data.recentAdmissions.isEmpty)
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 28),
-          child: Text('No approved admissions in the active school year.')),
-      for (final entry in _data.recentAdmissions)
-        Column(children: [
-          Row(children: [
-            CircleAvatar(
-              radius: 16, backgroundColor: _pale,
-              child: const Icon(Icons.school_outlined,
-                  color: _teal, size: 19),
-            ),
-            const SizedBox(width: 9),
-            Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(entry.name,
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                Text(entry.when, style: Theme.of(context).textTheme.labelSmall),
-              ],
-            )),
-            const SizedBox(width: 8),
-            Flexible(child: Text(entry.className,
-              maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12))),
-          ]),
-          const Divider(height: 18, color: Color(0xFFE2EAEF)),
-        ]),
-    ]),
-    trailing: TextButton(
-      onPressed: widget.onStudents,
-      child: const Text('View All', style: TextStyle(
-          decoration: TextDecoration.underline)),
-    ),
-  );
-
-  Widget _feeTrend() => _panel(
-    'Fee Collection Trend', Icons.trending_up_outlined,
-    _data.feeTrend.isEmpty
-      ? const SizedBox(
-          height: 145,
-          child: Center(child: Text('Fee ledger has not been deployed.')))
-      : SizedBox(height: 170, child: LayoutBuilder(builder: (context, c) {
-          final maxValue = _data.feeTrend
-              .fold<num>(0, (maxSoFar, item) => math.max(maxSoFar, item.amount));
-          return Stack(children: [
-            Positioned.fill(child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                for (var i = 0; i < 4; i++)
-                  const Divider(height: 1, color: Color(0xFFE2ECEF)),
-              ],
-            )),
-            Row(crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final month in _data.feeTrend)
-                  Expanded(child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Column(children: [
-                      Expanded(child: Align(
-                        alignment: Alignment.bottomCenter,
-                        child: FractionallySizedBox(
-                          heightFactor: maxValue == 0 ? 0.01 :
-                              (month.amount / maxValue).clamp(0.02, 1.0).toDouble(),
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [Color(0xFF007B78), Color(0xFF66DCC5)],
-                              ),
-                              borderRadius: BorderRadius.vertical(
-                                top: Radius.circular(5)),
-                            ),
-                          ),
-                        ),
-                      )),
-                      const SizedBox(height: 8),
-                      Text(month.label,
-                        style: Theme.of(context).textTheme.labelSmall),
-                    ]),
-                  )),
-              ],
-            ),
-          ]);
-        })),
-    trailing: Text('Last 6 Months', style: Theme.of(context).textTheme.labelSmall),
-  );
-
-  Widget _attendance() {
-    final total = _data.attendanceTotal;
-    final present = _data.attendancePresent;
-    final proportion = total == null || total == 0 || present == null
-        ? 0.0 : (present / total).clamp(0.0, 1.0).toDouble();
-    return _panel(
-      'Attendance Summary',
-      Icons.calendar_month_outlined,
-      total == null
-        ? const SizedBox(height: 130,
-          child: Center(child: Text('Attendance records are not configured.')))
-        : Row(children: [
-          SizedBox(
-            height: 112, width: 112,
-            child: Stack(alignment: Alignment.center, children: [
-              SizedBox(
-                width: 100, height: 100,
-                child: CircularProgressIndicator(
-                  value: proportion, strokeWidth: 13,
-                  strokeCap: StrokeCap.round, color: _teal,
-                  backgroundColor: const Color(0xFFE1E9EC),
-                ),
-              ),
-              Text(_percent(present,total),
-                style: const TextStyle(fontWeight: FontWeight.w900,
-                    color: _deep, fontSize: 18)),
-            ]),
-          ),
-          const SizedBox(width: 10),
-          Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _countLine('Present', _number(present), _teal),
-              const Divider(),
-              _countLine('Absent', _number(total - (present ?? 0)),
-                  const Color(0xFFB9C9D2)),
-              const Divider(),
-              _countLine('Total Students', _number(total), _deep),
-            ],
-          )),
-        ]),
-    );
-  }
-
-  Widget _countLine(String label, String value, Color color) => Row(children: [
-    Container(width: 9, height: 9,
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
-    const SizedBox(width: 7),
-    Expanded(child: Text(label, style: const TextStyle(fontSize: 12))),
-    Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-  ]);
-
-  Widget _approvals() => _panel(
-    'Pending Approvals', Icons.fact_check_outlined,
-    Column(children: [
-      _approvalRow('Admission Applications', Icons.school_outlined,
-        _data.pendingAdmissions, widget.onAdmissions ?? widget.onNewAdmission),
-      _approvalRow('Expense Requests', Icons.receipt_long_outlined,
-        _data.pendingExpenses, widget.onExpenses),
-      _approvalRow('Leave Requests', Icons.groups_2_outlined,
-        _data.pendingLeave,
-        () => _notConfigured('Leave requests')),
-    ]),
-    trailing: TextButton(
-      onPressed: widget.onAdmissions ?? widget.onNewAdmission,
-      child: const Text('View All', style: TextStyle(
-          decoration: TextDecoration.underline)),
-    ),
-  );
-
-  Widget _approvalRow(String label, IconData icon, int? count,
-      VoidCallback navigate) => Column(children: [
-    ListTile(
-      dense: true,
+  Widget _viewAll(VoidCallback? callback) => TextButton(
+    onPressed: callback ?? () => _notAvailable('This list'),
+    style: TextButton.styleFrom(
       visualDensity: VisualDensity.compact,
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: _teal, size: 22),
-      title: Text(label, style: const TextStyle(fontSize: 12)),
-      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFEBC5),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Text(count == null ? '—' : '$count',
-            style: const TextStyle(color: Color(0xFF8C5D14),
-                fontSize: 13, fontWeight: FontWeight.bold)),
-        ),
-        const SizedBox(width: 4),
-        const Icon(Icons.chevron_right, size: 18),
-      ]),
-      onTap: navigate,
+      foregroundColor: _deep,
+      padding: const EdgeInsets.symmetric(horizontal: 1),
     ),
-    const Divider(height: 1, color: Color(0xFFE2EAEF)),
+    child: const Row(mainAxisSize: MainAxisSize.min, children: [
+      Text('View All', style: TextStyle(
+        decoration: TextDecoration.underline,
+        fontSize: 12, fontWeight: FontWeight.w600)),
+      SizedBox(width: 3),
+      Icon(Icons.arrow_forward_ios_rounded, size: 12),
+    ]),
+  );
+
+  Widget _admissionsPanel({required bool desktop}) => DashboardPanel(
+    key: const Key('dashboard-recent-admissions'),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _panelHeading('Recent Admissions', Icons.person_add_alt_1_outlined,
+        trailing: _viewAll(widget.onStudents)),
+      const SizedBox(height: 10),
+      if (desktop)
+        _recentTable()
+      else
+        _recentMobileList(),
+    ]),
+  );
+
+  Widget _recentTable() => Column(children: [
+    Container(
+      height: 33,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF1F5),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: const Row(children: [
+        Expanded(flex: 5, child: Text('Student Name',
+            style: TextStyle(fontWeight: FontWeight.bold,
+              fontSize: 11, color: DashboardColors.ink))),
+        Expanded(flex: 3, child: Text('Class',
+            style: TextStyle(fontWeight: FontWeight.bold,
+              fontSize: 11, color: DashboardColors.ink))),
+        Expanded(flex: 3, child: Text('Admission Date',
+            style: TextStyle(fontWeight: FontWeight.bold,
+              fontSize: 11, color: DashboardColors.ink))),
+      ]),
+    ),
+    if (_data.recentAdmissions.isEmpty)
+      const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: Text('No approved admissions in the active school year.'),
+      ),
+    for (final item in _data.recentAdmissions.take(4)) ...[
+      SizedBox(height: 36, child: Row(children: [
+        const CircleAvatar(radius: 12,
+          backgroundColor: Color(0xFFE2EEEE),
+          child: Icon(Icons.person, size: 15, color: DashboardColors.teal)),
+        const SizedBox(width: 8),
+        Expanded(flex: 5, child: Text(item.name, maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: _text, fontWeight: FontWeight.w600,
+            fontSize: 11))),
+        Expanded(flex: 3, child: Text(item.className, maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: _text, fontSize: 11))),
+        Expanded(flex: 3, child: Text(item.when, maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: _text, fontSize: 11))),
+      ])),
+      const Divider(height: 1, color: Color(0xFFE1EAF0)),
+    ],
   ]);
 
-  Widget _sync() => _panel(
-    'Sync / Backup Status', Icons.sync_outlined,
-    Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFE8F4F0),
-          borderRadius: BorderRadius.circular(11),
-        ),
-        child: const Row(children: [
-          Icon(Icons.cloud_off_outlined, color: _deep, size: 27),
-          SizedBox(width: 8),
+  Widget _recentMobileList() => Column(children: [
+    if (_data.recentAdmissions.isEmpty)
+      const Padding(
+        padding: EdgeInsets.symmetric(vertical: 26),
+        child: Text('No approved admissions in the active school year.'),
+      ),
+    for (final entry in _data.recentAdmissions.take(3)) ...[
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(children: [
+          const DashboardIconTile(
+            icon: Icons.school_outlined, size: 39),
+          const SizedBox(width: 10),
           Expanded(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Not configured', style: TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.bold, color: _deep)),
-              Text('Offline sync and backups will be enabled '
-                   'after device authorization and testing.',
-                  style: TextStyle(fontSize: 11, color: _ink)),
+              Text(entry.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 13, color: _text,
+                  fontWeight: FontWeight.w800)),
+              const SizedBox(height: 3),
+              Text(entry.when, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 10, color: _secondary)),
             ],
           )),
+          const SizedBox(width: 5),
+          Container(
+            constraints: const BoxConstraints(maxWidth: 75),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: DashboardColors.pale,
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Text(entry.className, maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: DashboardColors.deep,
+                fontSize: 11, fontWeight: FontWeight.w800)),
+          ),
         ]),
       ),
-      const SizedBox(height: 12),
-      Row(children: [
-        Expanded(child: OutlinedButton.icon(
-          onPressed: () => _notConfigured('Sync'),
-          icon: const Icon(Icons.sync, size: 18),
-          label: const Text('Sync Now', style: TextStyle(fontSize: 12)),
-        )),
-        const SizedBox(width: 7),
-        Expanded(child: OutlinedButton.icon(
-          onPressed: () => _notConfigured('Backup'),
-          icon: const Icon(Icons.cloud_upload_outlined, size: 18),
-          label: const Text('Backup Now', style: TextStyle(fontSize: 12)),
-        )),
-      ]),
+      const Divider(height: 1, color: Color(0xFFE1EAF0)),
+    ],
+  ]);
+
+  Widget _trendPanel() => DashboardPanel(
+    key: const Key('dashboard-fee-trend'),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _panelHeading('Fee Collection Trend', Icons.query_stats_outlined,
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: const Color(0xFFCDDAE4)),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Text('Last 6 Months', style: TextStyle(
+              color: _text, fontSize: 10)),
+            const SizedBox(width: 5),
+            Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: _text),
+          ]),
+        ),
+      ),
+      const SizedBox(height: 10),
+      if (_data.feeTrend.isEmpty)
+        const SizedBox(height: 180,
+          child: Center(child: Text('Fee ledger has not been deployed.')))
+      else LayoutBuilder(builder: (context, bounds) {
+        final showSummary = bounds.maxWidth >= 480;
+        return Row(children: [
+          Expanded(child: DashboardTrendChart(
+            months: _data.feeTrend,
+            currency: _data.currencyCode,
+            height: 190,
+          )),
+          if (showSummary) ...[
+            const SizedBox(width: 13),
+            SizedBox(width: 149, height: 185,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECF6F2),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    const Icon(Icons.savings_outlined,
+                        color: DashboardColors.deep, size: 25),
+                    const Text('Total Collected',
+                      style: TextStyle(fontSize: 11,
+                          color: DashboardColors.ink)),
+                    FittedBox(fit: BoxFit.scaleDown,
+                      child: Text(_money(_data.feeCollected),
+                        style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.w900,
+                          color: DashboardColors.deep))),
+                    const Divider(height: 8),
+                    const Text('vs. Previous 6 Months',
+                      style: TextStyle(fontSize: 10,
+                          color: DashboardColors.ink)),
+                    if (_data.isDemo)
+                      const Align(alignment: Alignment.centerLeft,
+                        child: Text('▲ +12.4%',
+                          style: TextStyle(color: Color(0xFF15824C),
+                              fontSize: 12, fontWeight: FontWeight.w800))),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ]);
+      }),
     ]),
+  );
+
+  Widget _attendancePanel() {
+    final p = _data.attendancePresent;
+    final total = _data.attendanceTotal;
+    final fraction = p == null || total == null || total <= 0
+        ? 0.0 : (p / total).clamp(0.0, 1.0).toDouble();
+    return DashboardPanel(
+      key: const Key('dashboard-attendance-summary'),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        _panelHeading('Attendance Summary', Icons.calendar_month_outlined,
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFC6D6E2)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Row(mainAxisSize: MainAxisSize.min, children: [
+              Text('Today', style: TextStyle(fontSize: 10)),
+              Icon(Icons.keyboard_arrow_down_rounded, size: 15),
+            ]),
+          ),
+        ),
+        const Divider(height: 18, color: Color(0xFFDBE7EE)),
+        if (total == null)
+          const SizedBox(height: 142,
+            child: Center(child: Text('Attendance records are not configured.')))
+        else SizedBox(height: 142, child: Row(children: [
+          DashboardDonutIndicator(ratio: fraction,
+            label: _attendancePercent(), size: 126),
+          const SizedBox(width: 10),
+          Expanded(child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _attendanceLine('Present', _count(p),
+                DashboardColors.teal,
+                extra: _attendancePercent()),
+              const Divider(height: 16),
+              _attendanceLine('Absent', _count(total - (p ?? 0)),
+                const Color(0xFFB8CBD2),
+                extra: '${(100 * (total - (p ?? 0)) / math.max(total, 1)).toStringAsFixed(1)}%'),
+              const Divider(height: 16),
+              _attendanceLine('Total Students', _count(total),
+                DashboardColors.deep),
+            ],
+          )),
+        ])),
+      ]),
+    );
+  }
+
+  Widget _attendanceLine(String label, String value, Color color,
+      {String? extra}) => Row(children: [
+    Container(width: 9, height: 9, decoration: BoxDecoration(
+      color: color, borderRadius: BorderRadius.circular(2))),
+    const SizedBox(width: 6),
+    Expanded(child: Text(label, maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(fontSize: 10, color: _text))),
+    Text(value, style: TextStyle(fontSize: 11,
+        fontWeight: FontWeight.w800, color: _text)),
+    if (extra != null) ...[
+      const SizedBox(width: 4),
+      Text('($extra)', style: TextStyle(fontSize: 9, color: _secondary)),
+    ],
+  ]);
+
+  Widget _approvalsPanel({required bool desktop}) => DashboardPanel(
+    key: const Key('dashboard-pending-approvals'),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _panelHeading('Pending Approvals', Icons.fact_check_outlined,
+        trailing: _viewAll(widget.onAdmissions)),
+      const Divider(height: 16, color: Color(0xFFDBE7EE)),
+      _approvalRow(desktop ? 'Admission Applications' : 'Admission Requests',
+          Icons.person_add_alt_1_outlined,
+          _data.pendingAdmissions, widget.onAdmissions ?? widget.onNewAdmission),
+      _approvalRow('Expense Requests', Icons.receipt_long_outlined,
+          _data.pendingExpenses, widget.onExpenses),
+      _approvalRow(desktop ? 'Leave Requests' : 'Student Transfer Requests',
+          desktop ? Icons.groups_2_outlined : Icons.swap_horiz_rounded,
+          desktop ? _data.pendingLeave :
+              _data.isDemo ? 1 : null,
+          () => _notAvailable(desktop ? 'Leave Requests' : 'Student transfers')),
+    ]),
+  );
+
+  Widget _approvalRow(String label, IconData icon, int? count,
+      VoidCallback onTap) => Column(children: [
+    InkWell(
+      onTap: onTap,
+      child: SizedBox(height: 45, child: Row(children: [
+        Icon(icon, color: DashboardColors.teal, size: 24),
+        const SizedBox(width: 12),
+        Expanded(child: Text(label,
+            maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 12, color: _text))),
+        Container(
+          width: 42, height: 26,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFEBC6),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(count == null ? '—' : '$count',
+              style: const TextStyle(color: Color(0xFF8D5712),
+                  fontSize: 12, fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(width: 12),
+        Icon(Icons.chevron_right_rounded, size: 20, color: _secondary),
+      ])),
+    ),
+    const Divider(height: 1, color: Color(0xFFE2E9ED)),
+  ]);
+
+  Widget _syncPanel({required bool desktop}) => DashboardPanel(
+    key: const Key('dashboard-sync-status'),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _panelHeading(desktop ? 'Sync / Backup Status' : 'Sync Status',
+        Icons.sync_outlined,
+        trailing: desktop ? null : IconButton(
+          tooltip: 'About synchronization',
+          onPressed: () => _notAvailable('Device synchronization'),
+          icon: Icon(Icons.info_outline_rounded,
+            size: 20, color: _secondary),
+        ),
+      ),
+      const SizedBox(height: 13),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: const Color(0xFFE4F4EF),
+        ),
+        child: Row(children: [
+          const Icon(Icons.cloud_off_outlined,
+            color: DashboardColors.teal, size: 30),
+          const SizedBox(width: 10),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text('Not configured',
+                style: TextStyle(color: DashboardColors.ink,
+                    fontSize: 13, fontWeight: FontWeight.w800)),
+              SizedBox(height: 4),
+              Text('Sync and backup services are not enabled.',
+                maxLines: 2,
+                style: TextStyle(color: DashboardColors.muted, fontSize: 10)),
+            ],
+          )),
+          const Icon(Icons.storage_outlined,
+              color: DashboardColors.teal, size: 28),
+        ]),
+      ),
+      if (desktop) ...[
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: _syncButton('Sync Now', Icons.sync_outlined)),
+          const SizedBox(width: 9),
+          Expanded(child: _syncButton('Backup Now', Icons.cloud_upload_outlined)),
+        ]),
+      ] else ...[
+        const SizedBox(height: 9),
+        Row(children: [
+          const Icon(Icons.sync_rounded,
+              color: DashboardColors.teal, size: 23),
+          const SizedBox(width: 10),
+          Expanded(child: Text(
+            'Automatic synchronization will appear here once enabled.',
+            style: TextStyle(fontSize: 11, color: _secondary),
+          )),
+        ]),
+      ],
+    ]),
+  );
+
+  Widget _syncButton(String label, IconData icon) => SizedBox(
+    height: 34,
+    child: OutlinedButton.icon(
+      style: OutlinedButton.styleFrom(
+        backgroundColor: _dark ? const Color(0xFF19323A) : Colors.white,
+        padding: EdgeInsets.zero,
+        side: const BorderSide(color: Color(0xFF0B978B)),
+        foregroundColor: _deep,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      onPressed: () => _notAvailable(label),
+      icon: Icon(icon, size: 18),
+      label: Text(label,
+          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+    ),
   );
 }
