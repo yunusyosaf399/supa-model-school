@@ -4,8 +4,9 @@ import 'package:supa_model_school/main.dart';
 import 'package:supa_model_school/features/auth/data/owner_auth_gateway.dart';
 
 class FakeOwnerAuth implements OwnerAuthGateway {
-  FakeOwnerAuth({this.allow = true});
+  FakeOwnerAuth({this.allow = true, this.setupComplete = true});
   final bool allow;
+  final bool setupComplete;
   bool signedOut = false;
 
   @override
@@ -19,12 +20,13 @@ class FakeOwnerAuth implements OwnerAuthGateway {
     if (!allow || email != 'owner@example.test' || password != 'valid-passphrase') {
       throw StateError('Denied');
     }
-    return const OwnerAccess(
+    return OwnerAccess(
       userId: 'fictional-auth-id',
+      setupComplete: setupComplete,
       displayName: 'Test School Owner',
       schoolId: 'fictional-school-id',
       schoolName: 'Fictional School',
-      campuses: [
+      campuses: const [
         OwnerCampus(id: 'campus-1', name: 'Main Campus'),
       ],
     );
@@ -77,6 +79,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(auth.signedOut, isTrue);
     expect(find.byKey(const Key('login-email')), findsOneWidget);
+  });
+
+  testWidgets('pending Owner is directed to the school setup form',
+      (tester) async {
+    final auth = FakeOwnerAuth(setupComplete: false);
+    await tester.pumpWidget(SupaModelSchoolApp(authGateway: auth));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const Key('login-email')), 'owner@example.test');
+    await tester.enterText(
+        find.byKey(const Key('login-password')), 'valid-passphrase');
+    await tester.tap(find.byKey(const Key('login-sign-in')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('owner-control-panel')), findsOneWidget);
+    expect(find.text('Owner Control Panel'), findsOneWidget);
   });
 
   testWidgets('failed Owner authorization keeps login visible', (tester) async {
