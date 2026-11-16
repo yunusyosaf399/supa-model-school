@@ -138,10 +138,11 @@ BEGIN
     INSERT INTO public.fee_charges(
       school_id,campus_id,academic_year_id,student_id,enrollment_id,
       class_id,billing_cycle_id,billing_month,category_id,fee_plan_id,
-      plan_item_id,source_kind,gross_minor,discount_minor,due_on,posted_by)
+      plan_item_id,source_kind,gross_minor,discount_minor,due_on,posted_by,
+      manual_operation_id)
     VALUES(v_s,v_b,v_y,v_student,v_enroll,v_class,v_cycle,'2026-04-01',
-           v_tuition,v_plan,v_tuition_item,'scheduled',100000,0,
-           '2026-04-10',v_actor);
+           v_tuition,NULL,NULL,'manual',100000,0,
+           '2026-04-10',v_actor,'aaaaaaaa-0000-4000-8000-000000000009');
     RAISE EXCEPTION 'Cross-campus fee source accepted';
   EXCEPTION WHEN foreign_key_violation THEN NULL;
   END;
