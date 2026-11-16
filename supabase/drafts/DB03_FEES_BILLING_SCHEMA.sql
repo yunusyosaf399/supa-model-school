@@ -507,6 +507,39 @@ CREATE TRIGGER fee_operation_receipts_immutable
   BEFORE UPDATE OR DELETE ON public.fee_operation_receipts
   FOR EACH ROW EXECUTE FUNCTION app_private.db03_reject_posted_mutation();
 
+-- TRUNCATE bypasses row-level UPDATE/DELETE triggers. Even an accidental
+-- privileged bulk truncate must not erase a posted financial journal.
+CREATE TRIGGER fee_charges_no_truncate
+  BEFORE TRUNCATE ON public.fee_charges
+  FOR EACH STATEMENT EXECUTE FUNCTION app_private.db03_reject_posted_mutation();
+CREATE TRIGGER fee_charge_adjustments_no_truncate
+  BEFORE TRUNCATE ON public.fee_charge_adjustments
+  FOR EACH STATEMENT EXECUTE FUNCTION app_private.db03_reject_posted_mutation();
+CREATE TRIGGER fee_receipts_no_truncate
+  BEFORE TRUNCATE ON public.fee_receipts
+  FOR EACH STATEMENT EXECUTE FUNCTION app_private.db03_reject_posted_mutation();
+CREATE TRIGGER fee_allocations_no_truncate
+  BEFORE TRUNCATE ON public.fee_allocations
+  FOR EACH STATEMENT EXECUTE FUNCTION app_private.db03_reject_posted_mutation();
+CREATE TRIGGER student_credit_entries_no_truncate
+  BEFORE TRUNCATE ON public.student_credit_entries
+  FOR EACH STATEMENT EXECUTE FUNCTION app_private.db03_reject_posted_mutation();
+CREATE TRIGGER fee_credit_applications_no_truncate
+  BEFORE TRUNCATE ON public.fee_credit_applications
+  FOR EACH STATEMENT EXECUTE FUNCTION app_private.db03_reject_posted_mutation();
+CREATE TRIGGER fee_receipt_reversals_no_truncate
+  BEFORE TRUNCATE ON public.fee_receipt_reversals
+  FOR EACH STATEMENT EXECUTE FUNCTION app_private.db03_reject_posted_mutation();
+CREATE TRIGGER fee_collection_assignments_no_truncate
+  BEFORE TRUNCATE ON public.fee_collection_assignments
+  FOR EACH STATEMENT EXECUTE FUNCTION app_private.db03_reject_posted_mutation();
+CREATE TRIGGER admission_fee_deposits_no_truncate
+  BEFORE TRUNCATE ON public.admission_fee_deposits
+  FOR EACH STATEMENT EXECUTE FUNCTION app_private.db03_reject_posted_mutation();
+CREATE TRIGGER fee_operation_receipts_no_truncate
+  BEFORE TRUNCATE ON public.fee_operation_receipts
+  FOR EACH STATEMENT EXECUTE FUNCTION app_private.db03_reject_posted_mutation();
+
 -- Intentional deny-by-default on every public finance table. No permissive
 -- policies or grants for authenticated/anon; trusted server functions with
 -- specific current role+campus checks must be reviewed separately.
