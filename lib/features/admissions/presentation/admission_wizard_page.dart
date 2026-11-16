@@ -1346,66 +1346,103 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     ],
   );
 
-  Widget _feeFields() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text('Fee preferences (no financial posting)',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 10),
-        const Text('Tuition and other fee amounts will come from approved '
-            'campus/class plans. This screen does not collect money.'),
-        const SizedBox(height: 16),
-        _choice(
-          label: 'Admission fee status',
-          current: _draft.admissionFeeStatus,
-          choices: const {
-            'not_recorded': 'Not recorded / skip',
-            'unpaid': 'Unpaid',
-            'paid': 'Paid (verification required)',
-          },
-          onChanged: (v) => setState(() => _draft.admissionFeeStatus = v!),
-        ),
-        const SizedBox(height: 10),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Uses school transport'),
-          value: _draft.usesTransport,
-          onChanged: (v) => setState(() => _draft.usesTransport = v),
-        ),
-        if (_draft.usesTransport) ...[
-          TextFormField(
-            initialValue: _draft.transportNotes,
-            decoration: const InputDecoration(
-              labelText: 'Transport notes',
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (v) => _draft.transportNotes = v,
-          ),
+  Widget _feeFields() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const Text('Admission Fee Preferences',
+        style: TextStyle(color: _teal,
+          fontWeight: FontWeight.w900, fontSize: 15)),
+      const SizedBox(height: 6),
+      const Text('Fee amounts and payment verification will come from '
+        'authorized school plans. No money is collected on this screen.',
+        style: TextStyle(fontSize: 12, color: Color(0xFF617887))),
+      const SizedBox(height: 15),
+      Container(
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF7FBFE),
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(color: _line)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Row(children: [
+            Icon(Icons.savings_outlined, color: _teal),
+            SizedBox(width: 9),
+            Text('Admission Fee Status', style: TextStyle(
+              color: _teal, fontWeight: FontWeight.w800)),
+          ]),
           const SizedBox(height: 12),
-        ],
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Request a fee discount'),
-          subtitle: const Text('Requires an authorized discount rule later'),
-          value: _draft.requestsDiscount,
-          onChanged: (v) => setState(() => _draft.requestsDiscount = v),
-        ),
-        if (_draft.requestsDiscount)
-          TextFormField(
-            initialValue: _draft.discountNotes,
-            decoration: const InputDecoration(
-              labelText: 'Discount request notes',
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (v) => _draft.discountNotes = v,
+          _choice(label: 'Select admission fee status',
+            current: _draft.admissionFeeStatus,
+            choices: const {
+              'not_recorded': 'Skip / Not recorded',
+              'unpaid': 'Unpaid',
+              'paid': 'Paid (requires verification)',
+            },
+            onChanged: (v) => setState(
+              () => _draft.admissionFeeStatus = v ?? 'not_recorded')),
+          const SizedBox(height: 8),
+          const Text('Selecting Paid does not record a payment or issue a receipt.',
+            style: TextStyle(fontSize: 11, color: Color(0xFF657C89))),
+        ]),
+      ),
+      const SizedBox(height: 12),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: const Color(0xFFF7FBFE),
+          border: Border.all(color: _line),
+          borderRadius: BorderRadius.circular(11)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            secondary: const Icon(Icons.directions_bus_outlined, color: _teal),
+            title: const Text('School Transport', style: TextStyle(
+              fontWeight: FontWeight.w800, fontSize: 14)),
+            subtitle: const Text('Request transport for this student',
+              style: TextStyle(fontSize: 11)),
+            value: _draft.usesTransport,
+            onChanged: (v) => setState(() => _draft.usesTransport = v),
           ),
-        const SizedBox(height: 12),
-        const Text('Paid/unpaid is informational in this preview. '
-            'No payment receipt or school ledger entry is created.'),
-      ],
-    );
-  }
+          if (_draft.usesTransport) ...[
+            _styledField(label: 'Transport Notes',
+              icon: Icons.notes_outlined,
+              initialValue: _draft.transportNotes,
+              onChanged: (v) => _draft.transportNotes = v),
+            const SizedBox(height: 10),
+          ],
+          const Divider(height: 12, color: _line),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            secondary: const Icon(Icons.percent_outlined, color: _teal),
+            title: const Text('Scholarship / Discount Request',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+            subtitle: const Text('Requires an authorized discount rule',
+              style: TextStyle(fontSize: 11)),
+            value: _draft.requestsDiscount,
+            onChanged: (v) => setState(() => _draft.requestsDiscount = v),
+          ),
+          if (_draft.requestsDiscount)
+            _styledField(label: 'Discount Request Notes',
+              icon: Icons.notes_outlined,
+              initialValue: _draft.discountNotes,
+              onChanged: (v) => _draft.discountNotes = v),
+        ]),
+      ),
+      const SizedBox(height: 13),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: _pale, borderRadius: BorderRadius.circular(10)),
+        child: const Row(children: [
+          Icon(Icons.info_outline, color: _teal),
+          SizedBox(width: 10),
+          Expanded(child: Text('Tuition, transport and other fee categories '
+            'will be calculated after an approved enrollment. '
+            'No financial ledger entry has been created.',
+            style: TextStyle(fontSize: 12))),
+        ]),
+      ),
+    ],
+  );
 
   Widget _reviewFields() {
     final warning = _draft.validateStep(AdmissionStep.review);
