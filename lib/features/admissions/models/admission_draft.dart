@@ -78,6 +78,14 @@ class AdmissionDraft {
   bool requestsDiscount = false;
   String discountNotes = '';
 
+  /// Two calendar months, clamping month-end dates as Postgres intervals do.
+  static DateTime latestConditionalDeadline(DateTime today) {
+    final target = DateTime(today.year, today.month + 2, 1);
+    final lastDay = DateTime(target.year, target.month + 1, 0).day;
+    final day = today.day > lastDay ? lastDay : today.day;
+    return DateTime(target.year, target.month, day);
+  }
+
   bool get transferCertificateApplicable => previousSchool.trim().isNotEmpty;
 
   List<String> get requiredDocumentNames => [
@@ -144,7 +152,7 @@ class AdmissionDraft {
         if (DateTime(deadline.year, deadline.month, deadline.day).isBefore(day)) {
           return 'The document deadline cannot be in the past.';
         }
-        final latest = DateTime(day.year, day.month + 2, day.day);
+        final latest = latestConditionalDeadline(day);
         if (deadline.isAfter(latest)) {
           return 'Choose a document deadline within two calendar months.';
         }
