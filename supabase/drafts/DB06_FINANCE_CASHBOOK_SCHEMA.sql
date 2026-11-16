@@ -570,7 +570,7 @@ CREATE TABLE public.bank_reconciliation_matches (
 -- amount/direction. Statement date may legitimately lag journal date.
 CREATE FUNCTION app_private.db06_validate_bank_match()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
-AS $
+AS $$
 DECLARE
   v_ledger_account uuid;
   v_line_account uuid;
@@ -601,7 +601,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 CREATE TRIGGER db06_bank_match_guard
   BEFORE INSERT ON public.bank_reconciliation_matches
   FOR EACH ROW EXECUTE FUNCTION app_private.db06_validate_bank_match();
@@ -632,7 +632,7 @@ CREATE TABLE public.financial_operation_receipts (
 -- from racing a pending posting in this transaction.
 CREATE FUNCTION app_private.db06_require_open_journal_period()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
-AS $
+AS $$
 DECLARE v_status text;
 BEGIN
   SELECT p.status INTO v_status FROM public.accounting_periods p
@@ -647,7 +647,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 CREATE TRIGGER db06_journal_open_period
   BEFORE INSERT ON public.ledger_journals
   FOR EACH ROW EXECUTE FUNCTION app_private.db06_require_open_journal_period();
@@ -656,7 +656,7 @@ CREATE TRIGGER db06_journal_open_period
 -- future privileged posting caller forgets to check campus allocation.
 CREATE FUNCTION app_private.db06_check_ledger_line_scope()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
-AS $
+AS $$
 DECLARE
   v_campus uuid;
   v_active boolean;
@@ -700,7 +700,7 @@ CREATE TRIGGER db06_line_scope
 -- Future operations cannot attach a source later to a committed journal.
 CREATE FUNCTION app_private.db06_check_source_creation_txid()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
-AS $
+AS $$
 DECLARE v_created_txid bigint;
 BEGIN
   SELECT j.creation_txid INTO v_created_txid
@@ -712,7 +712,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 CREATE TRIGGER db06_source_same_transaction
   BEFORE INSERT ON public.ledger_source_links
   FOR EACH ROW EXECUTE FUNCTION app_private.db06_check_source_creation_txid();
@@ -890,7 +890,7 @@ CREATE TRIGGER db06_cash_counts_no_truncate
 -- silently reopen, change identity or be deleted after reporting.
 CREATE FUNCTION app_private.db06_validate_period_transition()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
-AS $
+AS $$
 BEGIN
   IF OLD.status='closed'
     OR NEW.school_id IS DISTINCT FROM OLD.school_id
@@ -902,7 +902,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 CREATE TRIGGER db06_period_close_guard
   BEFORE UPDATE ON public.accounting_periods
   FOR EACH ROW EXECUTE FUNCTION app_private.db06_validate_period_transition();
@@ -915,7 +915,7 @@ CREATE TRIGGER db06_period_no_truncate
 
 CREATE FUNCTION app_private.db06_validate_bank_reconcile_transition()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
-AS $
+AS $$
 BEGIN
   IF OLD.status='final'
     OR NEW.school_id IS DISTINCT FROM OLD.school_id
@@ -928,7 +928,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 CREATE TRIGGER db06_bank_reconcile_final_guard
   BEFORE UPDATE ON public.bank_reconciliations
   FOR EACH ROW EXECUTE FUNCTION app_private.db06_validate_bank_reconcile_transition();
