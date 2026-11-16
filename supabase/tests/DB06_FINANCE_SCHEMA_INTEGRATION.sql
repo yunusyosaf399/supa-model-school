@@ -297,6 +297,13 @@ BEGIN
   RAISE EXCEPTION 'Final closing reopened';
  EXCEPTION WHEN SQLSTATE '23514' THEN NULL;
  END;
+ BEGIN
+  INSERT INTO public.cash_closing_counts(
+   school_id,campus_id,cash_closing_id,denomination_minor,piece_count)
+  VALUES(s,ca,close_id,500,1);
+  RAISE EXCEPTION 'Late cash denomination insert after final close accepted';
+ EXCEPTION WHEN SQLSTATE '23514' THEN NULL;
+ END;
 
  -- BANK reconciliation matches statement to ledger account movement.
  INSERT INTO public.bank_statement_lines(
@@ -313,12 +320,14 @@ BEGIN
   ledger_line_id,matched_by)
  VALUES(s,bank_wallet,recon_id,bank_line_id,bank_debit_line,actor_id);
  -- Statement inflow cannot match a different cash account ledger line.
- INSERT INTO public.bank_statement_lines(
-  school_id,campus_id,bank_account_id,external_line_key,
-  booked_on,inflow_minor,imported_by)
- VALUES(s,cb,bank_wallet,'BANK-STMT-MISMATCH-002',
-  '2026-04-05',10000,actor_id);
+ -- Keep the fake unmatched import inside the savepoint so finalization
+ -- does not inherit an intentional mismatch after the negative test.
  BEGIN
+  INSERT INTO public.bank_statement_lines(
+   school_id,campus_id,bank_account_id,external_line_key,
+   booked_on,inflow_minor,imported_by)
+  VALUES(s,cb,bank_wallet,'BANK-STMT-MISMATCH-002',
+   '2026-04-05',10000,actor_id);
   INSERT INTO public.bank_reconciliation_matches(
    school_id,bank_account_id,reconciliation_id,bank_statement_line_id,
    ledger_line_id,matched_by)
@@ -337,6 +346,15 @@ BEGIN
   UPDATE public.bank_reconciliations
    SET status='draft',approved_by=NULL,approved_at=NULL WHERE id=recon_id;
   RAISE EXCEPTION 'Final bank reconciliation reopened';
+ EXCEPTION WHEN SQLSTATE '23514' THEN NULL;
+ END;
+ BEGIN
+  INSERT INTO public.bank_statement_lines(
+   school_id,campus_id,bank_account_id,external_line_key,
+   booked_on,inflow_minor,imported_by)
+  VALUES(s,cb,bank_wallet,'BANK-LATE-IMPORT-003',
+   '2026-04-04',500,actor_id);
+  RAISE EXCEPTION 'Late bank statement import changed a final reconciliation';
  EXCEPTION WHEN SQLSTATE '23514' THEN NULL;
  END;
 
