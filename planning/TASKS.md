@@ -4,7 +4,7 @@ Last verified: 2026-11-16.
 **114 tasks: 31 DONE / 82 TODO / 1 IN_PROGRESS / 0 BLOCKED.**
 Authoritative machine-readable status: [tasks.csv](tasks.csv).
 
-**Important:** D03-T03–T05 and D04-T01–T04 are DONE for code authoring/static source review only. The user reports Windows Flutter tests and build passed on 2026-11-15; logs were not independently inspected. Schema-first design is prioritized: DB03 PR #25, DB04 PR #26, DB05 PR #29 and DB06 PR #30 remain DRAFT and NOT deployed, and no Flutter changes are planned in this workstream. Android runtime, Flutter analyzer evidence, PostgreSQL RLS/Edge, offline security, and hosted deployment remain unfinished.
+**Important:** D03-T03–T05 and D04-T01–T04 are DONE for code authoring/static source review only. The user reports Windows Flutter tests and build passed on 2026-11-15; logs were not independently inspected. Schema-first design is prioritized: DB03 PR #25, DB04 PR #26, DB05 PR #29, DB06 PR #30 and DB07 PR #31 remain DRAFT and NOT deployed, and no Flutter changes are planned in this workstream. Android runtime, Flutter analyzer evidence, PostgreSQL RLS/Edge, offline security, and hosted deployment remain unfinished.
 
 ## Setup
 - [x] `SETUP-01` Identify Supabase link and organization — **DONE**
