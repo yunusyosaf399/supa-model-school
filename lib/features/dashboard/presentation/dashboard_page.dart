@@ -549,7 +549,7 @@ class _DashboardPageState extends State<DashboardPage> {
     Stack(children: [
       Positioned.fill(child: DashboardWaveBackground(mobile: true)),
       Padding(
-        padding: const EdgeInsets.fromLTRB(7, 17, 7, 19),
+        padding: const EdgeInsets.fromLTRB(7, 11, 7, 9),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             const SchoolMark(size: 47),
@@ -570,25 +570,25 @@ class _DashboardPageState extends State<DashboardPage> {
             const SizedBox(width: 2),
             _accountButton(),
           ]),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           Align(alignment: Alignment.centerRight,
               child: _campusSelector(mobile: true)),
-          const SizedBox(height: 17),
+          const SizedBox(height: 9),
           Container(
             key: const Key('dashboard-mobile-greeting'),
-            padding: const EdgeInsets.fromLTRB(11, 5, 5, 14),
+            padding: const EdgeInsets.fromLTRB(11, 3, 5, 9),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Good morning,', style: TextStyle(
-                  fontSize: 29, fontWeight: FontWeight.w900,
+                  fontSize: 27, fontWeight: FontWeight.w900,
                   letterSpacing: -.7, color: _deep,
                 )),
                 const SizedBox(height: 3),
                 Text('Here is today’s summary.', style: TextStyle(
                   fontSize: 16, color: _secondary,
                 )),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Container(width: 43, height: 3,
                   decoration: BoxDecoration(
                     color: DashboardColors.teal,
@@ -610,7 +610,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final columns = desktop ? 4 : 2;
     final gap = desktop ? 15.0 : 10.0;
     final cardWidth = math.max(80.0, (width - gap * (columns - 1)) / columns);
-    final height = desktop ? 119.0 : 110.0;
+    final height = desktop ? 119.0 : 91.0;
     return Wrap(spacing: gap, runSpacing: gap, children: [
       SizedBox(width: cardWidth, height: height,
         child: _metricCard(
@@ -686,7 +686,7 @@ class _DashboardPageState extends State<DashboardPage> {
       DashboardIconTile(
         icon: icon, color: color,
         background: color.withValues(alpha: .11),
-        size: desktop ? 58 : 46,
+        size: desktop ? 58 : 40,
       ),
       SizedBox(width: desktop ? 13 : 8),
       Expanded(child: Column(
@@ -755,7 +755,7 @@ class _DashboardPageState extends State<DashboardPage> {
     ];
     return Row(children: [
       for (var i = 0; i < actions.length; i++) ...[
-        SizedBox(width: cell, height: 99,
+        SizedBox(width: cell, height: 80,
           child: DashboardPanel(
             padding: EdgeInsets.zero,
             child: InkWell(
@@ -765,7 +765,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(actions[i].$2,
-                    size: 30, color: DashboardColors.teal),
+                    size: 28, color: DashboardColors.teal),
                   const SizedBox(height: 7),
                   Text(actions[i].$1, textAlign: TextAlign.center,
                     maxLines: 2, style: TextStyle(
@@ -875,10 +875,10 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
     for (final entry in _data.recentAdmissions.take(3)) ...[
       Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 3),
         child: Row(children: [
           const DashboardIconTile(
-            icon: Icons.school_outlined, size: 43),
+            icon: Icons.school_outlined, size: 39),
           const SizedBox(width: 10),
           Expanded(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
