@@ -81,3 +81,19 @@ breakpoint, form keys, and preserved callbacks. Real Flutter analyzer, widget
 tests, and Windows/Android screenshots must be run on the user's machine;
 the current tool environment has no Flutter/Dart SDK. New test source:
 `test/features/auth/login_reference_layout_widget_test.dart`.
+
+## Desktop compact-card correction — 2026-11-16
+
+After reviewing the user's first Windows screenshot, the desktop login form
+was made **narrower and shorter** and shifted downward to keep the top-right
+appearance and debug-preview icons completely unobstructed.
+
+- Desktop card width: `min(470, windowWidth × 0.335)` logical pixels.
+- Desktop card top: `max(76, windowHeight × 0.108)` logical pixels.
+- Reduced desktop internal padding and vertical spacing (mobile values
+  unchanged), while keeping all existing accessible login controls.
+- New widget regression assertions cover the card width and top offset.
+
+This is a layout-only correction: no change to Auth callbacks, Supabase
+settings, image assets, or database schema. Flutter runtime rendering must
+still be verified on Windows.
