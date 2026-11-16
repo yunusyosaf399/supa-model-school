@@ -10,7 +10,7 @@ BEGIN;
 -- enforce one campus/year and school at FK level, not only in client code.
 ALTER TABLE public.student_enrollments
   ADD CONSTRAINT db03_enrollment_finance_scope_unique
-  UNIQUE (id,student_id,school_id,campus_id,academic_year_id);
+  UNIQUE (id,student_id,school_id,campus_id,academic_year_id,class_id);
 
 CREATE TABLE public.fee_categories (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -50,8 +50,12 @@ CREATE TABLE public.fee_plans (
   CHECK (effective_to IS NULL OR effective_to >= effective_from),
   UNIQUE (campus_id,academic_year_id,class_id,version_no),
   UNIQUE (id,school_id,campus_id),
-  UNIQUE (id,school_id,campus_id,academic_year_id)
+  UNIQUE (id,school_id,campus_id,academic_year_id),
+  UNIQUE (id,school_id,campus_id,academic_year_id,class_id)
 );
+CREATE UNIQUE INDEX one_active_fee_plan_per_class
+  ON public.fee_plans(campus_id,academic_year_id,class_id)
+  WHERE status='active';
 
 CREATE TABLE public.fee_plan_items (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -171,6 +175,7 @@ CREATE TABLE public.fee_charges (
   academic_year_id uuid NOT NULL,
   student_id uuid NOT NULL,
   enrollment_id uuid NOT NULL,
+  class_id uuid NOT NULL,
   billing_cycle_id uuid NOT NULL,
   billing_month date NOT NULL CHECK (extract(day FROM billing_month)=1),
   category_id uuid NOT NULL,
@@ -187,17 +192,18 @@ CREATE TABLE public.fee_charges (
   description text,
   posted_at timestamptz NOT NULL DEFAULT now(),
   posted_by uuid NOT NULL REFERENCES auth.users(id),
-  FOREIGN KEY (enrollment_id,student_id,school_id,campus_id,academic_year_id)
+  FOREIGN KEY (enrollment_id,student_id,school_id,campus_id,academic_year_id,class_id)
     REFERENCES public.student_enrollments(
-      id,student_id,school_id,campus_id,academic_year_id) ON DELETE RESTRICT,
+      id,student_id,school_id,campus_id,academic_year_id,class_id)
+    ON DELETE RESTRICT,
   FOREIGN KEY (billing_cycle_id,school_id,campus_id,academic_year_id,billing_month)
     REFERENCES public.fee_billing_cycles(
       id,school_id,campus_id,academic_year_id,billing_month)
     ON DELETE RESTRICT,
   FOREIGN KEY (category_id,school_id)
     REFERENCES public.fee_categories(id,school_id) ON DELETE RESTRICT,
-  FOREIGN KEY (fee_plan_id,school_id,campus_id,academic_year_id)
-    REFERENCES public.fee_plans(id,school_id,campus_id,academic_year_id)
+  FOREIGN KEY (fee_plan_id,school_id,campus_id,academic_year_id,class_id)
+    REFERENCES public.fee_plans(id,school_id,campus_id,academic_year_id,class_id)
     ON DELETE RESTRICT,
   FOREIGN KEY (plan_item_id,fee_plan_id,category_id)
     REFERENCES public.fee_plan_items(id,fee_plan_id,category_id)
