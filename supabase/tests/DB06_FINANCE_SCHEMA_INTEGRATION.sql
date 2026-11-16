@@ -153,6 +153,7 @@ BEGIN
 
  -- Validate DEFERRED journal-balance and source-link constraint triggers.
  SET CONSTRAINTS ALL IMMEDIATE;
+ SET CONSTRAINTS ALL DEFERRED;
 
  SELECT sum(l.debit_minor-l.credit_minor) INTO cash_balance
  FROM public.ledger_lines l
@@ -213,6 +214,61 @@ BEGIN
  EXCEPTION WHEN SQLSTATE '23514' THEN NULL;
  END;
 
+ -- A BALANCED journal without any source must fail at commit.
+ BEGIN
+  INSERT INTO public.ledger_journals(
+   school_id,initiating_campus_id,accounting_period_id,period_month,
+   journal_date,journal_kind,operation_id,explanation,posted_by)
+  VALUES(s,ca,pa,'2026-04-01','2026-04-08','capital_in',
+   'a0000000-0000-4000-8000-000000000007',
+   'Source-less journal must be rejected',actor_id);
+  INSERT INTO public.ledger_lines(
+   school_id,campus_id,journal_id,ledger_account_id,debit_minor,credit_minor)
+  SELECT s,ca,id,cash_account,100,0 FROM public.ledger_journals
+   WHERE operation_id='a0000000-0000-4000-8000-000000000007';
+  INSERT INTO public.ledger_lines(
+   school_id,campus_id,journal_id,ledger_account_id,debit_minor,credit_minor)
+  SELECT s,ca,id,equity_account,0,100 FROM public.ledger_journals
+   WHERE operation_id='a0000000-0000-4000-8000-000000000007';
+  SET CONSTRAINTS ALL IMMEDIATE;
+  RAISE EXCEPTION 'Orphan journal accepted';
+ EXCEPTION WHEN SQLSTATE '23514' THEN NULL;
+ END;
+
+ -- Source-linked but UNBALANCED journal must not commit.
+ BEGIN
+  INSERT INTO public.capital_transactions(
+   school_id,campus_id,financial_account_id,capital_kind,amount_minor,
+   occurred_on,reason,operation_id,approved_by)
+  VALUES(s,ca,cash_wallet,'owner_withdrawal',500,
+   '2026-04-08','Fictional invalid debit credit test',
+   'a0000000-0000-4000-8000-000000000008',actor_id);
+  INSERT INTO public.ledger_journals(
+   school_id,initiating_campus_id,accounting_period_id,period_month,
+   journal_date,journal_kind,operation_id,explanation,posted_by)
+  VALUES(s,ca,pa,'2026-04-01','2026-04-08','capital_out',
+   'a0000000-0000-4000-8000-000000000008',
+   'Deliberately unbalanced journal test',actor_id);
+  INSERT INTO public.ledger_source_links(
+   journal_id,school_id,journal_kind,capital_id)
+  SELECT j.id,s,'capital_out',c.id FROM public.ledger_journals j
+   JOIN public.capital_transactions c
+     ON c.school_id=j.school_id AND c.operation_id=j.operation_id
+   WHERE j.operation_id='a0000000-0000-4000-8000-000000000008';
+  INSERT INTO public.ledger_lines(
+   school_id,campus_id,journal_id,ledger_account_id,debit_minor,credit_minor)
+  SELECT s,ca,id,equity_account,500,0 FROM public.ledger_journals
+   WHERE operation_id='a0000000-0000-4000-8000-000000000008';
+  INSERT INTO public.ledger_lines(
+   school_id,campus_id,journal_id,ledger_account_id,debit_minor,credit_minor)
+  SELECT s,ca,id,cash_account,0,400 FROM public.ledger_journals
+   WHERE operation_id='a0000000-0000-4000-8000-000000000008';
+  SET CONSTRAINTS ALL IMMEDIATE;
+  RAISE EXCEPTION 'Unbalanced ledger accepted';
+ EXCEPTION WHEN SQLSTATE '23514' THEN NULL;
+ END;
+ SET CONSTRAINTS ALL DEFERRED;
+
  -- CASH closing cannot finalize with unresolved offline sync.
  INSERT INTO public.cash_closings(
   id,school_id,campus_id,financial_account_id,closing_date,
@@ -256,6 +312,24 @@ BEGIN
   school_id,bank_account_id,reconciliation_id,bank_statement_line_id,
   ledger_line_id,matched_by)
  VALUES(s,bank_wallet,recon_id,bank_line_id,bank_debit_line,actor_id);
+ -- Statement inflow cannot match a different cash account ledger line.
+ INSERT INTO public.bank_statement_lines(
+  school_id,campus_id,bank_account_id,external_line_key,
+  booked_on,inflow_minor,imported_by)
+ VALUES(s,cb,bank_wallet,'BANK-STMT-MISMATCH-002',
+  '2026-04-05',10000,actor_id);
+ BEGIN
+  INSERT INTO public.bank_reconciliation_matches(
+   school_id,bank_account_id,reconciliation_id,bank_statement_line_id,
+   ledger_line_id,matched_by)
+  SELECT s,bank_wallet,recon_id,bs.id,ll.id,actor_id
+  FROM public.bank_statement_lines bs
+  JOIN public.ledger_lines ll
+    ON ll.journal_id=jt AND ll.ledger_account_id=cash_account
+  WHERE bs.external_line_key='BANK-STMT-MISMATCH-002';
+  RAISE EXCEPTION 'Mismatched bank statement to cash line accepted';
+ EXCEPTION WHEN SQLSTATE '23514' THEN NULL;
+ END;
  UPDATE public.bank_reconciliations
   SET status='final',approved_by=actor_id,approved_at=now()
   WHERE id=recon_id;
