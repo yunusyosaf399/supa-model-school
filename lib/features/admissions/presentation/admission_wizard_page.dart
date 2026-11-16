@@ -1002,118 +1002,122 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     ]),
   ));
 
-  Widget _guardianFields() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text('Parent or guardian contacts',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        const Text('Exactly one primary guardian is required for submission. '
-            'A guardian may later be linked to several siblings.'),
-        const SizedBox(height: 14),
-        for (var i = 0; i < _draft.guardians.length; i++)
-          _guardianCard(i, _draft.guardians[i]),
-        const SizedBox(height: 8),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: FilledButton.tonalIcon(
-            onPressed: _draft.guardians.length >= 8
-                ? null
-                : () => setState(() => _draft.guardians.add(
-                      GuardianDraft(localId: _nextGuardianId++),
-                    )),
-            icon: const Icon(Icons.person_add_alt),
-            label: const Text('Add another guardian'),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _guardianCard(int index, GuardianDraft guardian) {
-    return Card.outlined(
-      key: ValueKey('guardian-${guardian.localId}'),
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(child: Text('Guardian ${index + 1}',
-                    style: const TextStyle(fontWeight: FontWeight.bold))),
-                if (_draft.guardians.length > 1)
-                  IconButton(
-                    key: Key('remove-guardian-${guardian.localId}'),
-                    tooltip: 'Remove guardian',
-                    onPressed: () => setState(() => _draft.guardians.removeAt(index)),
-                    icon: const Icon(Icons.delete_outline),
-                  ),
-              ],
-            ),
-            TextFormField(
-              key: Key('guardian-name-${guardian.localId}'),
-              initialValue: guardian.fullName,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Full name *',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) => guardian.fullName = v,
-            ),
-            const SizedBox(height: 12),
-            _choice(
-              label: 'Relationship',
-              current: guardian.relationship,
-              choices: const {
-                'father': 'Father',
-                'mother': 'Mother',
-                'guardian': 'Guardian',
-                'other': 'Other',
-              },
-              onChanged: (v) => setState(() => guardian.relationship = v!),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              key: Key('guardian-phone-${guardian.localId}'),
-              initialValue: guardian.phone,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                labelText: guardian.isPrimary
-                    ? 'Primary guardian phone *'
-                    : 'Phone number',
-                border: const OutlineInputBorder(),
-              ),
-              onChanged: (v) => guardian.phone = v,
-            ),
-            CheckboxListTile(
-              title: const Text('Primary contact'),
-              contentPadding: EdgeInsets.zero,
-              value: guardian.isPrimary,
-              onChanged: (selected) => setState(() {
-                if (selected ?? false) {
-                  for (final g in _draft.guardians) {
-                    g.isPrimary = identical(g, guardian);
-                  }
-                } else {
-                  guardian.isPrimary = false;
-                }
+  Widget _guardianFields() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const Text('Parent / Guardian Information',
+        style: TextStyle(color: _teal, fontWeight: FontWeight.w800,
+          fontSize: 15)),
+      const SizedBox(height: 6),
+      const Text('One primary contact is required. Other guardians can '
+        'be added for the same student.',
+        style: TextStyle(color: Color(0xFF5A7382), fontSize: 12)),
+      const SizedBox(height: 14),
+      for (var i = 0; i < _draft.guardians.length; i++)
+        _guardianCard(i, _draft.guardians[i]),
+      const SizedBox(height: 4),
+      Align(alignment: Alignment.centerLeft, child:
+        OutlinedButton.icon(
+          key: const Key('admission-add-guardian'),
+          onPressed: _draft.guardians.length >= 8
+            ? null : () => setState(() {
+                _draft.guardians.add(
+                  GuardianDraft(localId: _nextGuardianId++));
               }),
-            ),
-            CheckboxListTile(
-              title: const Text('Legal guardian'),
-              contentPadding: EdgeInsets.zero,
-              value: guardian.isLegalGuardian,
-              onChanged: (selected) =>
-                  setState(() => guardian.isLegalGuardian = selected ?? false),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+          icon: const Icon(Icons.person_add_alt_1_outlined),
+          label: const Text('Add Another Guardian'),
+        )),
+    ],
+  );
+
+  Widget _guardianCard(int index, GuardianDraft guardian) => Container(
+    key: ValueKey('guardian-${guardian.localId}'),
+    margin: const EdgeInsets.only(bottom: 12),
+    padding: const EdgeInsets.all(13),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF8FCFF),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: _line)),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [
+        const Icon(Icons.groups_outlined, color: _teal),
+        const SizedBox(width: 8),
+        Expanded(child: Text('Guardian ${index + 1}',
+          style: const TextStyle(color: _teal,
+            fontWeight: FontWeight.w800, fontSize: 15))),
+        if (_draft.guardians.length > 1)
+          IconButton(
+            tooltip: 'Remove guardian',
+            key: Key('remove-guardian-${guardian.localId}'),
+            onPressed: () => setState(
+              () => _draft.guardians.removeAt(index)),
+            icon: const Icon(Icons.delete_outline, color: Colors.redAccent)),
+      ]),
+      const SizedBox(height: 12),
+      _styledField(
+        key: Key('guardian-name-${guardian.localId}'),
+        label: 'Full Name', required: true,
+        icon: Icons.person_outline,
+        initialValue: guardian.fullName,
+        onChanged: (v) => guardian.fullName = v),
+      const SizedBox(height: 12),
+      LayoutBuilder(builder: (context, bounds) {
+        final relationship = _styledChoice(
+          label: 'Relationship', icon: Icons.people_outline,
+          current: guardian.relationship,
+          options: const {
+            'father': 'Father', 'mother': 'Mother',
+            'guardian': 'Guardian', 'other': 'Other',
+          },
+          onChanged: (v) => setState(
+            () => guardian.relationship = v ?? 'guardian'));
+        final phone = _styledField(
+          key: Key('guardian-phone-${guardian.localId}'),
+          label: guardian.isPrimary
+              ? 'Primary Guardian Phone' : 'Phone Number',
+          icon: Icons.call_outlined,
+          required: guardian.isPrimary,
+          keyboardType: TextInputType.phone,
+          initialValue: guardian.phone,
+          onChanged: (v) => guardian.phone = v);
+        return bounds.maxWidth >= 440
+          ? Row(children: [
+              Expanded(child: relationship),
+              const SizedBox(width: 12),
+              Expanded(child: phone),
+            ])
+          : Column(children: [
+              relationship, const SizedBox(height: 12), phone,
+            ]);
+      }),
+      const SizedBox(height: 7),
+      Wrap(spacing: 10, runSpacing: 0, children: [
+        SizedBox(width: 210, child: CheckboxListTile(
+          dense: true, contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          title: const Text('Primary Contact', style: TextStyle(fontSize: 12)),
+          value: guardian.isPrimary,
+          onChanged: (selected) => setState(() {
+            if (selected ?? false) {
+              for (final person in _draft.guardians) {
+                person.isPrimary = identical(person, guardian);
+              }
+            } else {
+              guardian.isPrimary = false;
+            }
+          }),
+        )),
+        SizedBox(width: 190, child: CheckboxListTile(
+          dense: true, contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          title: const Text('Legal Guardian', style: TextStyle(fontSize: 12)),
+          value: guardian.isLegalGuardian,
+          onChanged: (selected) => setState(
+            () => guardian.isLegalGuardian = selected ?? false),
+        )),
+      ]),
+    ]),
+  );
 
   Widget _academicFields() {
     return Column(
