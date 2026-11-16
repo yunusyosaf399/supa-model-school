@@ -26,7 +26,7 @@ mistaken for the number of schemas.
 | DB03 | Fee plans, discounts, charges, partial receipts, credit, bank claims | **18-table SQL design in draft PR (2026-11-16)** | NOT deployed | Test SQL; design atomic server posting, DB06 account links |
 | DB04 | Student/staff attendance, school calendar, teacher duties and corrections | **11-table SQL design in stacked draft** | NOT deployed | Run SQL/RLS tests; teacher-role expansion, signed posting operations |
 | DB05 | Employees, multi-campus assignments, teaching duties, leave, salary and advance recovery | **20-table SQL design in stacked draft** | NOT deployed | Local SQL/RLS, salary payment concurrency, DB06 account posting and DB08 approvals |
-| DB06 | Financial accounts, cash/bank, expenses, transfers and closings | NOT fully designed | NOT deployed | Full schema design (complements DB03) |
+| DB06 | Ledger accounts, double-entry cash/bank, expenses, transfers, capital, closing and reconciliation | **20-table SQL design in stacked draft** | NOT deployed | PostgreSQL/RLS tests, DB08 approvals and trusted financial posting RPCs |
 | DB07 | Canteen, uniforms, inventory, transport/vehicles | NOT fully designed | NOT deployed | Full schema design |
 | DB08 | Approvals, audit, correction workflows, templates, notifications | NOT fully designed | NOT deployed | Full schema design |
 | DB09 | Offline sync, device receipts/cursor, backups and reporting projections | PARTIAL drafts exist, full design incomplete | Dashboard demo/read-only portion deployed; sync NOT deployed | Complete unified device sync, backups and status schema |
@@ -40,14 +40,14 @@ projection and NOT a complete DB09 sync/backup architecture.
 
 - **Baseline deployed:** 2 of 9 domains (DB01, DB02).
   DB01/DB02 operational workflows still have unresolved gaps.
-- **New designs authored but not deployed:** 3 of 9 (DB03, DB04 and DB05).
-- **Full-domain designs remaining after DB05:** **4** (DB06–DB09).
+- **New designs authored but not deployed:** 4 of 9 (DB03, DB04, DB05 and DB06).
+- **Full-domain designs remaining after DB06:** **3** (DB07–DB09).
   DB09 has preliminary server-sync code but not a finished domain.
 - **Core domains still requiring deployment:** **7** (DB03–DB09).
   Previously deployed DB01/DB02 are not rolled back.
 
 Before DB03 source design was started: 7 full-domain designs remained.
-After DB03 source design is reviewed: 6 remain; after DB04: 5 remain; after DB05: 4 remain. Counts are **domains**,
+After DB03 source design is reviewed: 6 remain; after DB04: 5 remain; after DB05: 4 remain; after DB06: 3 remain. Counts are **domains**,
 not SQL files, tables, Flutter screens or total project tasks.
 
 ## Cross-domain dependency decisions
@@ -79,7 +79,7 @@ Owner dashboard with example fee collection/dues. DB03 fee panels must
 not claim real collections before DB03+DB06 posted financial transactions
 and authorized dashboard projections exist.
 
-**Next domain to author: DB06 Cash/Bank Accounts, Expenses and Closings.**
+**Next domain to author: DB07 Canteen, Uniform Inventory and Transport.**
 
 ## DB04 attendance schema, 2026-11-16
 11 RLS-denied tables designed on stacked draft DB04 branch, including
@@ -98,3 +98,14 @@ receipts. Original salary assessment is unique per (school,employee,month).
 Source in `supabase/drafts/DB05_EMPLOYEES_PAYROLL_SCHEMA.sql` and `docs/34_DB05_EMPLOYEES_PAYROLL_DESIGN.md`.
 No hosted database or Flutter changes. **4 full domains remain to design
 (DB06–DB09), and 7 domains remain undeployed (DB03–DB09).**
+
+## DB06 finance/cashbook schema source (2026-11-16)
+20 deny-by-default RLS tables designed in stacked draft branch. Uses a
+school-wide chart of accounts, per-campus physical cash/bank accounts,
+source-linked immutable double-entry journals with commit-time balancing,
+DB03 fee and DB05 payroll accruals, pending/approved expenses, capital,
+cross-campus transfers, cash counts/closings and bank reconciliation.
+See `docs/35_DB06_FINANCE_CASHBOOK_DESIGN.md` and
+`supabase/drafts/DB06_FINANCE_CASHBOOK_SCHEMA.sql`. No Flutter code or new
+live SQL deployed. **3 full schema designs remain (DB07–DB09), while 7
+remain undeployed (DB03–DB09).**
