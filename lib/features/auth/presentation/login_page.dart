@@ -1,11 +1,15 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
-import '../../../ui/school_brand.dart';
 import '../../../ui/school_theme.dart';
 
-/// Auth UI preview. No password is persisted, and no local demo flow creates
-/// an authenticated session. Real sign-in must be wired after DB01 RLS tests.
+/// The supplied desktop and Android background artwork is intentionally
+/// flattened (logo, school scene, header/footer already appear in the image).
+/// Only the interactive login card is drawn above it: no duplicate artwork.
+/// The optional image fallback keeps the app bootable while assets are being
+/// installed locally; it is NOT intended as the released visual design.
 class LoginPage extends StatefulWidget {
   const LoginPage({
     super.key,
@@ -29,13 +33,15 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  static const _teal = Color(0xFF005F5B);
+  static const _desktopBackground = 'assets/login/signin_desktop.jpg';
+  static const _mobileBackground = 'assets/login/signin_mobile.jpg';
+
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
-  bool _remember = false;
   bool _showPassword = false;
   bool _working = false;
-  String _campus = 'campus-a';
 
   @override
   void dispose() {
@@ -45,7 +51,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _submitSignIn() async {
-    if (!_formKey.currentState!.validate() || _working) return;
+    if (_working || !_formKey.currentState!.validate()) return;
     setState(() => _working = true);
     try {
       await widget.onSignIn(_email.text.trim(), _password.text);
@@ -84,66 +90,369 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  void _help() {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('Contact your school administrator for account support.'),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(builder: (context, limits) {
-          final wide = limits.maxWidth >= 900 && limits.maxHeight >= 720;
-          if (wide) {
-            return Row(children: [
-              Expanded(
-                flex: 6,
-                child: _desktopBrand(),
-              ),
-              Expanded(
-                flex: 5,
-                child: Center(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(30),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 490),
-                      child: _loginCard(false),
+      // Keep the image stationary when the mobile keyboard appears; scroll
+      // the form above the keyboard instead of squashing/cropping the art.
+      resizeToAvoidBottomInset: false,
+      body: LayoutBuilder(
+        builder: (context, viewport) {
+          final width = viewport.maxWidth;
+          final height = viewport.maxHeight;
+          final desktop = width >= 900 && width > height;
+
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              _background(desktop),
+              if (Theme.of(context).brightness == Brightness.dark)
+                const ColoredBox(color: Color(0x33001620)),
+              if (desktop)
+                Positioned(
+                  right: math.max(22, width * 0.021),
+                  top: math.max(24, height * 0.044),
+                  bottom: math.max(22, height * 0.073),
+                  width: math.min(550, width * 0.365),
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: SingleChildScrollView(
+                      key: const Key('login-desktop-layout'),
+                      child: _loginCard(mobile: false),
+                    ),
+                  ),
+                )
+              else
+                SafeArea(
+                  child: LayoutBuilder(
+                    builder: (context, inner) => SingleChildScrollView(
+                      key: const Key('login-mobile-layout'),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: EdgeInsets.fromLTRB(
+                        18,
+                        inner.maxHeight * 0.205,
+                        18,
+                        MediaQuery.viewInsetsOf(context).bottom + 26,
+                      ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 470),
+                          child: _loginCard(mobile: true),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ]);
-          }
-          return ListView(
-            key: const Key('login-mobile-layout'),
-            padding: const EdgeInsets.fromLTRB(18, 20, 18, 24),
-            children: [
-              Align(
-                alignment: Alignment.centerRight,
-                child: _themeButton(),
-              ),
-              const Center(child: SchoolMark(size: 88)),
-              const SizedBox(height: 8),
-              Text('Supa Model School',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: Theme.of(context).colorScheme.primary,
-                  )),
-              const SizedBox(height: 4),
-              const Text('School Management System',
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 26),
-              _loginCard(true),
-              const SizedBox(height: 16),
-              const SchoolScene(height: 185),
             ],
           );
-        }),
+        },
       ),
     );
   }
 
-  Widget _themeButton() => PopupMenuButton<ThemeMode>(
+  Widget _background(bool desktop) {
+    return Image.asset(
+      desktop ? _desktopBackground : _mobileBackground,
+      key: Key(desktop ? 'login-desktop-background' : 'login-mobile-background'),
+      fit: BoxFit.fill,
+      filterQuality: FilterQuality.medium,
+      errorBuilder: (context, error, stackTrace) => const DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFEDF7FC), Color(0xFFD9E9F9)],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _loginCard({required bool mobile}) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final onCard = dark ? Colors.white : const Color(0xFF12191D);
+    final muted = dark ? const Color(0xFFC8D8DB) : const Color(0xFF586873);
+    final cardColor = dark
+        ? const Color(0xFF162B30).withValues(alpha: 0.97)
+        : Colors.white.withValues(alpha: 0.97);
+    final space = mobile ? 11.0 : 16.0;
+
+    return Material(
+      key: const Key('login-form-card'),
+      color: cardColor,
+      elevation: 12,
+      shadowColor: const Color(0x440A3540),
+      borderRadius: BorderRadius.circular(mobile ? 26 : 24),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          mobile ? 20 : 40, mobile ? 19 : 32,
+          mobile ? 20 : 40, mobile ? 16 : 28,
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                mobile ? 'Welcome back' : 'Sign In to Supa Model School',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: mobile ? 27 : 27,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.8,
+                  color: dark ? const Color(0xFF6ED5C9) : _teal,
+                ),
+              ),
+              SizedBox(height: mobile ? 2 : 5),
+              Text(
+                mobile
+                    ? 'Sign in to continue to Supa Model School'
+                    : 'Access your school management system',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: muted, fontSize: mobile ? 14 : 15),
+              ),
+              SizedBox(height: mobile ? 18 : 24),
+              _fieldLabel('School / Campus', Icons.account_balance_outlined,
+                  onCard, mobile),
+              const SizedBox(height: 5),
+              DropdownButtonFormField<String>(
+                key: const Key('login-campus'),
+                isExpanded: true,
+                initialValue: null,
+                hint: const Text('Select School / Campus'),
+                disabledHint: const Text('Select School / Campus'),
+                items: const [],
+                onChanged: null,
+                icon: Icon(Icons.keyboard_arrow_down_rounded, color: muted),
+                decoration: _inputDecoration(dark),
+              ),
+              SizedBox(height: space),
+              _fieldLabel('Email or Username', Icons.person_rounded,
+                  onCard, mobile),
+              const SizedBox(height: 5),
+              TextFormField(
+                key: const Key('login-email'),
+                controller: _email,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.username],
+                style: TextStyle(color: onCard, fontSize: 15),
+                decoration: _inputDecoration(dark).copyWith(
+                  hintText: 'Enter your email or username',
+                ),
+                validator: (value) =>
+                    value == null || value.trim().isEmpty
+                        ? 'Enter your email or username'
+                        : null,
+              ),
+              SizedBox(height: space),
+              _fieldLabel('Password', Icons.lock_rounded, onCard, mobile),
+              const SizedBox(height: 5),
+              TextFormField(
+                key: const Key('login-password'),
+                controller: _password,
+                obscureText: !_showPassword,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _submitSignIn(),
+                autofillHints: const [AutofillHints.password],
+                style: TextStyle(color: onCard, fontSize: 15),
+                decoration: _inputDecoration(dark).copyWith(
+                  hintText: 'Enter your password',
+                  suffixIcon: IconButton(
+                    key: const Key('toggle-password'),
+                    tooltip: _showPassword ? 'Hide password' : 'Show password',
+                    icon: Icon(
+                      _showPassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      color: muted,
+                    ),
+                    onPressed: () =>
+                        setState(() => _showPassword = !_showPassword),
+                  ),
+                ),
+                validator: (value) =>
+                    value == null || value.isEmpty
+                        ? 'Enter your password'
+                        : null,
+              ),
+              SizedBox(height: mobile ? 6 : 10),
+              Row(
+                children: [
+                  SizedBox(
+                    width: 30,
+                    height: 40,
+                    child: Tooltip(
+                      message: 'Remember me is disabled until encrypted '
+                          'session storage is implemented.',
+                      child: Checkbox(
+                        value: false,
+                        onChanged: null,
+                        side: BorderSide(color: muted),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text('Remember me',
+                        style: TextStyle(color: onCard, fontSize: 13)),
+                  ),
+                  TextButton(
+                    onPressed: _resetPassword,
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      foregroundColor: dark
+                          ? const Color(0xFF77E1D4)
+                          : _teal,
+                    ),
+                    child: const Text(
+                      'Forgot Password?',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: mobile ? 9 : 17),
+              SizedBox(
+                height: mobile ? 49 : 57,
+                child: FilledButton.icon(
+                  key: const Key('login-sign-in'),
+                  onPressed: _working ? null : _submitSignIn,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _teal,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                  ),
+                  icon: _working
+                      ? const SizedBox(
+                          width: 17, height: 17,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.login_rounded, size: 25),
+                  label: Text(
+                    _working ? 'Signing In...' : 'Sign In',
+                    style: const TextStyle(
+                        fontSize: 19, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              SizedBox(height: mobile ? 7 : 14),
+              Text(
+                'English first • Windows & Android',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: muted, fontSize: 12),
+              ),
+              Divider(height: mobile ? 17 : 25, color: muted.withValues(alpha: 0.17)),
+              Center(
+                child: TextButton.icon(
+                  onPressed: _help,
+                  style: TextButton.styleFrom(
+                    foregroundColor:
+                        dark ? const Color(0xFF77E1D4) : _teal,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 4, vertical: 0),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  icon: const Icon(Icons.headset_mic_outlined, size: 20),
+                  label: const Text(
+                    'Need help? Contact administrator',
+                    style: TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline),
+                  ),
+                ),
+              ),
+              if (mobile)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.verified_user_outlined,
+                          color: SchoolPalette.teal, size: 17),
+                      const SizedBox(width: 6),
+                      Text('Secure access for authorized staff only',
+                          style: TextStyle(color: muted, fontSize: 11)),
+                    ],
+                  ),
+                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _themeButton(muted),
+                  if (kDebugMode)
+                    IconButton(
+                      key: const Key('open-demo-dashboard'),
+                      tooltip: 'Preview Dashboard',
+                      onPressed: widget.onOpenDemo,
+                      icon: Icon(Icons.preview_outlined,
+                          color: muted, size: 19),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _fieldLabel(
+      String text, IconData icon, Color color, bool mobile) {
+    return Row(children: [
+      Icon(icon, color: const Color(0xFF60737A), size: mobile ? 19 : 20),
+      const SizedBox(width: 10),
+      Text(text, style: TextStyle(
+        color: color, fontSize: mobile ? 14 : 14,
+        fontWeight: FontWeight.w700,
+      )),
+    ]);
+  }
+
+  InputDecoration _inputDecoration(bool dark) {
+    final border = OutlineInputBorder(
+      borderSide: BorderSide(
+        color: dark ? const Color(0xFF56777C) : const Color(0xFFCBD3D9)),
+      borderRadius: BorderRadius.circular(10),
+    );
+    return InputDecoration(
+      isDense: true,
+      filled: true,
+      fillColor: dark ? const Color(0xFF1C363B) : const Color(0xFFF9FAFB),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      border: border,
+      enabledBorder: border,
+      disabledBorder: border,
+      focusedBorder: border.copyWith(
+        borderSide: const BorderSide(color: _teal, width: 2),
+      ),
+    );
+  }
+
+  Widget _themeButton(Color color) => PopupMenuButton<ThemeMode>(
         tooltip: 'Change appearance',
-        icon: Icon(widget.themeMode == ThemeMode.dark
-            ? Icons.dark_mode_outlined : Icons.light_mode_outlined),
+        icon: Icon(
+          widget.themeMode == ThemeMode.dark
+              ? Icons.dark_mode_outlined
+              : Icons.light_mode_outlined,
+          color: color, size: 19,
+        ),
         onSelected: widget.onThemeChanged,
         itemBuilder: (context) => const [
           PopupMenuItem(value: ThemeMode.system, child: Text('System theme')),
@@ -151,192 +460,4 @@ class _LoginPageState extends State<LoginPage> {
           PopupMenuItem(value: ThemeMode.dark, child: Text('Dark theme')),
         ],
       );
-
-  Widget _desktopBrand() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(38, 26, 38, 22),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: Theme.of(context).brightness == Brightness.dark
-              ? [const Color(0xFF0A282B), const Color(0xFF153541)]
-              : [const Color(0xFFEDF8FB), const Color(0xFFDCECF8)],
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            const SchoolMark(size: 96),
-            const SizedBox(width: 14),
-            Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Supa Model School',
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      color: Theme.of(context).colorScheme.primary,
-                    )),
-                Text('School Management System',
-                    style: Theme.of(context).textTheme.titleLarge),
-              ],
-            )),
-            _themeButton(),
-          ]),
-          const SizedBox(height: 34),
-          Container(width: 82, height: 4, color: SchoolPalette.teal),
-          const SizedBox(height: 16),
-          Text('A modern, easy-to-use platform\nto manage your school smarter.',
-              style: Theme.of(context).textTheme.titleLarge),
-          const Spacer(),
-          const SchoolScene(height: 360),
-          const SizedBox(height: 18),
-          const Row(children: [
-            Icon(Icons.verified_user_outlined, size: 20),
-            SizedBox(width: 8),
-            Flexible(child: Text('Secure access for authorized staff only')),
-          ]),
-        ],
-      ),
-    );
-  }
-
-  Widget _loginCard(bool mobile) {
-    final colors = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(mobile ? 22 : 30),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(mobile ? 'Welcome back' : 'Sign In to Supa Model School',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: colors.primary)),
-              const SizedBox(height: 7),
-              const Text('Access your school management system',
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 27),
-              const Text('School / Campus'),
-              const SizedBox(height: 6),
-              DropdownButtonFormField<String>(
-                key: const Key('login-campus'),
-                initialValue: widget.authConfigured ? 'after-auth' : _campus,
-                isExpanded: true,
-                items: widget.authConfigured
-                    ? const [
-                        DropdownMenuItem(
-                          value: 'after-auth',
-                          child: Text('Campus chosen after secure sign-in'),
-                        ),
-                      ]
-                    : const [
-                        DropdownMenuItem(
-                          value: 'campus-a',
-                          child: Text('Sample Campus A (demo)'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'campus-b',
-                          child: Text('Sample Campus B (demo)'),
-                        ),
-                      ],
-                onChanged: widget.authConfigured ? null : (value) {
-                  if (value != null) setState(() => _campus = value);
-                },
-              ),
-              const SizedBox(height: 17),
-              Text(widget.authConfigured ? 'Email address' : 'Email or Username'),
-              const SizedBox(height: 6),
-              TextFormField(
-                key: const Key('login-email'),
-                controller: _email,
-                keyboardType: TextInputType.emailAddress,
-                autofillHints: const [AutofillHints.username],
-                decoration: const InputDecoration(
-                  hintText: 'Enter your email address',
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-                validator: (s) => (s == null || s.trim().isEmpty)
-                    ? 'Enter your email or username' : null,
-              ),
-              const SizedBox(height: 17),
-              const Text('Password'),
-              const SizedBox(height: 6),
-              TextFormField(
-                key: const Key('login-password'),
-                controller: _password,
-                obscureText: !_showPassword,
-                autofillHints: const [AutofillHints.password],
-                decoration: InputDecoration(
-                  hintText: 'Enter your password',
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    key: const Key('toggle-password'),
-                    tooltip: _showPassword ? 'Hide password' : 'Show password',
-                    icon: Icon(_showPassword
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined),
-                    onPressed: () => setState(
-                        () => _showPassword = !_showPassword),
-                  ),
-                ),
-                validator: (s) => (s == null || s.isEmpty)
-                    ? 'Enter your password' : null,
-              ),
-              const SizedBox(height: 13),
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 10,
-                children: [
-                  Row(mainAxisSize: MainAxisSize.min, children: [
-                    Checkbox(
-                      value: widget.authConfigured ? false : _remember,
-                      onChanged: widget.authConfigured
-                          ? null
-                          : (v) => setState(() => _remember = v ?? false),
-                    ),
-                    Text(widget.authConfigured
-                        ? 'Remember me (disabled for security)' : 'Remember me'),
-                  ]),
-                  TextButton(
-                    onPressed: _resetPassword,
-                    child: const Text('Forgot Password?'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              FilledButton.icon(
-                key: const Key('login-sign-in'),
-                onPressed: _working ? null : _submitSignIn,
-                icon: const Icon(Icons.login),
-                label: Text(_working ? 'Signing In...' : 'Sign In'),
-              ),
-              const SizedBox(height: 13),
-              if (kDebugMode) OutlinedButton.icon(
-                key: const Key('open-demo-dashboard'),
-                onPressed: widget.onOpenDemo,
-                icon: const Icon(Icons.visibility_outlined),
-                label: const Text('Preview Dashboard'),
-              ),
-              const SizedBox(height: 12),
-              Text(widget.authConfigured
-                  ? 'OWNER SIGN-IN • verified school role required'
-                  : 'DESIGN PREVIEW — no authenticated access',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelSmall),
-              const Divider(height: 32),
-              const Center(child: Text('Need help? Contact administrator')),
-              const SizedBox(height: 12),
-              const Center(child: Text('English first • Windows & Android')),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
