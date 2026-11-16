@@ -185,7 +185,7 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, bounds) {
-      final desktop = bounds.maxWidth >= 1010;
+      final desktop = bounds.maxWidth >= 850;
       final sidePadding = desktop ? 22.0 : 13.0;
       final contentWidth = math.max(0, bounds.maxWidth - 2 * sidePadding);
       return Stack(children: [
