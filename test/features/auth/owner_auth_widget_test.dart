@@ -70,8 +70,9 @@ void main() {
     expect(find.byKey(const Key('owner-campus-selector')), findsOneWidget);
     expect(find.byKey(const Key('dashboard-page')), findsOneWidget);
     expect(find.byKey(const Key('dashboard-demo-banner')), findsOneWidget);
-    expect(find.textContaining('Dashboard figures are still fictional'),
-        findsOneWidget);
+    // Demo figures are disclosed in a compact badge, without disturbing
+    // the reference dashboard card positions.
+    expect(find.text('TEST DATA'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Account'));
     await tester.pumpAndSettle();
