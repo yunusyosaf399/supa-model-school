@@ -45,7 +45,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   int _nextGuardianId = 2;
   String? _error;
   bool _allowExit = false;
-  List<SchoolClassRecord> _academicClasses = const [];
+  List<SchoolClassRecord> _academicClasses = [];
   bool _academicLoading = false;
   String? _academicError;
   int _academicLoadVersion = 0;
@@ -113,7 +113,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       _draft.academicYearId = widget.owner!.activeYearId;
       _draft.classId = null;
       _draft.sectionId = null;
-      _academicClasses = const [];
+      _academicClasses = [];
       _academicLoading = false;
       _academicError = null;
       _error = null;
@@ -142,7 +142,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     } catch (_) {
       if (!mounted || version != _academicLoadVersion) return;
       setState(() {
-        _academicClasses = const [];
+        _academicClasses = [];
         _draft.classId = null;
         _draft.sectionId = null;
         _academicLoading = false;
@@ -243,8 +243,8 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     final discard = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Discard admission preview?'),
-        content: const Text(
+        title: Text('Discard admission preview?'),
+        content: Text(
           'Only academic options may be read from your school database. '
           'No admission details have been saved. All entered information '
           'will be lost when you leave.',
@@ -252,11 +252,11 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Continue editing'),
+            child: Text('Continue editing'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Discard preview'),
+            child: Text('Discard preview'),
           ),
         ],
       ),
@@ -288,22 +288,29 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     if (callback != null) {
       callback();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Global search is not configured in this preview.'),
       ));
     }
   }
 
   void _showNotifications() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text('Notifications are not connected to live data yet.'),
     ));
   }
 
-  static const _teal = Color(0xFF00635D);
-  static const _pale = Color(0xFFE7F5F6);
-  static const _ink = Color(0xFF193745);
-  static const _line = Color(0xFFD5E2E8);
+  // Follow the parent MaterialApp ThemeMode, configured in Settings.
+  bool get _dark => Theme.of(context).brightness == Brightness.dark;
+  Color get _teal => _dark ? Color(0xFF6BDBD0) : Color(0xFF00635D);
+  Color get _pale => _dark ? Color(0xFF193B3D) : Color(0xFFE7F5F6);
+  Color get _ink => _dark ? Color(0xFFF0F8FC) : Color(0xFF193745);
+  Color get _line => _dark ? Color(0xFF35515C) : Color(0xFFD5E2E8);
+  Color get _surface => Theme.of(context).colorScheme.surface;
+  Color get _subSurface => _dark ? Color(0xFF203740) : Color(0xFFF8FCFF);
+  Color get _fieldSurface => _dark ? Color(0xFF20333C) : Colors.white;
+  Color get _muted => _dark ? Color(0xFFBDD2DC) : Color(0xFF5A7382);
+  Color get _warningSurface => _dark ? Color(0xFF413621) : Color(0xFFFFF4DC);
 
   IconData _stepIcon(AdmissionStep step) => switch (step) {
     AdmissionStep.student => Icons.person_outline_rounded,
@@ -319,16 +326,15 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     final wide = MediaQuery.sizeOf(context).width >= 1250;
     return Theme(
       data: Theme.of(context).copyWith(
-        colorScheme: ColorScheme.fromSeed(seedColor: _teal),
-        scaffoldBackgroundColor: const Color(0xFFF0F8FD),
+        // Never create a second light-only color scheme for this route.
         inputDecorationTheme: InputDecorationTheme(
           isDense: true,
           filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
+          fillColor: _fieldSurface,
+          contentPadding: EdgeInsets.symmetric(
               horizontal: 13, vertical: 12),
           border: OutlineInputBorder(
-            borderSide: const BorderSide(color: _line),
+            borderSide: BorderSide(color: _line),
             borderRadius: BorderRadius.circular(7)),
         ),
       ),
@@ -338,7 +344,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           if (!didPop) _confirmExit();
         },
         child: Scaffold(
-          key: const Key('admission-wizard-screen'),
+          key: Key('admission-wizard-screen'),
           resizeToAvoidBottomInset: true,
           body: SafeArea(
             child: wide ? _desktopLayout() : _mobileLayout(),
@@ -353,7 +359,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     mainAxisSize: MainAxisSize.min,
     children: [
       SchoolMark(size: mobile ? 57 : 65),
-      const SizedBox(width: 11),
+      SizedBox(width: 11),
       Flexible(child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -383,48 +389,48 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   ]);
 
   Widget _sidebar() {
-    const names = ['Dashboard', 'Students', 'Admissions', 'Fees',
+    names = ['Dashboard', 'Students', 'Admissions', 'Fees',
       'Attendance', 'Employees', 'Payroll', 'Expenses',
       'Reports', 'Sync Center', 'Settings'];
-    const icons = [Icons.home_outlined, Icons.groups_outlined,
+    icons = [Icons.home_outlined, Icons.groups_outlined,
       Icons.school_outlined, Icons.savings_outlined,
       Icons.calendar_month_outlined, Icons.people_outline,
       Icons.account_balance_wallet_outlined,
       Icons.receipt_long_outlined, Icons.bar_chart_outlined,
       Icons.sync_outlined, Icons.settings_outlined];
     return Container(
-      key: const Key('admission-desktop-sidebar'),
+      key: Key('admission-desktop-sidebar'),
       width: 244,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
         border: Border(right: BorderSide(color: _line))),
       child: Column(children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 13, 12, 17),
+          padding: EdgeInsets.fromLTRB(12, 13, 12, 17),
           child: Column(children: [
-            const SchoolMark(size: 68),
-            const SizedBox(height: 5),
-            const Text('Supa Model School',
+            SchoolMark(size: 68),
+            SizedBox(height: 5),
+            Text('Supa Model School',
               style: TextStyle(color: _teal, fontWeight: FontWeight.w900,
                   fontSize: 17)),
-            const Text('School Management System',
+            Text('School Management System',
               style: TextStyle(fontSize: 11, color: _ink)),
-            const Divider(height: 24),
+            Divider(height: 24),
           ])),
-        Expanded(child: ListView(padding: const EdgeInsets.symmetric(
+        Expanded(child: ListView(padding: EdgeInsets.symmetric(
             horizontal: 13), children: [
           for (var i = 0; i < names.length; i++)
             Container(
-              height: 40, margin: const EdgeInsets.only(bottom: 4),
+              height: 40, margin: EdgeInsets.only(bottom: 4),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(9),
-                gradient: i == 2 ? const LinearGradient(colors: [
+                gradient: i == 2 ? LinearGradient(colors: [
                   Color(0xFF029B8A), Color(0xFF005B55)]) : null),
               child: Row(children: [
-                const SizedBox(width: 16),
+                SizedBox(width: 16),
                 Icon(icons[i], size: 21,
                   color: i == 2 ? Colors.white : _ink),
-                const SizedBox(width: 13),
+                SizedBox(width: 13),
                 Text(names[i], style: TextStyle(
                   color: i == 2 ? Colors.white : _ink,
                   fontWeight: i == 2 ? FontWeight.w800 : FontWeight.w500,
@@ -438,56 +444,56 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
 
   Widget _desktopToolbar() => Container(
     height: 73,
-    padding: const EdgeInsets.symmetric(horizontal: 22),
+    padding: EdgeInsets.symmetric(horizontal: 22),
     child: Row(children: [
       Expanded(flex: 4, child: OutlinedButton.icon(
         onPressed: () {},
-        icon: const Icon(Icons.search_outlined),
-        label: const Align(alignment: Alignment.centerLeft,
+        icon: Icon(Icons.search_outlined),
+        label: Align(alignment: Alignment.centerLeft,
           child: Text('Search students, staff, invoices, etc...',
             overflow: TextOverflow.ellipsis)),
       )),
-      const SizedBox(width: 14),
+      SizedBox(width: 14),
       _topPill(Icons.account_balance_outlined,
           widget.owner?.campuses.isNotEmpty == true
             ? widget.owner!.campuses.first.name : 'School / Campus'),
-      const SizedBox(width: 12),
+      SizedBox(width: 12),
       _topPill(Icons.calendar_month_outlined,
           widget.owner?.activeYearLabel ?? 'Academic Year'),
-      const SizedBox(width: 13),
-      const Icon(Icons.notifications_none_rounded, size: 26, color: _teal),
-      const SizedBox(width: 14),
-      const CircleAvatar(radius: 18,
+      SizedBox(width: 13),
+      Icon(Icons.notifications_none_rounded, size: 26, color: _teal),
+      SizedBox(width: 14),
+      CircleAvatar(radius: 18,
           child: Icon(Icons.person_outline)),
-      const SizedBox(width: 8),
-      const Flexible(child: Text('Administrator',
+      SizedBox(width: 8),
+      Flexible(child: Text('Administrator',
           overflow: TextOverflow.ellipsis,
           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
     ]),
   );
 
   Widget _topPill(IconData icon, String label) => Container(
-    constraints: const BoxConstraints(maxWidth: 200),
-    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-    decoration: BoxDecoration(color: Colors.white,
+    constraints: BoxConstraints(maxWidth: 200),
+    padding: EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+    decoration: BoxDecoration(color: _surface,
       borderRadius: BorderRadius.circular(9),
       border: Border.all(color: _line)),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
       Icon(icon, color: _teal, size: 20),
-      const SizedBox(width: 8),
+      SizedBox(width: 8),
       Flexible(child: Text(label, overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 12))),
-      const Icon(Icons.keyboard_arrow_down, size: 18),
+          style: TextStyle(fontSize: 12))),
+      Icon(Icons.keyboard_arrow_down, size: 18),
     ]),
   );
 
   Widget _mobileLayout() => Column(children: [
     Container(
-      padding: const EdgeInsets.fromLTRB(18, 9, 17, 7),
+      padding: EdgeInsets.fromLTRB(18, 9, 17, 7),
       child: Row(children: [
         Expanded(child: _brandRow(mobile: true)),
         IconButton(onPressed: () {}, tooltip: 'Notifications (preview)',
-          icon: const Icon(Icons.notifications_none_rounded,
+          icon: Icon(Icons.notifications_none_rounded,
               color: _teal, size: 26)),
       ]),
     ),
@@ -496,37 +502,37 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   ]);
 
   Widget _admissionScroll({required bool wide}) => SingleChildScrollView(
-    key: const Key('admission-scroll'),
+    key: Key('admission-scroll'),
     padding: EdgeInsets.fromLTRB(wide ? 24 : 16, wide ? 8 : 8,
         wide ? 24 : 16, 20),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       _pageHeading(wide),
       SizedBox(height: wide ? 16 : 13),
       _progress(wide),
-      const SizedBox(height: 15),
+      SizedBox(height: 15),
       if (wide)
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(flex: 7, child: Column(children: [
             _mainStepPanel(),
             if (_step == AdmissionStep.student) ...[
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               _contactPanel(),
             ],
           ])),
-          const SizedBox(width: 15),
+          SizedBox(width: 15),
           Expanded(flex: 3, child: _sideChecklist()),
         ])
       else ...[
         _mainStepPanel(),
         if (_step == AdmissionStep.student) ...[
-          const SizedBox(height: 13),
+          SizedBox(height: 13),
           _contactPanel(),
         ],
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
         _mobileDocumentsChecklist(),
       ],
       if (wide) ...[
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
         _actions(),
       ],
     ]),
@@ -535,15 +541,15 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   Widget _pageHeading(bool wide) => Row(children: [
     if (!wide)
       IconButton(
-        key: const Key('admission-back-button'),
+        key: Key('admission-back-button'),
         onPressed: _step == 0 ? _confirmExit : _previous,
-        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+        icon: Icon(Icons.arrow_back_ios_new_rounded,
             color: _teal)),
     Container(width: 5, height: wide ? 49 : 53,
         decoration: BoxDecoration(
-          color: const Color(0xFF00A28E),
+          color: Color(0xFF00A28E),
           borderRadius: BorderRadius.circular(6))),
-    const SizedBox(width: 14),
+    SizedBox(width: 14),
     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('New Admission', style: TextStyle(
@@ -557,29 +563,29 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
               ? widget.owner!.campuses.first.name
               : 'School / Campus',
             maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: _ink, fontSize: 13)),
+            style: TextStyle(color: _ink, fontSize: 13)),
       ])),
     if (wide) ...[
       OutlinedButton.icon(
-        key: const Key('admission-save-draft-disabled'),
-        onPressed: null, icon: const Icon(Icons.save_outlined),
-        label: const Text('Save Draft')),
-      const SizedBox(width: 10),
+        key: Key('admission-save-draft-disabled'),
+        onPressed: null, icon: Icon(Icons.save_outlined),
+        label: Text('Save Draft')),
+      SizedBox(width: 10),
       FilledButton.icon(
         onPressed: null,
-        icon: const Icon(Icons.send_outlined),
-        label: const Text('Submit for Approval')),
-      const SizedBox(width: 10),
+        icon: Icon(Icons.send_outlined),
+        label: Text('Submit for Approval')),
+      SizedBox(width: 10),
       OutlinedButton.icon(
         onPressed: _confirmExit,
-        icon: const Icon(Icons.close),
-        label: const Text('Cancel')),
+        icon: Icon(Icons.close),
+        label: Text('Cancel')),
     ] else
       Chip(
-        avatar: const Icon(Icons.description_outlined, color: _teal, size: 18),
-        label: const Text('Draft', style: TextStyle(
+        avatar: Icon(Icons.description_outlined, color: _teal, size: 18),
+        label: Text('Draft', style: TextStyle(
             color: _teal, fontWeight: FontWeight.w700)),
-        backgroundColor: const Color(0xFFFFF0D4),
+        backgroundColor: Color(0xFFFFF0D4),
         side: BorderSide.none),
   ]);
 
@@ -590,7 +596,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       for (var i = 0; i < AdmissionStep.values.length; i++) ...[
         if (i > 0)
           Expanded(child: Container(height: 2, color: i <= _step
-            ? _teal : const Color(0xFFBFD1DA))),
+            ? _teal : Color(0xFFBFD1DA))),
         Flexible(flex: wide ? 3 : 2,
           child: InkWell(
             key: Key(wide ? 'step-tab-$i' : 'step-chip-$i'),
@@ -612,7 +618,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
                       color: i == _step ? Colors.white : _teal,
                       size: 22),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
               Text(AdmissionStep.values[i].label,
                 textAlign: TextAlign.center,
                 maxLines: 1,
@@ -628,12 +634,12 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   );
 
   Widget _surfaceCard({required Widget child,
-      EdgeInsetsGeometry padding = const EdgeInsets.all(15)}) => Container(
+      EdgeInsetsGeometry padding = EdgeInsets.all(15)}) => Container(
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: _surface,
       borderRadius: BorderRadius.circular(15),
       border: Border.all(color: _line),
-      boxShadow: const [BoxShadow(color: Color(0x10046D7B),
+      boxShadow: [BoxShadow(color: Color(0x10046D7B),
         blurRadius: 11, offset: Offset(0, 4))]),
     child: Padding(padding: padding, child: child),
   );
@@ -641,11 +647,11 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   Widget _panelHeading(IconData icon, String text, {String? trailing}) =>
     Row(children: [
       Icon(icon, color: _teal, size: 25),
-      const SizedBox(width: 10),
-      Expanded(child: Text(text, style: const TextStyle(
+      SizedBox(width: 10),
+      Expanded(child: Text(text, style: TextStyle(
         fontSize: 19, fontWeight: FontWeight.w900, color: _teal))),
       if (trailing != null)
-        Text(trailing, style: const TextStyle(
+        Text(trailing, style: TextStyle(
           fontSize: 12, color: Color(0xFF63798A))),
     ]);
 
@@ -661,17 +667,17 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
               AdmissionStep.fees => 'Fee Setup',
               AdmissionStep.review => 'Review Application',
             }, trailing: 'Step ${_step + 1} of 6'),
-        const Divider(height: 21, color: _line),
+        Divider(height: 21, color: _line),
         if (_error != null) ...[
           Container(
-            key: const Key('admission-validation-error'),
-            padding: const EdgeInsets.all(11),
+            key: Key('admission-validation-error'),
+            padding: EdgeInsets.all(11),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFE9E7),
+              color: _warningSurface,
               borderRadius: BorderRadius.circular(9)),
-            child: Text(_error!, style: const TextStyle(
+            child: Text(_error!, style: TextStyle(
               color: Color(0xFFB01D24), fontWeight: FontWeight.w600))),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
         ],
         _stepContent(),
       ]),
@@ -682,27 +688,27 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     children: [
       _panelHeading(Icons.description_outlined, 'Required Documents',
           trailing: 'Sample / preview'),
-      const Divider(height: 15, color: _line),
+      Divider(height: 15, color: _line),
       _checkRow('Birth Certificate', isRequired: true),
       _checkRow('Guardian Identity Document'),
       if (_draft.transferCertificateApplicable)
         _checkRow('Transfer Certificate'),
-      const SizedBox(height: 5),
-      const Text('Uploads and verification are not enabled.',
+      SizedBox(height: 5),
+      Text('Uploads and verification are not enabled.',
         style: TextStyle(fontSize: 11, color: Color(0xFF617888))),
     ],
   ));
 
   Widget _checkRow(String title, {bool isRequired = false}) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 5),
+    padding: EdgeInsets.symmetric(vertical: 5),
     child: Row(children: [
-      const Icon(Icons.check_box_outline_blank,
+      Icon(Icons.check_box_outline_blank,
           size: 18, color: Color(0xFF8FA6B6)),
-      const SizedBox(width: 11),
+      SizedBox(width: 11),
       Expanded(child: Text(title,
-          style: const TextStyle(fontSize: 12))),
+          style: TextStyle(fontSize: 12))),
       if (isRequired)
-        const Text('*', style: TextStyle(color: Colors.red)),
+        Text('*', style: TextStyle(color: Colors.red)),
     ]),
   );
 
@@ -710,7 +716,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     _surfaceCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _panelHeading(Icons.checklist_outlined, 'Admission Checklist'),
-        const Divider(color: _line),
+        Divider(color: _line),
         for (final item in [
           'Birth Certificate',
           if (_draft.transferCertificateApplicable) 'Transfer Certificate',
@@ -719,74 +725,74 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           'Fee Setup'
         ]) _checkRow(item),
       ])),
-    const SizedBox(height: 11),
+    SizedBox(height: 11),
     _surfaceCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _panelHeading(Icons.description_outlined, 'Required Documents'),
-        const Divider(color: _line),
+        Divider(color: _line),
         for (final item in _draft.requiredDocumentNames)
           ListTile(
             dense: true, contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.description_outlined,
+            leading: Icon(Icons.description_outlined,
                 color: _teal, size: 19),
-            title: Text(item, style: const TextStyle(fontSize: 12)),
-            trailing: const Text('Pending', style: TextStyle(
+            title: Text(item, style: TextStyle(fontSize: 12)),
+            trailing: Text('Pending', style: TextStyle(
               color: Color(0xFFB47713), fontSize: 11)),
           ),
       ])),
-    const SizedBox(height: 11),
+    SizedBox(height: 11),
     _surfaceCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _panelHeading(Icons.school_outlined, 'Admission Status'),
-        const Divider(color: _line),
+        Divider(color: _line),
         Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: const Color(0xFFE2F7EE),
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(color: _pale,
             borderRadius: BorderRadius.circular(10)),
-          child: const Row(children: [
+          child: Row(children: [
             Icon(Icons.hourglass_top_outlined, color: _teal),
             SizedBox(width: 10),
             Expanded(child: Text('Draft (In Progress)',
               style: TextStyle(color: _teal, fontWeight: FontWeight.w800))),
           ]),
         ),
-        const SizedBox(height: 8),
-        const Text('No application has been saved. Uploads and '
+        SizedBox(height: 8),
+        Text('No application has been saved. Uploads and '
           'verification are pending.',
           style: TextStyle(fontSize: 12)),
       ])),
   ]);
 
   Widget _mobileActions() => Container(
-    padding: const EdgeInsets.fromLTRB(15, 11, 15, 12),
-    decoration: const BoxDecoration(color: Colors.white,
+    padding: EdgeInsets.fromLTRB(15, 11, 15, 12),
+    decoration: BoxDecoration(color: Colors.white,
         border: Border(top: BorderSide(color: _line))),
     child: Row(children: [
       Expanded(child: OutlinedButton.icon(
-        key: const Key('admission-save-draft-disabled'),
+        key: Key('admission-save-draft-disabled'),
         onPressed: null,
-        icon: const Icon(Icons.save_outlined),
-        label: const Text('Save Draft'))),
-      const SizedBox(width: 11),
+        icon: Icon(Icons.save_outlined),
+        label: Text('Save Draft'))),
+      SizedBox(width: 11),
       Expanded(child: _step == AdmissionStep.review
         ? FilledButton.icon(
-            key: const Key('wizard-submit-disabled'),
+            key: Key('wizard-submit-disabled'),
             onPressed: null,
-            icon: const Icon(Icons.lock_outline),
-            label: const Text('Submit unavailable'))
+            icon: Icon(Icons.lock_outline),
+            label: Text('Submit unavailable'))
         : FilledButton.icon(
-            key: const Key('wizard-next'),
+            key: Key('wizard-next'),
             onPressed: _next,
-            icon: const Icon(Icons.arrow_forward),
-            label: const Text('Next Step'))),
+            icon: Icon(Icons.arrow_forward),
+            label: Text('Next Step'))),
     ]),
   );
 
   Widget _footerBar() => Container(
     height: 39,
-    color: const Color(0xFF005653),
-    padding: const EdgeInsets.symmetric(horizontal: 20),
-    child: const Row(children: [
+    color: Color(0xFF005653),
+    padding: EdgeInsets.symmetric(horizontal: 20),
+    child: Row(children: [
       Icon(Icons.verified_user_outlined, color: Colors.white, size: 18),
       SizedBox(width: 9),
       Expanded(child: Text('Secure access for authorized staff only',
@@ -819,13 +825,13 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   }) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
     Row(children: [
       Icon(icon, color: _teal, size: 17),
-      const SizedBox(width: 7),
+      SizedBox(width: 7),
       Flexible(child: Text(label,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
           color: _ink))),
-      if (isRequired) const Text(' *', style: TextStyle(color: Colors.red)),
+      if (isRequired) Text(' *', style: TextStyle(color: Colors.red)),
     ]),
-    const SizedBox(height: 6),
+    SizedBox(height: 6),
     TextFormField(
       key: key, initialValue: initialValue,
       onChanged: onChanged, maxLines: maxLines,
@@ -833,7 +839,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       textCapitalization: TextCapitalization.sentences,
       decoration: InputDecoration(
         hintText: hint,
-        border: const OutlineInputBorder()),
+        border: OutlineInputBorder()),
     ),
   ]);
 
@@ -847,48 +853,48 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   }) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
     Row(children: [
       Icon(icon, color: _teal, size: 17),
-      const SizedBox(width: 7),
-      Text(label, style: const TextStyle(fontSize: 12,
+      SizedBox(width: 7),
+      Text(label, style: TextStyle(fontSize: 12,
         fontWeight: FontWeight.w700, color: _ink)),
-      if (isRequired) const Text(' *', style: TextStyle(color: Colors.red)),
+      if (isRequired) Text(' *', style: TextStyle(color: Colors.red)),
     ]),
-    const SizedBox(height: 6),
+    SizedBox(height: 6),
     _choice(label: 'Choose $label', current: current,
       choices: options, onChanged: onChanged),
   ]);
 
   Widget _dobField() => Column(crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Row(children: [
+      Row(children: [
         Icon(Icons.calendar_month_outlined, size: 17, color: _teal),
         SizedBox(width: 7),
         Text('Date of Birth', style: TextStyle(fontSize: 12,
           fontWeight: FontWeight.w700, color: _ink)),
         Text(' *', style: TextStyle(color: Colors.red)),
       ]),
-      const SizedBox(height: 6),
+      SizedBox(height: 6),
       SizedBox(height: 43, child: OutlinedButton.icon(
-        key: const Key('date-of-birth'),
+        key: Key('date-of-birth'),
         onPressed: _chooseBirthDate,
-        icon: const Icon(Icons.calendar_today_outlined, size: 17),
+        icon: Icon(Icons.calendar_today_outlined, size: 17),
         label: Text(_dateLabel(_draft.dateOfBirth),
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 12)),
+          style: TextStyle(fontSize: 12)),
       )),
     ]);
 
   Widget _photoPlaceholder() => Tooltip(
     message: 'Photo uploads require the private admission upload service.',
     child: Container(
-      key: const Key('admission-photo-placeholder'),
+      key: Key('admission-photo-placeholder'),
       width: 140, height: 134,
-      padding: const EdgeInsets.all(10),
+      padding: EdgeInsets.all(10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: const Color(0xFFEDFAF6),
-        border: Border.all(color: const Color(0xFFABDCD0),
+        color: _pale,
+        border: Border.all(color: Color(0xFFABDCD0),
           style: BorderStyle.solid)),
-      child: const Column(
+      child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.cloud_upload_outlined, size: 35, color: _teal),
@@ -907,7 +913,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   Widget _studentFields() => LayoutBuilder(builder: (context, constraints) {
     final wide = constraints.maxWidth >= 660;
     final name = _styledField(
-      key: const Key('student-name'), label: 'Full Name',
+      key: Key('student-name'), label: 'Full Name',
       icon: Icons.person_outline, isRequired: true,
       hint: 'Student full name', initialValue: _draft.studentName,
       onChanged: (v) => _draft.studentName = v);
@@ -915,13 +921,13 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     final gender = _styledChoice(
       label: 'Gender', icon: Icons.groups_outlined,
       current: _draft.gender,
-      options: const {
+      options: {
         'unspecified': 'Prefer not to say',
         'male': 'Male', 'female': 'Female', 'other': 'Other',
       },
       onChanged: (v) => setState(() => _draft.gender = v ?? 'unspecified'));
     final previous = _styledField(
-      key: const Key('previous-school'),
+      key: Key('previous-school'),
       label: 'Previous School', icon: Icons.account_balance_outlined,
       hint: 'Previous school (if applicable)',
       initialValue: _draft.previousSchool,
@@ -951,54 +957,54 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           Expanded(flex: 7, child: Column(children: [
             Row(children: [
               Expanded(flex: 2, child: name),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(child: date),
             ]),
-            const SizedBox(height: 13),
+            SizedBox(height: 13),
             Row(children: [
               Expanded(child: gender),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(flex: 2, child: previous),
             ]),
           ])),
-          const SizedBox(width: 15),
+          SizedBox(width: 15),
           _photoPlaceholder(),
         ]),
-        const SizedBox(height: 13),
+        SizedBox(height: 13),
         Row(children: [
           Expanded(child: nationality),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(child: religion),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(child: language),
         ]),
-        const SizedBox(height: 13),
+        SizedBox(height: 13),
         notes,
       ]);
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(width: 108, child: _photoPlaceholder()),
-        const SizedBox(width: 13),
+        SizedBox(width: 13),
         Expanded(child: name),
       ]),
-      const SizedBox(height: 14),
+      SizedBox(height: 14),
       Row(children: [
         Expanded(child: date),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(child: gender),
       ]),
-      const SizedBox(height: 14),
+      SizedBox(height: 14),
       previous,
-      const SizedBox(height: 14),
+      SizedBox(height: 14),
       Row(children: [
         Expanded(child: nationality),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(child: religion),
       ]),
-      const SizedBox(height: 14),
+      SizedBox(height: 14),
       language,
-      const SizedBox(height: 14),
+      SizedBox(height: 14),
       notes,
     ]);
   });
@@ -1008,7 +1014,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     children: [
       _panelHeading(Icons.perm_contact_calendar_outlined,
           'Contact / Identity Information'),
-      const Divider(height: 20, color: _line),
+      Divider(height: 20, color: _line),
       LayoutBuilder(builder: (context, c) {
         final wide = c.maxWidth > 560;
         final birth = _styledField(
@@ -1022,23 +1028,23 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         return Column(children: [
           if (wide)
             Row(children: [
-              Expanded(child: birth), const SizedBox(width: 12),
+              Expanded(child: birth), SizedBox(width: 12),
               Expanded(child: identity),
             ])
           else ...[
-            birth, const SizedBox(height: 12), identity,
+            birth, SizedBox(height: 12), identity,
           ],
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           _styledField(label: 'Address', icon: Icons.location_on_outlined,
             initialValue: _draft.address,
             onChanged: (v) => _draft.address = v),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(children: [
             Expanded(child: _styledField(
               label: 'City', icon: Icons.location_city_outlined,
               initialValue: _draft.city,
               onChanged: (v) => _draft.city = v)),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(child: _styledField(
               label: 'Emergency Contact', icon: Icons.call_outlined,
               keyboardType: TextInputType.phone,
@@ -1053,45 +1059,45 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   Widget _guardianFields() => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const Text('Parent / Guardian Information',
+      Text('Parent / Guardian Information',
         style: TextStyle(color: _teal, fontWeight: FontWeight.w800,
           fontSize: 15)),
-      const SizedBox(height: 6),
-      const Text('One primary contact is required. Other guardians can '
+      SizedBox(height: 6),
+      Text('One primary contact is required. Other guardians can '
         'be added for the same student.',
         style: TextStyle(color: Color(0xFF5A7382), fontSize: 12)),
-      const SizedBox(height: 14),
+      SizedBox(height: 14),
       for (var i = 0; i < _draft.guardians.length; i++)
         _guardianCard(i, _draft.guardians[i]),
-      const SizedBox(height: 4),
+      SizedBox(height: 4),
       Align(alignment: Alignment.centerLeft, child:
         OutlinedButton.icon(
-          key: const Key('admission-add-guardian'),
+          key: Key('admission-add-guardian'),
           onPressed: _draft.guardians.length >= 8
             ? null : () => setState(() {
                 _draft.guardians.add(
                   GuardianDraft(localId: _nextGuardianId++));
               }),
-          icon: const Icon(Icons.person_add_alt_1_outlined),
-          label: const Text('Add Another Guardian'),
+          icon: Icon(Icons.person_add_alt_1_outlined),
+          label: Text('Add Another Guardian'),
         )),
     ],
   );
 
   Widget _guardianCard(int index, GuardianDraft guardian) => Container(
     key: ValueKey('guardian-${guardian.localId}'),
-    margin: const EdgeInsets.only(bottom: 12),
-    padding: const EdgeInsets.all(13),
+    margin: EdgeInsets.only(bottom: 12),
+    padding: EdgeInsets.all(13),
     decoration: BoxDecoration(
-      color: const Color(0xFFF8FCFF),
+      color: _subSurface,
       borderRadius: BorderRadius.circular(12),
       border: Border.all(color: _line)),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
-        const Icon(Icons.groups_outlined, color: _teal),
-        const SizedBox(width: 8),
+        Icon(Icons.groups_outlined, color: _teal),
+        SizedBox(width: 8),
         Expanded(child: Text('Guardian ${index + 1}',
-          style: const TextStyle(color: _teal,
+          style: TextStyle(color: _teal,
             fontWeight: FontWeight.w800, fontSize: 15))),
         if (_draft.guardians.length > 1)
           IconButton(
@@ -1099,21 +1105,21 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
             key: Key('remove-guardian-${guardian.localId}'),
             onPressed: () => setState(
               () => _draft.guardians.removeAt(index)),
-            icon: const Icon(Icons.delete_outline, color: Colors.redAccent)),
+            icon: Icon(Icons.delete_outline, color: Colors.redAccent)),
       ]),
-      const SizedBox(height: 12),
+      SizedBox(height: 12),
       _styledField(
         key: Key('guardian-name-${guardian.localId}'),
         label: 'Full Name', isRequired: true,
         icon: Icons.person_outline,
         initialValue: guardian.fullName,
         onChanged: (v) => guardian.fullName = v),
-      const SizedBox(height: 12),
+      SizedBox(height: 12),
       LayoutBuilder(builder: (context, bounds) {
         final relationship = _styledChoice(
           label: 'Relationship', icon: Icons.people_outline,
           current: guardian.relationship,
-          options: const {
+          options: {
             'father': 'Father', 'mother': 'Mother',
             'guardian': 'Guardian', 'other': 'Other',
           },
@@ -1131,19 +1137,19 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         return bounds.maxWidth >= 440
           ? Row(children: [
               Expanded(child: relationship),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(child: phone),
             ])
           : Column(children: [
-              relationship, const SizedBox(height: 12), phone,
+              relationship, SizedBox(height: 12), phone,
             ]);
       }),
-      const SizedBox(height: 7),
+      SizedBox(height: 7),
       Wrap(spacing: 10, runSpacing: 0, children: [
         SizedBox(width: 210, child: CheckboxListTile(
           dense: true, contentPadding: EdgeInsets.zero,
           controlAffinity: ListTileControlAffinity.leading,
-          title: const Text('Primary Contact', style: TextStyle(fontSize: 12)),
+          title: Text('Primary Contact', style: TextStyle(fontSize: 12)),
           value: guardian.isPrimary,
           onChanged: (selected) => setState(() {
             if (selected ?? false) {
@@ -1158,7 +1164,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         SizedBox(width: 190, child: CheckboxListTile(
           dense: true, contentPadding: EdgeInsets.zero,
           controlAffinity: ListTileControlAffinity.leading,
-          title: const Text('Legal Guardian', style: TextStyle(fontSize: 12)),
+          title: Text('Legal Guardian', style: TextStyle(fontSize: 12)),
           value: guardian.isLegalGuardian,
           onChanged: (selected) => setState(
             () => guardian.isLegalGuardian = selected ?? false),
@@ -1170,17 +1176,17 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   Widget _academicFields() => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const Text('Assign the academic year, campus, class and section.',
+      Text('Assign the academic year, campus, class and section.',
         style: TextStyle(color: Color(0xFF587484), fontSize: 12)),
-      const SizedBox(height: 14),
+      SizedBox(height: 14),
       if (!_academicReady)
         Container(
-          padding: const EdgeInsets.all(14),
+          padding: EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFF4DC),
-            border: Border.all(color: const Color(0xFFF4D6A7)),
+            color: _warningSurface,
+            border: Border.all(color: Color(0xFFF4D6A7)),
             borderRadius: BorderRadius.circular(10)),
-          child: const Row(children: [
+          child: Row(children: [
             Icon(Icons.info_outline, color: Color(0xFF9A6D11)),
             SizedBox(width: 10),
             Expanded(child: Text(
@@ -1191,49 +1197,49 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           ]),
         )
       else ...[
-        const Text('Academic choices are loaded from your verified '
+        Text('Academic choices are loaded from your verified '
           'school records. Only the active academic year is shown.',
           style: TextStyle(fontSize: 12)),
-        const SizedBox(height: 13),
+        SizedBox(height: 13),
         LayoutBuilder(builder: (context, c) {
           final campus = _choice(
-            key: const Key('admission-campus-choice'),
+            key: Key('admission-campus-choice'),
             label: 'Campus *', current: _draft.campusId,
             choices: _campusChoices,
             onChanged: _chooseCampus);
           final year = _choice(
-            key: const Key('admission-year-choice'),
+            key: Key('admission-year-choice'),
             label: 'Academic Year *', current: _draft.academicYearId,
             choices: _yearChoices,
             onChanged: (_) {});
           if (c.maxWidth >= 520) {
             return Row(children: [
               Expanded(child: campus),
-              const SizedBox(width: 13),
+              SizedBox(width: 13),
               Expanded(child: year),
             ]);
           }
           return Column(children: [
-            campus, const SizedBox(height: 12), year,
+            campus, SizedBox(height: 12), year,
           ]);
         }),
         if (_academicLoading) ...[
-          const SizedBox(height: 13),
-          const LinearProgressIndicator(
+          SizedBox(height: 13),
+          LinearProgressIndicator(
             key: Key('admission-classes-loading')),
         ],
         if (_academicError != null) ...[
-          const SizedBox(height: 13),
+          SizedBox(height: 13),
           Text(_academicError!,
-            key: const Key('admission-classes-error'),
-            style: const TextStyle(color: Color(0xFFB6232C))),
+            key: Key('admission-classes-error'),
+            style: TextStyle(color: Color(0xFFB6232C))),
           TextButton.icon(
             onPressed: _draft.campusId == null
               ? null : () => _loadClasses(_draft.campusId!),
-            icon: const Icon(Icons.refresh),
-            label: const Text('Retry class lookup')),
+            icon: Icon(Icons.refresh),
+            label: Text('Retry class lookup')),
         ],
-        const SizedBox(height: 13),
+        SizedBox(height: 13),
         LayoutBuilder(builder: (context, c) {
           final schoolClass = _choice(
             key: ValueKey('class-choice-${_draft.campusId}-'
@@ -1260,28 +1266,28 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           if (c.maxWidth >= 520) {
             return Row(children: [
               Expanded(child: schoolClass),
-              const SizedBox(width: 13),
+              SizedBox(width: 13),
               Expanded(child: section),
             ]);
           }
           return Column(children: [
-            schoolClass, const SizedBox(height: 12), section,
+            schoolClass, SizedBox(height: 12), section,
           ]);
         }),
         if (!_academicLoading && _draft.campusId != null &&
             _academicError == null && _academicClasses.isEmpty) ...[
-          const SizedBox(height: 10),
-          const Text('No classes exist for this campus and academic year. '
+          SizedBox(height: 10),
+          Text('No classes exist for this campus and academic year. '
             'Create them in Owner → Academic Setup.',
             style: TextStyle(fontSize: 12, color: Color(0xFF9A6D11))),
         ],
       ],
-      const SizedBox(height: 18),
+      SizedBox(height: 18),
       Container(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(12),
         decoration: BoxDecoration(color: _pale,
           borderRadius: BorderRadius.circular(10)),
-        child: const Row(children: [
+        child: Row(children: [
           Icon(Icons.verified_user_outlined, color: _teal),
           SizedBox(width: 10),
           Expanded(child: Text('A permanent registration/admission number '
@@ -1296,41 +1302,41 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   Widget _documentFields() => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const Text('Required Certificate Uploads',
+      Text('Required Certificate Uploads',
         style: TextStyle(color: _teal, fontSize: 15,
           fontWeight: FontWeight.w900)),
-      const SizedBox(height: 7),
-      const Text('Documents are awaiting secure upload and verification. '
+      SizedBox(height: 7),
+      Text('Documents are awaiting secure upload and verification. '
         'No file has been stored from this preview.',
         style: TextStyle(fontSize: 12, color: Color(0xFF5B7380))),
-      const SizedBox(height: 14),
+      SizedBox(height: 14),
       for (final name in _draft.requiredDocumentNames)
         Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(12),
+          margin: EdgeInsets.only(bottom: 10),
+          padding: EdgeInsets.all(12),
           decoration: BoxDecoration(
             border: Border.all(color: _line),
             borderRadius: BorderRadius.circular(11),
-            color: const Color(0xFFF8FCFF)),
+            color: _subSurface),
           child: Row(children: [
             Container(width: 44, height: 44,
               decoration: BoxDecoration(
                 color: _pale, borderRadius: BorderRadius.circular(9)),
-              child: const Icon(Icons.description_outlined,
+              child: Icon(Icons.description_outlined,
                 color: _teal)),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(
+                Text(name, style: TextStyle(
                   fontWeight: FontWeight.w800, fontSize: 13)),
-                const SizedBox(height: 4),
-                const Text('Not uploaded • Not verified',
+                SizedBox(height: 4),
+                Text('Not uploaded • Not verified',
                   style: TextStyle(
                     color: Color(0xFF667E8B), fontSize: 11)),
               ],
             )),
-            const Chip(
+            Chip(
               visualDensity: VisualDensity.compact,
               backgroundColor: Color(0xFFFFE9C5),
               side: BorderSide.none,
@@ -1340,13 +1346,13 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           ]),
         ),
       Container(
-        key: const Key('admission-upload-disabled'),
-        padding: const EdgeInsets.symmetric(vertical: 19, horizontal: 10),
+        key: Key('admission-upload-disabled'),
+        padding: EdgeInsets.symmetric(vertical: 19, horizontal: 10),
         decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFB3CDD8)),
-          color: const Color(0xFFF5FAFC),
+          border: Border.all(color: Color(0xFFB3CDD8)),
+          color: _subSurface,
           borderRadius: BorderRadius.circular(12)),
-        child: const Column(children: [
+        child: Column(children: [
           Icon(Icons.cloud_upload_outlined, size: 39, color: _teal),
           SizedBox(height: 5),
           Text('Secure document upload coming soon',
@@ -1360,33 +1366,33 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
               color: Color(0xFF607A87), fontSize: 11)),
         ]),
       ),
-      const SizedBox(height: 16),
-      const Text('Conditional Document Submission',
+      SizedBox(height: 16),
+      Text('Conditional Document Submission',
         style: TextStyle(color: _teal, fontSize: 15,
           fontWeight: FontWeight.w900)),
-      const SizedBox(height: 6),
-      const Text('Where required certificates are missing, the school may '
+      SizedBox(height: 6),
+      Text('Where required certificates are missing, the school may '
         'permit a deadline up to two calendar months. '
         'An overdue certificate never automatically deletes the student.',
         style: TextStyle(fontSize: 12, color: Color(0xFF5A7280))),
-      const SizedBox(height: 13),
+      SizedBox(height: 13),
       OutlinedButton.icon(
-        key: const Key('document-deadline'),
+        key: Key('document-deadline'),
         onPressed: _chooseDocumentDeadline,
-        icon: const Icon(Icons.calendar_month_outlined, color: _teal),
+        icon: Icon(Icons.calendar_month_outlined, color: _teal),
         label: Text('Submission Deadline *: '
           '${_dateLabel(_draft.missingDocumentsDueOn)}'),
       ),
-      const SizedBox(height: 13),
+      SizedBox(height: 13),
       _styledField(
-        key: const Key('conditional-reason'),
+        key: Key('conditional-reason'),
         label: 'Reason for Outstanding Documents', isRequired: true,
         icon: Icons.notes_outlined,
         initialValue: _draft.conditionalReason,
         maxLines: 3,
         onChanged: (v) => _draft.conditionalReason = v),
-      const SizedBox(height: 12),
-      const Text('Deadline decisions and document verification will be '
+      SizedBox(height: 12),
+      Text('Deadline decisions and document verification will be '
         'audited when the trusted admissions service is enabled.',
         style: TextStyle(fontSize: 11, color: Color(0xFF5A7280))),
     ],
@@ -1395,55 +1401,55 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   Widget _feeFields() => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const Text('Admission Fee Preferences',
+      Text('Admission Fee Preferences',
         style: TextStyle(color: _teal,
           fontWeight: FontWeight.w900, fontSize: 15)),
-      const SizedBox(height: 6),
-      const Text('Fee amounts and payment verification will come from '
+      SizedBox(height: 6),
+      Text('Fee amounts and payment verification will come from '
         'authorized school plans. No money is collected on this screen.',
         style: TextStyle(fontSize: 12, color: Color(0xFF617887))),
-      const SizedBox(height: 15),
+      SizedBox(height: 15),
       Container(
-        padding: const EdgeInsets.all(13),
+        padding: EdgeInsets.all(13),
         decoration: BoxDecoration(
-          color: const Color(0xFFF7FBFE),
+          color: _subSurface,
           borderRadius: BorderRadius.circular(11),
           border: Border.all(color: _line)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Row(children: [
+          Row(children: [
             Icon(Icons.savings_outlined, color: _teal),
             SizedBox(width: 9),
             Text('Admission Fee Status', style: TextStyle(
               color: _teal, fontWeight: FontWeight.w800)),
           ]),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           _choice(label: 'Select admission fee status',
             current: _draft.admissionFeeStatus,
-            choices: const {
+            choices: {
               'not_recorded': 'Skip / Not recorded',
               'unpaid': 'Unpaid',
               'paid': 'Paid (requires verification)',
             },
             onChanged: (v) => setState(
               () => _draft.admissionFeeStatus = v ?? 'not_recorded')),
-          const SizedBox(height: 8),
-          const Text('Selecting Paid does not record a payment or issue a receipt.',
+          SizedBox(height: 8),
+          Text('Selecting Paid does not record a payment or issue a receipt.',
             style: TextStyle(fontSize: 11, color: Color(0xFF657C89))),
         ]),
       ),
-      const SizedBox(height: 12),
+      SizedBox(height: 12),
       Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: const Color(0xFFF7FBFE),
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(color: _subSurface,
           border: Border.all(color: _line),
           borderRadius: BorderRadius.circular(11)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            secondary: const Icon(Icons.directions_bus_outlined, color: _teal),
-            title: const Text('School Transport', style: TextStyle(
+            secondary: Icon(Icons.directions_bus_outlined, color: _teal),
+            title: Text('School Transport', style: TextStyle(
               fontWeight: FontWeight.w800, fontSize: 14)),
-            subtitle: const Text('Request transport for this student',
+            subtitle: Text('Request transport for this student',
               style: TextStyle(fontSize: 11)),
             value: _draft.usesTransport,
             onChanged: (v) => setState(() => _draft.usesTransport = v),
@@ -1453,15 +1459,15 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
               icon: Icons.notes_outlined,
               initialValue: _draft.transportNotes,
               onChanged: (v) => _draft.transportNotes = v),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
           ],
-          const Divider(height: 12, color: _line),
+          Divider(height: 12, color: _line),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            secondary: const Icon(Icons.percent_outlined, color: _teal),
-            title: const Text('Scholarship / Discount Request',
+            secondary: Icon(Icons.percent_outlined, color: _teal),
+            title: Text('Scholarship / Discount Request',
               style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
-            subtitle: const Text('Requires an authorized discount rule',
+            subtitle: Text('Requires an authorized discount rule',
               style: TextStyle(fontSize: 11)),
             value: _draft.requestsDiscount,
             onChanged: (v) => setState(() => _draft.requestsDiscount = v),
@@ -1473,12 +1479,12 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
               onChanged: (v) => _draft.discountNotes = v),
         ]),
       ),
-      const SizedBox(height: 13),
+      SizedBox(height: 13),
       Container(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: _pale, borderRadius: BorderRadius.circular(10)),
-        child: const Row(children: [
+        child: Row(children: [
           Icon(Icons.info_outline, color: _teal),
           SizedBox(width: 10),
           Expanded(child: Text('Tuition, transport and other fee categories '
@@ -1492,21 +1498,21 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
 
   Widget _reviewSection(String title, IconData icon, List<Widget> rows) =>
     Container(
-      margin: const EdgeInsets.only(bottom: 13),
-      padding: const EdgeInsets.all(13),
+      margin: EdgeInsets.only(bottom: 13),
+      padding: EdgeInsets.all(13),
       decoration: BoxDecoration(
         border: Border.all(color: _line),
-        color: const Color(0xFFF9FCFF),
+        color: _subSurface,
         borderRadius: BorderRadius.circular(11)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           Icon(icon, color: _teal, size: 21),
-          const SizedBox(width: 9),
+          SizedBox(width: 9),
           Expanded(child: Text(title,
-            style: const TextStyle(color: _teal,
+            style: TextStyle(color: _teal,
               fontSize: 15, fontWeight: FontWeight.w900))),
         ]),
-        const Divider(height: 16, color: _line),
+        Divider(height: 16, color: _line),
         ...rows,
       ]),
     );
@@ -1514,24 +1520,24 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   Widget _reviewFields() {
     final warning = _draft.validateStep(AdmissionStep.review);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const Text('Confirm the application details below before forwarding '
+      Text('Confirm the application details below before forwarding '
         'to the Principal.',
         style: TextStyle(fontSize: 12, color: Color(0xFF587482))),
-      const SizedBox(height: 13),
+      SizedBox(height: 13),
       if (warning != null) ...[
         Container(
-          padding: const EdgeInsets.all(11),
-          decoration: BoxDecoration(color: const Color(0xFFFFF1DA),
+          padding: EdgeInsets.all(11),
+          decoration: BoxDecoration(color: _warningSurface,
             borderRadius: BorderRadius.circular(9)),
           child: Row(children: [
-            const Icon(Icons.warning_amber_outlined,
+            Icon(Icons.warning_amber_outlined,
                 color: Color(0xFF9C6B12)),
-            const SizedBox(width: 9),
+            SizedBox(width: 9),
             Expanded(child: Text('Additional information required: $warning',
-              style: const TextStyle(fontSize: 12))),
+              style: TextStyle(fontSize: 12))),
           ]),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
       ],
       _reviewSection('Student Information', Icons.person_outline, [
         _summaryRow('Full Name', _draft.studentName),
@@ -1574,12 +1580,12 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           _draft.requestsDiscount ? 'Requested' : 'Not requested'),
       ]),
       Container(
-        padding: const EdgeInsets.all(13),
+        padding: EdgeInsets.all(13),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFF2DB),
+          color: _warningSurface,
           borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: const Color(0xFFF3D8A3))),
-        child: const Row(children: [
+          border: Border.all(color: Color(0xFFF3D8A3))),
+        child: Row(children: [
           Icon(Icons.lock_outline, color: Color(0xFF906115)),
           SizedBox(width: 12),
           Expanded(child: Text(
@@ -1595,13 +1601,13 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   }
 
   Widget _summaryRow(String label, String value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 7),
+        padding: EdgeInsets.symmetric(vertical: 7),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
               width: 155,
-              child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+              child: Text(label, style: TextStyle(fontWeight: FontWeight.w600)),
             ),
             Expanded(child: Text(value.isEmpty ? 'Not provided' : value)),
           ],
@@ -1619,7 +1625,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       key: key,
       initialValue: choices.containsKey(current) ? current : null,
       isExpanded: true,
-      decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
+      decoration: InputDecoration(labelText: label, border: OutlineInputBorder()),
       items: [
         for (final entry in choices.entries)
           DropdownMenuItem(value: entry.key, child: Text(entry.value)),
@@ -1631,22 +1637,22 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   Widget _actions() => Row(children: [
     Expanded(child: OutlinedButton.icon(
       onPressed: _step == 0 ? null : _previous,
-      icon: const Icon(Icons.arrow_back),
-      label: const Text('Back'),
+      icon: Icon(Icons.arrow_back),
+      label: Text('Back'),
     )),
-    const SizedBox(width: 13),
+    SizedBox(width: 13),
     Expanded(child: _step < AdmissionStep.values.length - 1
       ? FilledButton.icon(
-          key: const Key('wizard-next'),
+          key: Key('wizard-next'),
           onPressed: _next,
-          icon: const Icon(Icons.arrow_forward),
+          icon: Icon(Icons.arrow_forward),
           iconAlignment: IconAlignment.end,
-          label: const Text('Next Step'))
+          label: Text('Next Step'))
       : FilledButton.icon(
-          key: const Key('wizard-submit-disabled'),
+          key: Key('wizard-submit-disabled'),
           onPressed: null,
-          icon: const Icon(Icons.lock_outline),
-          label: const Text('Submit unavailable')),
+          icon: Icon(Icons.lock_outline),
+          label: Text('Submit unavailable')),
     ),
   ]);
 
