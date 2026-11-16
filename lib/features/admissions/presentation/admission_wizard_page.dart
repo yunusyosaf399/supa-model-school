@@ -1121,63 +1121,77 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     ]),
   );
 
-  Widget _academicFields() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text('Class and campus allocation',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        if (!_academicReady) ...[
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(12),
-              child: Text('No authorized academic options are available. '
-                  'Sign in as Owner, complete school setup, and create '
-                  'classes and sections before selecting a placement.'),
-            ),
-          ),
-        ] else ...[
-          const Text('The options below come from your school database. '
-              'Only the active academic year is available for new admissions.'),
-          const SizedBox(height: 16),
-          _choice(
+  Widget _academicFields() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const Text('Assign the academic year, campus, class and section.',
+        style: TextStyle(color: Color(0xFF587484), fontSize: 12)),
+      const SizedBox(height: 14),
+      if (!_academicReady)
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF4DC),
+            border: Border.all(color: const Color(0xFFF4D6A7)),
+            borderRadius: BorderRadius.circular(10)),
+          child: const Row(children: [
+            Icon(Icons.info_outline, color: Color(0xFF9A6D11)),
+            SizedBox(width: 10),
+            Expanded(child: Text(
+              'No authorized academic options are available. '
+              'Sign in as Owner, complete school setup, and create '
+              'classes and sections first.',
+              style: TextStyle(fontSize: 12))),
+          ]),
+        )
+      else ...[
+        const Text('Academic choices are loaded from your verified '
+          'school records. Only the active academic year is shown.',
+          style: TextStyle(fontSize: 12)),
+        const SizedBox(height: 13),
+        LayoutBuilder(builder: (context, c) {
+          final campus = _choice(
             key: const Key('admission-campus-choice'),
-            label: 'Campus *',
-            current: _draft.campusId,
+            label: 'Campus *', current: _draft.campusId,
             choices: _campusChoices,
-            onChanged: _chooseCampus,
-          ),
-          const SizedBox(height: 16),
-          _choice(
+            onChanged: _chooseCampus);
+          final year = _choice(
             key: const Key('admission-year-choice'),
-            label: 'Academic year *',
-            current: _draft.academicYearId,
+            label: 'Academic Year *', current: _draft.academicYearId,
             choices: _yearChoices,
-            onChanged: (_) {}, // Server-selected active year only.
-          ),
-          if (_academicLoading) ...[
-            const SizedBox(height: 12),
-            const LinearProgressIndicator(
-              key: Key('admission-classes-loading'),
-            ),
-          ],
-          if (_academicError != null) ...[
-            const SizedBox(height: 12),
-            Text(_academicError!,
-                key: const Key('admission-classes-error'),
-                style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            TextButton.icon(
-              onPressed: _draft.campusId == null
-                  ? null : () => _loadClasses(_draft.campusId!),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry class lookup'),
-            ),
-          ],
-          const SizedBox(height: 16),
-          _choice(
+            onChanged: (_) {});
+          if (c.maxWidth >= 520) {
+            return Row(children: [
+              Expanded(child: campus),
+              const SizedBox(width: 13),
+              Expanded(child: year),
+            ]);
+          }
+          return Column(children: [
+            campus, const SizedBox(height: 12), year,
+          ]);
+        }),
+        if (_academicLoading) ...[
+          const SizedBox(height: 13),
+          const LinearProgressIndicator(
+            key: Key('admission-classes-loading')),
+        ],
+        if (_academicError != null) ...[
+          const SizedBox(height: 13),
+          Text(_academicError!,
+            key: const Key('admission-classes-error'),
+            style: const TextStyle(color: Color(0xFFB6232C))),
+          TextButton.icon(
+            onPressed: _draft.campusId == null
+              ? null : () => _loadClasses(_draft.campusId!),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry class lookup')),
+        ],
+        const SizedBox(height: 13),
+        LayoutBuilder(builder: (context, c) {
+          final schoolClass = _choice(
             key: ValueKey('class-choice-${_draft.campusId}-'
-                '${_draft.academicYearId}-${_academicClasses.length}'),
+              '${_draft.academicYearId}-${_academicClasses.length}'),
             label: 'Class *',
             current: _draft.classId,
             choices: _classChoices,
@@ -1186,15 +1200,8 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
               _draft.sectionId = null;
               _error = null;
             }),
-          ),
-          if (!_academicLoading && _draft.campusId != null &&
-              _academicError == null && _academicClasses.isEmpty) ...[
-            const SizedBox(height: 8),
-            const Text('No classes exist for this campus and academic year. '
-                'Create them in Owner → Academic Setup.'),
-          ],
-          const SizedBox(height: 16),
-          _choice(
+          );
+          final section = _choice(
             key: ValueKey('section-choice-${_draft.classId}'),
             label: 'Section (optional)',
             current: _draft.sectionId,
@@ -1203,15 +1210,42 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
               _draft.sectionId = value;
               _error = null;
             }),
-          ),
+          );
+          if (c.maxWidth >= 520) {
+            return Row(children: [
+              Expanded(child: schoolClass),
+              const SizedBox(width: 13),
+              Expanded(child: section),
+            ]);
+          }
+          return Column(children: [
+            schoolClass, const SizedBox(height: 12), section,
+          ]);
+        }),
+        if (!_academicLoading && _draft.campusId != null &&
+            _academicError == null && _academicClasses.isEmpty) ...[
+          const SizedBox(height: 10),
+          const Text('No classes exist for this campus and academic year. '
+            'Create them in Owner → Academic Setup.',
+            style: TextStyle(fontSize: 12, color: Color(0xFF9A6D11))),
         ],
-        const SizedBox(height: 12),
-        const Text('The permanent registration number will be generated by '
-            'the trusted server after admission approval; nothing is '
-            'submitted at this stage.'),
       ],
-    );
-  }
+      const SizedBox(height: 18),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: _pale,
+          borderRadius: BorderRadius.circular(10)),
+        child: const Row(children: [
+          Icon(Icons.verified_user_outlined, color: _teal),
+          SizedBox(width: 10),
+          Expanded(child: Text('A permanent registration/admission number '
+            'will be generated by the trusted server after Principal approval. '
+            'This screen does not create a student.',
+            style: TextStyle(fontSize: 12))),
+        ]),
+      ),
+    ],
+  );
 
   Widget _documentFields() {
     return Column(
