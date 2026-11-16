@@ -24,7 +24,7 @@ mistaken for the number of schemas.
 | DB01 | School foundation, Auth roles, campuses, academic years/classes | Baseline authored + deployed | Deployed | Expand complete role catalog, user access, tests/review |
 | DB02 | Students, admissions, guardians, enrollments, documents | Baseline authored + deployed | Deployed | Full document upload/verification service and acceptance testing |
 | DB03 | Fee plans, discounts, charges, partial receipts, credit, bank claims | **18-table SQL design in draft PR (2026-11-16)** | NOT deployed | Test SQL; design atomic server posting, DB06 account links |
-| DB04 | Student/staff attendance, school calendar and corrections | NOT fully designed | NOT deployed | Full schema design next |
+| DB04 | Student/staff attendance, school calendar, teacher duties and corrections | **11-table SQL design in stacked draft** | NOT deployed | Run SQL/RLS tests; teacher-role expansion, signed posting operations |
 | DB05 | Employees, assignments, payroll, salary advances/repayments | NOT fully designed | NOT deployed | Full schema design |
 | DB06 | Financial accounts, cash/bank, expenses, transfers and closings | NOT fully designed | NOT deployed | Full schema design (complements DB03) |
 | DB07 | Canteen, uniforms, inventory, transport/vehicles | NOT fully designed | NOT deployed | Full schema design |
@@ -40,14 +40,14 @@ projection and NOT a complete DB09 sync/backup architecture.
 
 - **Baseline deployed:** 2 of 9 domains (DB01, DB02).
   DB01/DB02 operational workflows still have unresolved gaps.
-- **New design authored but not deployed:** 1 of 9 (DB03).
-- **Full-domain designs remaining after DB03:** **6** (DB04–DB09).
+- **New designs authored but not deployed:** 2 of 9 (DB03 and DB04).
+- **Full-domain designs remaining after DB04:** **5** (DB05–DB09).
   DB09 has preliminary server-sync code but not a finished domain.
 - **Core domains still requiring deployment:** **7** (DB03–DB09).
   Previously deployed DB01/DB02 are not rolled back.
 
 Before DB03 source design was started: 7 full-domain designs remained.
-After DB03 source design is reviewed: 6 remain. Counts are **domains**,
+After DB03 source design is reviewed: 6 remain; after DB04: 5 remain. Counts are **domains**,
 not SQL files, tables, Flutter screens or total project tasks.
 
 ## Cross-domain dependency decisions
@@ -79,4 +79,12 @@ Owner dashboard with example fee collection/dues. DB03 fee panels must
 not claim real collections before DB03+DB06 posted financial transactions
 and authorized dashboard projections exist.
 
-**Next domain to author: DB04 Attendance.**
+**Next domain to author: DB05 Employees, Assignments and Payroll.**
+
+## DB04 attendance schema, 2026-11-16
+11 RLS-denied tables designed on stacked draft DB04 branch, including
+campus calendar, teacher first-period/optional after-break duties, class/
+section register, original student marks and immutable student/staff
+correction requests and decisions. No Flutter code or hosted SQL changes.
+See docs/33_DB04_ATTENDANCE_DESIGN.md. **5 full domain designs remain; 7
+remain undeployed.** Actual PostgreSQL fixture/RLS has not yet run.
