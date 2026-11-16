@@ -39,3 +39,28 @@ Supabase public tables remain empty. Do not deploy a draft or register a real
 school/user/device until migration, two-campus RLS and Edge integration tests
 pass, Windows credential storage is encrypted, and device provisioning/
 rotation/expiration are implemented and reviewed.
+
+## D04-T04 admission change feed (source draft; not deployed)
+
+- `drafts/DB04_CHANGE_FEED.sql` — private RLS-enabled append-only admission
+  event log; AFTER INSERT/UPDATE/DELETE capture, bulk-truncation rejection,
+  campus/ID immutability checks, transaction-scoped advisory commit-order
+  sequencing, and latest-state backfill for preexisting admissions.
+- `functions/offline-pull/index.ts` — verified-user JWT Edge handler,
+  registered offline desktop proof, campus-scope checks, page sizes 1–100,
+  after_cursor as a lossless decimal string and `has_more` pagination.
+- `functions/offline-pull/README.md` — request/response contract, initial
+  pull behavior, tombstones and local atomic-cursor application requirements.
+- `tests/OFFLINE_CHANGE_FEED_INTEGRATION.sql` — rollback-only fictional
+  PostgreSQL test: campus isolation, paging, invalid/rolled-back cursor gaps,
+  revision/tombstone guards, secret expiry, revocation and private grants.
+- `tests/check_offline_change_feed.py` — static source review only.
+- `drafts/DB04_CHANGE_FEED_RUNBOOK.md` — disposable-local database
+  prerequisites and two-session commit-order concurrency test plan.
+
+**Dependency order:** DB01 foundation → DB02 admissions → DB02 workflow →
+DB02 admission operations → DB04 offline ingest → DB04 change feed.
+The SQL and Edge function have NOT been deployed, and the Flutter client
+has not implemented atomic event application/cursor persistence. Do not
+load real pupil data until the encryption, device enrollment and
+PostgreSQL/RLS/Edge runtime acceptance gates have all passed.
