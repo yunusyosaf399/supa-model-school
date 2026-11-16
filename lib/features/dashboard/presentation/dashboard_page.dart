@@ -998,3 +998,177 @@ class _DashboardPageState extends State<DashboardPage> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Row(mainAxisSize: MainAxisSize.min, children: [
+              Text('Today', style: TextStyle(fontSize: 10)),
+              Icon(Icons.keyboard_arrow_down_rounded, size: 15),
+            ]),
+          ),
+        ),
+        const Divider(height: 18, color: Color(0xFFDBE7EE)),
+        if (total == null)
+          const SizedBox(height: 142,
+            child: Center(child: Text('Attendance records are not configured.')))
+        else SizedBox(height: 142, child: Row(children: [
+          DashboardDonutIndicator(ratio: fraction,
+            label: _attendancePercent(), size: 126),
+          const SizedBox(width: 10),
+          Expanded(child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _attendanceLine('Present', _count(p),
+                DashboardColors.teal,
+                extra: _attendancePercent()),
+              const Divider(height: 16),
+              _attendanceLine('Absent', _count(total - (p ?? 0)),
+                const Color(0xFFB8CBD2),
+                extra: '${(100 * (total - (p ?? 0)) / math.max(total, 1)).toStringAsFixed(1)}%'),
+              const Divider(height: 16),
+              _attendanceLine('Total Students', _count(total),
+                DashboardColors.deep),
+            ],
+          )),
+        ])),
+      ]),
+    );
+  }
+
+  Widget _attendanceLine(String label, String value, Color color,
+      {String? extra}) => Row(children: [
+    Container(width: 9, height: 9, decoration: BoxDecoration(
+      color: color, borderRadius: BorderRadius.circular(2))),
+    const SizedBox(width: 6),
+    Expanded(child: Text(label, maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(fontSize: 10, color: _text))),
+    Text(value, style: TextStyle(fontSize: 11,
+        fontWeight: FontWeight.w800, color: _text)),
+    if (extra != null) ...[
+      const SizedBox(width: 4),
+      Text('($extra)', style: TextStyle(fontSize: 9, color: _secondary)),
+    ],
+  ]);
+
+  Widget _approvalsPanel({required bool desktop}) => DashboardPanel(
+    key: const Key('dashboard-pending-approvals'),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _panelHeading('Pending Approvals', Icons.fact_check_outlined,
+        trailing: _viewAll(widget.onAdmissions)),
+      const Divider(height: 16, color: Color(0xFFDBE7EE)),
+      _approvalRow(desktop ? 'Admission Applications' : 'Admission Requests',
+          Icons.person_add_alt_1_outlined,
+          _data.pendingAdmissions, widget.onAdmissions ?? widget.onNewAdmission),
+      _approvalRow('Expense Requests', Icons.receipt_long_outlined,
+          _data.pendingExpenses, widget.onExpenses),
+      _approvalRow(desktop ? 'Leave Requests' : 'Student Transfer Requests',
+          desktop ? Icons.groups_2_outlined : Icons.swap_horiz_rounded,
+          desktop ? _data.pendingLeave :
+              _data.isDemo ? 1 : null,
+          () => _notAvailable(desktop ? 'Leave Requests' : 'Student transfers')),
+    ]),
+  );
+
+  Widget _approvalRow(String label, IconData icon, int? count,
+      VoidCallback onTap) => Column(children: [
+    InkWell(
+      onTap: onTap,
+      child: SizedBox(height: 45, child: Row(children: [
+        Icon(icon, color: DashboardColors.teal, size: 24),
+        const SizedBox(width: 12),
+        Expanded(child: Text(label,
+            maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 12, color: _text))),
+        Container(
+          width: 42, height: 26,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFEBC6),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(count == null ? '—' : '$count',
+              style: const TextStyle(color: Color(0xFF8D5712),
+                  fontSize: 12, fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(width: 12),
+        Icon(Icons.chevron_right_rounded, size: 20, color: _secondary),
+      ])),
+    ),
+    const Divider(height: 1, color: Color(0xFFE2E9ED)),
+  ]);
+
+  Widget _syncPanel({required bool desktop}) => DashboardPanel(
+    key: const Key('dashboard-sync-status'),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _panelHeading(desktop ? 'Sync / Backup Status' : 'Sync Status',
+        Icons.sync_outlined,
+        trailing: desktop ? null : IconButton(
+          tooltip: 'About synchronization',
+          onPressed: () => _notAvailable('Device synchronization'),
+          icon: Icon(Icons.info_outline_rounded,
+            size: 20, color: _secondary),
+        ),
+      ),
+      const SizedBox(height: 13),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: const Color(0xFFE4F4EF),
+        ),
+        child: Row(children: [
+          const Icon(Icons.cloud_off_outlined,
+            color: DashboardColors.teal, size: 30),
+          const SizedBox(width: 10),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text('Not configured',
+                style: TextStyle(color: DashboardColors.ink,
+                    fontSize: 13, fontWeight: FontWeight.w800)),
+              SizedBox(height: 4),
+              Text('Sync and backup services are not enabled.',
+                maxLines: 2,
+                style: TextStyle(color: DashboardColors.muted, fontSize: 10)),
+            ],
+          )),
+          const Icon(Icons.storage_outlined,
+              color: DashboardColors.teal, size: 28),
+        ]),
+      ),
+      if (desktop) ...[
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: _syncButton('Sync Now', Icons.sync_outlined)),
+          const SizedBox(width: 9),
+          Expanded(child: _syncButton('Backup Now', Icons.cloud_upload_outlined)),
+        ]),
+      ] else ...[
+        const SizedBox(height: 9),
+        Row(children: [
+          const Icon(Icons.sync_rounded,
+              color: DashboardColors.teal, size: 23),
+          const SizedBox(width: 10),
+          Expanded(child: Text(
+            'Automatic synchronization will appear here once enabled.',
+            style: TextStyle(fontSize: 11, color: _secondary),
+          )),
+        ]),
+      ],
+    ]),
+  );
+
+  Widget _syncButton(String label, IconData icon) => SizedBox(
+    height: 34,
+    child: OutlinedButton.icon(
+      style: OutlinedButton.styleFrom(
+        backgroundColor: _dark ? const Color(0xFF19323A) : Colors.white,
+        padding: EdgeInsets.zero,
+        side: const BorderSide(color: Color(0xFF0B978B)),
+        foregroundColor: _deep,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      onPressed: () => _notAvailable(label),
+      icon: Icon(icon, size: 18),
+      label: Text(label,
+          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+    ),
+  );
+}
