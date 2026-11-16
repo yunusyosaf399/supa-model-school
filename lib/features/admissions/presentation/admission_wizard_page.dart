@@ -1444,50 +1444,108 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     ],
   );
 
+  Widget _reviewSection(String title, IconData icon, List<Widget> rows) =>
+    Container(
+      margin: const EdgeInsets.only(bottom: 13),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        border: Border.all(color: _line),
+        color: const Color(0xFFF9FCFF),
+        borderRadius: BorderRadius.circular(11)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Icon(icon, color: _teal, size: 21),
+          const SizedBox(width: 9),
+          Expanded(child: Text(title,
+            style: const TextStyle(color: _teal,
+              fontSize: 15, fontWeight: FontWeight.w900))),
+        ]),
+        const Divider(height: 16, color: _line),
+        ...rows,
+      ]),
+    );
+
   Widget _reviewFields() {
     final warning = _draft.validateStep(AdmissionStep.review);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text('Review admission information',
-            style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 12),
-        if (warning != null) ...[
-          Text('Additional information required: $warning',
-              style: TextStyle(color: Theme.of(context).colorScheme.error)),
-          const SizedBox(height: 12),
-        ],
-        _summaryRow('Student', _draft.studentName),
-        _summaryRow('Birth date', _dateLabel(_draft.dateOfBirth)),
-        _summaryRow('Previous school',
-            _draft.previousSchool.trim().isEmpty
-                ? 'Not applicable'
-                : _draft.previousSchool),
-        _summaryRow('Guardians', _draft.guardians
-            .map((g) => '${g.fullName} (${g.relationship}'
-                '${g.isPrimary ? ', primary' : ''})')
-            .join(', ')),
-        _summaryRow('Campus', _campusChoices[_draft.campusId] ?? 'Not selected'),
-        _summaryRow('Year', _yearChoices[_draft.academicYearId] ?? 'Not selected'),
-        _summaryRow('Class', _classChoices[_draft.classId] ?? 'Not selected'),
-        _summaryRow('Section', _sectionChoices[_draft.sectionId] ?? 'Unassigned'),
-        _summaryRow('Document state', 'Conditional — awaiting verification'),
-        _summaryRow('Document deadline', _dateLabel(_draft.missingDocumentsDueOn)),
-        _summaryRow('Admission fee', _draft.admissionFeeStatus),
-        _summaryRow('Transport', _draft.usesTransport ? 'Requested' : 'Not requested'),
-        const SizedBox(height: 18),
-        Card(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          child: const Padding(
-            padding: EdgeInsets.all(12),
-            child: Text('The application has NOT been saved or forwarded for '
-                'approval. Academic placement choices may come from authorized '
-                'DB01 records, but private document Storage and the audited '
-                'DB02 admission endpoint are not connected. Submission remains disabled.'),
-          ),
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const Text('Confirm the application details below before forwarding '
+        'to the Principal.',
+        style: TextStyle(fontSize: 12, color: Color(0xFF587482))),
+      const SizedBox(height: 13),
+      if (warning != null) ...[
+        Container(
+          padding: const EdgeInsets.all(11),
+          decoration: BoxDecoration(color: const Color(0xFFFFF1DA),
+            borderRadius: BorderRadius.circular(9)),
+          child: Row(children: [
+            const Icon(Icons.warning_amber_outlined,
+                color: Color(0xFF9C6B12)),
+            const SizedBox(width: 9),
+            Expanded(child: Text('Additional information required: $warning',
+              style: const TextStyle(fontSize: 12))),
+          ]),
         ),
+        const SizedBox(height: 12),
       ],
-    );
+      _reviewSection('Student Information', Icons.person_outline, [
+        _summaryRow('Full Name', _draft.studentName),
+        _summaryRow('Date of Birth', _dateLabel(_draft.dateOfBirth)),
+        _summaryRow('Gender', _draft.gender),
+        _summaryRow('Previous School',
+          _draft.previousSchool.trim().isEmpty
+            ? 'Not applicable' : _draft.previousSchool),
+        _summaryRow('Nationality', _draft.nationality),
+        _summaryRow('Primary Language', _draft.primaryLanguage),
+        _summaryRow('Notes', _draft.notes),
+      ]),
+      _reviewSection('Guardian Contacts', Icons.groups_outlined, [
+        for (final person in _draft.guardians)
+          _summaryRow(person.isPrimary ? 'Primary Guardian' : 'Guardian',
+            '${person.fullName} • ${person.relationship} • '
+            '${person.phone.isEmpty ? 'No phone' : person.phone}'),
+      ]),
+      _reviewSection('Academic Placement', Icons.school_outlined, [
+        _summaryRow('Campus', _campusChoices[_draft.campusId] ?? 'Not selected'),
+        _summaryRow('Academic Year',
+          _yearChoices[_draft.academicYearId] ?? 'Not selected'),
+        _summaryRow('Class',
+          _classChoices[_draft.classId] ?? 'Not selected'),
+        _summaryRow('Section',
+          _sectionChoices[_draft.sectionId] ?? 'Unassigned'),
+      ]),
+      _reviewSection('Documents', Icons.description_outlined, [
+        for (final name in _draft.requiredDocumentNames)
+          _summaryRow(name, 'Not uploaded / unverified'),
+        _summaryRow('Conditional Deadline',
+          _dateLabel(_draft.missingDocumentsDueOn)),
+        _summaryRow('Reason', _draft.conditionalReason),
+      ]),
+      _reviewSection('Fee Preferences', Icons.savings_outlined, [
+        _summaryRow('Admission Fee', _draft.admissionFeeStatus),
+        _summaryRow('Transport',
+          _draft.usesTransport ? 'Requested' : 'Not requested'),
+        _summaryRow('Scholarship / Discount',
+          _draft.requestsDiscount ? 'Requested' : 'Not requested'),
+      ]),
+      Container(
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF2DB),
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(color: const Color(0xFFF3D8A3))),
+        child: const Row(children: [
+          Icon(Icons.lock_outline, color: Color(0xFF906115)),
+          SizedBox(width: 12),
+          Expanded(child: Text(
+            'This application has NOT been saved or submitted. '
+            'Real admission requires secure private document uploads '
+            'and an authenticated DB02 intake endpoint. '
+            'The Principal approval action stays disabled until those '
+            'services are deployed and tested.',
+            style: TextStyle(fontSize: 12))),
+        ]),
+      ),
+    ]);
   }
 
   Widget _summaryRow(String label, String value) => Padding(
