@@ -312,7 +312,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   Color get _surface => Theme.of(context).colorScheme.surface;
   Color get _subSurface => _dark ? Color(0xFF203740) : Color(0xFFF8FCFF);
   Color get _fieldSurface => _dark ? Color(0xFF20333C) : Colors.white;
-  Color get _muted => _dark ? Color(0xFFBDD2DC) : _muted;
+  Color get _muted => _dark ? Color(0xFFBDD2DC) : Color(0xFF5A7382);
   Color get _warningSurface => _dark ? Color(0xFF413621) : Color(0xFFFFF4DC);
 
   IconData _stepIcon(AdmissionStep step) => switch (step) {
