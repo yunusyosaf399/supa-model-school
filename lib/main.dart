@@ -587,29 +587,10 @@ class _SchoolShellState extends State<_SchoolShell> {
     };
 
     return Scaffold(
-      // The supplied dashboard design has a slim teal desktop titlebar;
-      // its search/campus/notifications/account controls are inside the
-      // dashboard itself. Non-dashboard screens retain the existing toolbar.
-      appBar: selected == 0
-          ? (desktop
-              ? AppBar(
-                  toolbarHeight: 38,
-                  elevation: 0,
-                  backgroundColor: SchoolPalette.tealDark,
-                  foregroundColor: Colors.white,
-                  title: const Row(children: [
-                    Icon(Icons.school_outlined, color: Colors.white, size: 23),
-                    SizedBox(width: 10),
-                    Text('Supa Model School',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                    SizedBox(width: 14),
-                    Text('│', style: TextStyle(color: Color(0xFF95D0CD))),
-                    SizedBox(width: 14),
-                    Text('School Management System',
-                      style: TextStyle(fontSize: 13)),
-                  ]),
-                )
-              : null)
+      // Dashboard controls are rendered inside DashboardPage. The desktop
+      // window already has its own native titlebar, so no second teal AppBar.
+      // Other modules retain the normal Flutter toolbar.
+      appBar: selected == 0 ? null
           : AppBar(
         titleSpacing: 14,
         title: Row(mainAxisSize: MainAxisSize.min, children: [
