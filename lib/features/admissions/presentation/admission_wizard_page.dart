@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../../academics/data/academic_structure_repository.dart';
@@ -549,7 +550,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         Flexible(flex: wide ? 3 : 2,
           child: InkWell(
             key: Key(wide ? 'step-tab-$i' : 'step-chip-$i'),
-            onTap: i <= _step
+            // Debug builds can inspect every screen independently.
+            // This does not mark any validation as passed or submit data.
+            onTap: i <= _step || kDebugMode
               ? () => setState(() { _step = i; _error = null; })
               : null,
             child: Column(mainAxisSize: MainAxisSize.min, children: [
