@@ -232,6 +232,11 @@ class _SchoolShellState extends State<_SchoolShell> {
         owner: widget.owner,
         academicRepository:
             widget.owner == null ? null : widget.academicRepository,
+        selectedCampusId: activeCampusId,
+        onOpenSearch: _showGlobalSearch,
+        onCampusChanged: (campusId) =>
+            setState(() => activeCampusId = campusId),
+        onNavigateModule: (index) => setState(() => selected = index),
       ),
     ));
   }
@@ -619,7 +624,8 @@ class _SchoolShellState extends State<_SchoolShell> {
             onPressed: _showGlobalSearch,
             icon: const Icon(Icons.search),
           ),
-          _themeMenu(),
+          // Appearance is configured in Settings, never per-feature.
+          if (selected == 10) _themeMenu(),
           IconButton(
             tooltip: 'Notifications (preview)',
             onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
@@ -644,6 +650,19 @@ class _SchoolShellState extends State<_SchoolShell> {
       ),
 
       body: Column(children: [
+        if (selected == 10)
+          Material(
+            color: Theme.of(context).colorScheme.surface,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(children: [
+                const Icon(Icons.contrast_outlined),
+                const SizedBox(width: 12),
+                const Expanded(child: Text('Appearance — System, Light or Dark')),
+                _themeMenu(),
+              ]),
+            ),
+          ),
         if (owner != null && selected != 0)
           Container(
             width: double.infinity,
