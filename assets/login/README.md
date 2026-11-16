@@ -1,52 +1,41 @@
 # Supa Model School — Login Background Assets
 
-This directory is registered in `pubspec.yaml`. It must contain the
-two user-supplied blank login backgrounds before testing final login visuals:
+Both user-supplied blank background images are **committed in GitHub**
+on this branch and declared in `pubspec.yaml`:
 
-| Platform | Asset path | Image source | Crop |
+| Platform | GitHub asset | Original upload | Transform |
 |---|---|---|---|
-| Windows desktop | `assets/login/signin_desktop.jpg` | User upload `1000311590.jpg` | Remove baked-in 43px Windows titlebar |
-| Android portrait | `assets/login/signin_mobile.jpg` | User upload `1000311591.jpg` | Remove baked-in 49px status and 58px navigation bars |
+| Windows | `assets/login/signin_desktop.jpg` | `1000311590.jpg` | Removed top 43px baked-in window caption |
+| Android | `assets/login/signin_mobile.jpg` | `1000311591.jpg` | Removed 49px baked-in status bar and 58px bottom navigation bar |
 
-The backgrounds are static artwork (logo / scene / window-style header and
-footer included). They are behind **real** Flutter email, password,
-campus-placeholder, sign-in, password reset, help, theme and demo controls.
+The photographs, foliage, logo, text and teal framing remain unchanged.
+Flutter displays the interactive login form on top of the fixed background.
 
-**Asset transport:** The chat's uploaded image bytes cannot be written into
-this repository through the current text-only GitHub file actions. They are
-packaged separately in `SMS_Login_Backgrounds.zip` supplied in this chat.
-Extract that archive **into the repository root**, keeping the
-`assets/login/` directory intact. After extraction run:
+### Verified GitHub blob hashes
+
+- Desktop: `6b17351b1bdcb44dd5993d05037317af477927e0`
+- Android: `456c59b9b0811c7d4f8967a964290681420b34b2`
+
+These hashes were checked against the uploaded local JPEG bytes after
+cropping. **No extra asset extraction is necessary:** `git pull` is enough.
+
+### Laptop commands
 
 ```powershell
-git status --short
+git pull --ff-only origin main
 flutter pub get
 flutter analyze
 flutter test
 flutter run -d windows --dart-define=SUPABASE_URL=https://uebzvfzpbqqttbqyxxos.supabase.co --dart-define=SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLIC_KEY
 ```
 
-To commit the binaries to GitHub from your laptop after checking them:
+The user's empty images contain baked-in branding **"Suffah Model School"**
+while the application and form still use **"Supa Model School"**. The asset
+content was not retouched; use a revised approved background if this spelling
+must match.
 
-```powershell
-git add assets/login/signin_desktop.jpg assets/login/signin_mobile.jpg
-git commit -m "assets: add approved login desktop and mobile backgrounds"
-git push origin main
-```
+The School / Campus pre-auth selector is intentionally disabled until
+authenticated campus lookup is available. Remember me stays disabled until
+secure encrypted session persistence is implemented.
 
-Asset checksums (SHA-256, cropped high-quality JPEG copies):
-
-- `signin_desktop.jpg`: `64764e50bfbbe13c8aa0b39c48837e63ead2f04e5af5c734a8ca448565ffe8b3`
-- `signin_mobile.jpg`: `ff0f2168b30d321059571d346f133d92f72d44c7b9e75baf7089bea426c5e3a2`
-
-IMPORTANT: The supplied empty screenshots contain the baked-in text
-**"Suffah Model School"** (not "Supa Model School"). The live form still
-calls itself "Supa Model School". The screenshots are kept as submitted
-except for crop; use replacement backgrounds if the artwork's displayed
-school name needs correcting.
-
-No change to live school records or authentication was made.
-The School/Campus dropdown is intentionally placeholder-only before login:
-this app verifies campus membership *after* Supabase authentication.
-The Remember-me checkbox remains disabled until a secure encrypted
-device-session store is implemented.
+The downloadable chat ZIP is an optional backup, not required for use.
