@@ -5,7 +5,7 @@ DB02 admissions: students, guardians, student_guardians, admission_applications,
 DB03 fees: fee_categories, fee_plans, fee_plan_items, student_fee_rules, fee_discounts, fee_charges, fee_receipts, fee_allocations, student_credit_entries, fee_adjustments.
 DB04 attendance: school_calendar_days, attendance_policies, attendance_duties, attendance_registers, attendance_register_events, student_attendance_marks, attendance_correction_requests, attendance_correction_decisions, staff_attendance_records, staff_attendance_correction_requests, staff_attendance_correction_decisions.
 DB05 payroll: employee_departments, employee_positions, employees, employee_assignments, employee_teaching_assignments, payroll_components, salary_structures, salary_structure_lines, employee_leave_requests, employee_leave_days, payroll_periods, payroll_entries, payroll_entry_lines, payroll_cost_allocations, payroll_adjustments, salary_advances, advance_repayments, salary_payments, salary_payment_reversals, payroll_operation_receipts.
-DB06 money: financial_accounts, account_movements, account_transfers, expense_categories, expenses, capital_transactions, cash_closings, cash_closing_adjustments.
+DB06 money: ledger_accounts, financial_accounts, expense_categories, expense_requests, expenses, account_transfers, capital_transactions, account_opening_entries, accounting_periods, ledger_journals, ledger_lines, ledger_reversals, ledger_source_links, cash_closings, cash_closing_counts, cash_closing_adjustments, bank_statement_lines, bank_reconciliations, bank_reconciliation_matches, financial_operation_receipts.
 DB07 business: canteen_products, stock_movements, canteen_sales, uniform_materials, production_batches, finished_stock_movements, uniform_sales, vehicles, vehicle_expenses.
 DB08 controls: approval_policies, approval_requests, approval_decisions, correction_requests, audit_events, document_templates, user_shortcuts.
 DB09 sync: processed_operations, cloud_change_log, sync_conflicts, device_sync_status, backup_manifests and client-local sync_outbox/sync_state.
@@ -54,3 +54,13 @@ leave-day validation, allocation/recovery sums and DB06 linked account
 movements remain pending. See docs/34_DB05_EMPLOYEES_PAYROLL_DESIGN.md.
 **4 full core schemas remain to design (DB06–DB09); 7 remain undeployed
 (DB03–DB09). No Flutter source changes or hosted SQL deployment.**
+
+## DB06 double-entry finance/cashbook — design authored, NOT deployed (2026-11-16)
+20 tables and 20 RLS statements define school chart-of-accounts with
+cash/bank physical asset mapping; paired debit/credit posting lines, typed
+same-school DB03/DB05 accrual and payment sources, operating expense claims,
+capital and internal transfers, cash closings, bank statement reconciliation
+and immutable request receipts. Balanced/source-linked journals must validate
+at COMMIT. For details see `docs/35_DB06_FINANCE_CASHBOOK_DESIGN.md`.
+**3 full schemas remain to design (DB07–DB09), 7 remain undeployed
+(DB03–DB09).** No Flutter code or new hosted Supabase SQL.
