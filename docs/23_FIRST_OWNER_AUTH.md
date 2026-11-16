@@ -11,7 +11,7 @@
 
 ## What has been implemented in source
 - `lib/features/auth/data/owner_auth_gateway.dart`: production Supabase email/password authentication through `signInWithPassword`; `getUser()` verified identity; active `user_profiles`; unique active school-wide `owner` membership in `user_roles`; active `schools`; authorized active `campuses`; denial signs out the Auth session.
-- `lib/main.dart`: initialize with `SUPABASE_URL` and the **publishable** key supplied through Dart defines; restore an existing session only after revalidating Owner role. Distinct debug design preview mode. Owner's campus list only appears after authorization. Sign out removes authentication.
+- `lib/main.dart`: initialize with `SUPABASE_URL` and the **publishable** key supplied through Dart defines; restore an existing session only after revalidating Owner role. Distinct debug design preview mode. In-memory-only Auth storage with `EmptyLocalStorage`: sessions are intentionally not persisted across app restarts until encrypted platform-specific storage is tested. Owner's campus list only appears after authorization. Sign out removes authentication.
 - `lib/features/auth/presentation/login_page.dart`: real email/password sign-in callback, disabled sample campus selection for configured auth, errors that do not enumerate users, no fake sign-in.
 - `pubspec.yaml`: pinned stable `supabase_flutter 2.18.3` for Dart 3.9.
 - `supabase/drafts/DB01_FIRST_OWNER_ACTIVATION_TEMPLATE.sql`: privileged, one-use **data bootstrap template**, explicitly NOT a migration or an Auth user creation script. Fails closed for missing verified email, missing config, or pre-existing school/Owner.
