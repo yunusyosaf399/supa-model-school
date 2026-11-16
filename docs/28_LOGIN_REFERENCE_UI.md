@@ -32,33 +32,21 @@ Flutter `Form` overlaid above the picture.
 - `assets/login/signin_desktop.jpg`
 - `assets/login/signin_mobile.jpg`
 
-**Critical transfer note:** the GitHub repository update mechanism in this
-session accepts UTF-8 text only. It cannot ingest the attached JPEG bytes
-directly, so the exact uploaded user-image assets are delivered as
-`SMS_Login_Backgrounds.zip` in the same ChatGPT response. The GitHub PR
-contains the UI source, `pubspec.yaml`, tests and this documentation, but
-**does not contain the two actual JPEG files** until the user extracts them
-on their laptop and pushes them once. A neutral gradient fallback prevents
-missing assets from crashing the login screen.
+**GitHub binary assets are committed and verified.** Both uploaded JPEG
+backgrounds were transferred into GitHub Git blobs and attached to this UI
+branch, then checked against the exact local image content. The Flutter
+`pubspec.yaml` asset registration and both files are version-controlled.
+No manual ZIP extraction, copy or asset push is required. The chat ZIP
+is an optional backup only.
 
-On Windows, open PowerShell in the repository root and extract the
-downloaded ZIP (adjust path if Downloads is different):
+On Windows, open PowerShell in the repository root:
 
 ```powershell
 git pull --ff-only origin main
-Expand-Archive -LiteralPath "$env:USERPROFILE\Downloads\SMS_Login_Backgrounds.zip" -DestinationPath . -Force
 flutter pub get
 flutter analyze
 flutter test
 flutter run -d windows --dart-define=SUPABASE_URL=https://uebzvfzpbqqttbqyxxos.supabase.co --dart-define=SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLIC_KEY
-```
-
-**When satisfied with screenshots, publish backgrounds:**
-
-```powershell
-git add assets/login/signin_desktop.jpg assets/login/signin_mobile.jpg
-git commit -m "assets: approved Windows and Android login backgrounds"
-git push origin main
 ```
 
 ### Artwork processing
