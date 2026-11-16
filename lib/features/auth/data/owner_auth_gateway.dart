@@ -9,12 +9,16 @@ class OwnerAccess {
     required this.schoolId,
     required this.schoolName,
     required this.campuses,
+    this.currencyCode = 'XXX',
+    this.timezoneName = 'Etc/UTC',
   });
 
   final String userId;
   final String displayName;
   final String schoolId;
   final String schoolName;
+  final String currencyCode;
+  final String timezoneName;
   final List<OwnerCampus> campuses;
 }
 
@@ -32,6 +36,7 @@ abstract class OwnerAuthGateway {
   Future<OwnerAccess> signIn(String email, String password);
   Future<void> signOut();
   Future<void> sendRecovery(String email);
+  Future<void> changePassword(String currentPassword, String newPassword);
 }
 
 class UnconfiguredOwnerAuthGateway implements OwnerAuthGateway {
@@ -52,6 +57,10 @@ class UnconfiguredOwnerAuthGateway implements OwnerAuthGateway {
 
   @override
   Future<void> sendRecovery(String email) async =>
+      throw StateError('Supabase is not configured');
+
+  @override
+  Future<void> changePassword(String currentPassword, String newPassword) async =>
       throw StateError('Supabase is not configured');
 }
 
@@ -126,7 +135,7 @@ class SupabaseOwnerAuthGateway implements OwnerAuthGateway {
     final schoolId = roles.single['school_id'] as String;
     final school = await client
         .from('schools')
-        .select('id,name,status')
+        .select('id,name,status,currency_code,timezone_name')
         .eq('id', schoolId)
         .maybeSingle();
     if (school == null || school['status'] != 'active') {
@@ -147,6 +156,8 @@ class SupabaseOwnerAuthGateway implements OwnerAuthGateway {
       displayName: profile['display_name'] as String,
       schoolId: schoolId,
       schoolName: school['name'] as String,
+      currencyCode: school['currency_code'] as String,
+      timezoneName: school['timezone_name'] as String,
       campuses: [
         for (final item in campuses)
           OwnerCampus(
@@ -155,6 +166,30 @@ class SupabaseOwnerAuthGateway implements OwnerAuthGateway {
           ),
       ],
     );
+  }
+
+  @override
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    if (currentPassword.isEmpty || newPassword.length < 12 ||
+        currentPassword == newPassword) {
+      throw const FormatException('Use a distinct password of 12+ characters');
+    }
+    final before = await client.auth.getUser();
+    final userId = before.user?.id;
+    if (userId == null || client.auth.currentSession == null) {
+      throw StateError('No active session');
+    }
+    // Verify Owner access again, not just an earlier client-side screen flag.
+    await _loadVerifiedOwner(userId);
+    final result = await client.auth.updateUser(UserAttributes(
+      password: newPassword,
+      currentPassword: currentPassword,
+    ));
+    if (result.user?.id != userId) {
+      throw StateError('Password update could not be confirmed');
+    }
+    // Force re-login using the updated credentials.
+    await client.auth.signOut();
   }
 
   @override
