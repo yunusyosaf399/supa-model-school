@@ -41,6 +41,15 @@ The document-level and student-level data provided on this screen **are not save
 
 Existing `test/features/admissions/admission_academic_lookup_widget_test.dart` and other widget tests continue using the established keys (`wizard-next`, `step-chip-*`, `admission-campus-choice`, `class-choice-*`, `section-choice-*`, `document-deadline`).
 
+## Debug-only stage inspection
+
+In a Flutter debug build, clicking any stepper stage can open its
+corresponding UI for visual testing, even if the unconfigured school has no
+classes or the draft is incomplete. This **does not override** Next Step
+validation, does not synthesize campus/year/class identifiers, and does not
+enable Save Draft, Submit for Approval or document uploads. In release builds,
+stage navigation remains limited to previously reached steps.
+
 ## Verification status
 Source bracket/quote consistency checks and review of widget keys passed. Flutter analysis, widget tests, and actual Windows/Android runtime rendering **have not been executed in the assistant environment**, where the Flutter and Dart SDKs are unavailable. No claims of pixel-perfect visual verification should be made until actual screenshots from target devices have been reviewed.
 
