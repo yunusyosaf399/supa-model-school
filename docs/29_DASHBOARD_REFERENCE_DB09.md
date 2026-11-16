@@ -9,8 +9,8 @@
 
 The desktop dashboard follows the supplied desktop reference:
 
-- Slim teal application title bar, school logo, left white sidebar and user
-  supplied building image in the bottom of the sidebar.
+- Slim teal application title bar, school logo and left white sidebar without
+  decorative photographs.
 - Global search entry, verified Owner campus selector, active/demo year,
   notification preview and authenticated account menu.
 - Dashboard header with four quick actions: New Admission, Collect Fee,
@@ -23,8 +23,7 @@ The desktop dashboard follows the supplied desktop reference:
 The mobile dashboard follows the supplied portrait reference:
 
 - School logo, school name, Owner campus and account actions.
-- Good morning banner with the school's photo extracted from the user's
-  reference image.
+- Compact, text-only Good morning banner with a subtle light gradient.
 - Two-column metric cards, a four-tile quick action strip.
 - Recent Admissions, Pending Approvals and Sync Status panels above existing
   bottom navigation.
@@ -34,8 +33,6 @@ Source files:
 - `lib/features/dashboard/presentation/dashboard_page.dart`
 - `lib/features/dashboard/data/dashboard_repository.dart`
 - `lib/main.dart`
-- `assets/dashboard/school_hero.jpg`
-- `assets/dashboard/school_sidebar.jpg`
 - `pubspec.yaml`
 - `test/features/dashboard/dashboard_reference_widget_test.dart`
 
@@ -142,3 +139,16 @@ where snapshot->>'is_demo'='true';
 
 Do not delete operational student or enrollment records as part of
 dashboard demo cleanup.
+
+## Dashboard image removal — 2026-11-16
+
+On user request, both decorative dashboard photographs were removed from
+Flutter, unregistered from `pubspec.yaml` and deleted from this repository:
+`assets/dashboard/school_hero.jpg` and
+`assets/dashboard/school_sidebar.jpg`.
+
+The desktop sidebar retains its icon-based navigation but no photo footer.
+The Android welcome section is a compact **text-only** greeting with a subtle
+solid-color gradient and no building/student photography. The school brand
+mark, action icons, metrics, charts and layout remain. This does not affect
+login-screen background assets, Supabase data, Owner login or DB09 fixture.
