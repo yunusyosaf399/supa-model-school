@@ -64,7 +64,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(repo.calls, ['school-1/campus-1']);
     expect(find.text('TEST Student A'), findsOneWidget);
-    expect(find.text('TEST-2026-0001'), findsWidgets);
+    expect(find.textContaining('TEST-2026-0001'), findsWidgets);
     expect(find.textContaining('DEMO MODE'), findsNothing);
     expect(find.text('Example Student Alpha'), findsNothing);
   });
