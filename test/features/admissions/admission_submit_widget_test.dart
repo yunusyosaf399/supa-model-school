@@ -114,7 +114,7 @@ void main(){
      ),
    )));
    await tester.pumpAndSettle();
-   final submit=find.byKey(const Key('admission-submit-for-approval'));
+   final submit=find.byKey(const Key('wizard-submit-disabled'));
    expect(submit,findsOneWidget);
    expect(tester.widget<FilledButton>(submit).onPressed,isNotNull);
    await tester.tap(submit);
