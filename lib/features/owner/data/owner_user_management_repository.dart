@@ -60,14 +60,15 @@ abstract class OwnerUserManagementRepository {
   Future<List<OwnerStaffAccount>> listUsers(String schoolId);
   Future<void> createUser(OwnerUserCreation invitation);
   Future<void> setRoleActive(String roleId,bool active);
-  Future<List<StaffPermission>> permissions(String roleId) async =>
-      throw UnsupportedError('Staff permissions not configured');
-  Future<void> setPermission(String roleId, String code, bool allowed) async =>
-      throw UnsupportedError('Staff permissions not configured');
+}
+
+abstract class OwnerPermissionRepository {
+  Future<List<StaffPermission>> permissions(String roleId);
+  Future<void> setPermission(String roleId, String code, bool allowed);
 }
 
 class SupabaseOwnerUserManagementRepository
-    implements OwnerUserManagementRepository {
+    implements OwnerUserManagementRepository, OwnerPermissionRepository {
   const SupabaseOwnerUserManagementRepository(this.client);
   final SupabaseClient client;
 
