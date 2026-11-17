@@ -27,6 +27,25 @@ class OwnerStaffAccount {
   }
 }
 
+class StaffPermission {
+  const StaffPermission({
+    required this.code, required this.section, required this.title,
+    required this.action, required this.implemented, required this.allowed,
+  });
+  final String code, section, title, action;
+  final bool implemented, allowed;
+
+  factory StaffPermission.fromJson(Map<String, dynamic> map) =>
+    StaffPermission(
+      code: map['code'] as String,
+      section: map['section'] as String,
+      title: map['title'] as String,
+      action: map['action'] as String,
+      implemented: map['implemented'] == true,
+      allowed: map['allowed'] == true,
+    );
+}
+
 class OwnerUserCreation {
   const OwnerUserCreation({
     required this.schoolId,required this.campusId,
@@ -41,6 +60,10 @@ abstract class OwnerUserManagementRepository {
   Future<List<OwnerStaffAccount>> listUsers(String schoolId);
   Future<void> createUser(OwnerUserCreation invitation);
   Future<void> setRoleActive(String roleId,bool active);
+  Future<List<StaffPermission>> permissions(String roleId) async =>
+      throw UnsupportedError('Staff permissions not configured');
+  Future<void> setPermission(String roleId, String code, bool allowed) async =>
+      throw UnsupportedError('Staff permissions not configured');
 }
 
 class SupabaseOwnerUserManagementRepository
@@ -91,6 +114,31 @@ class SupabaseOwnerUserManagementRepository
     final body=result.data;
     if(result.status!=201 || body is! Map || body['status']!='created') {
       throw StateError('Staff account creation was not confirmed');
+    }
+  }
+
+  @override
+  Future<List<StaffPermission>> permissions(String roleId) async {
+    await _requireUser();
+    final raw = await client.rpc('owner_staff_permission_matrix',
+        params: {'p_role_id': roleId});
+    if (raw is! List || raw.length > 200) {
+      throw StateError('Invalid permissions matrix');
+    }
+    return List.unmodifiable(raw.map((item) => StaffPermission.fromJson(
+      Map<String, dynamic>.from(item as Map),
+    )));
+  }
+
+  @override
+  Future<void> setPermission(String roleId, String code, bool allowed) async {
+    await _requireUser();
+    final raw = await client.rpc('owner_set_staff_permission', params: {
+      'p_role_id': roleId, 'p_code': code, 'p_allowed': allowed,
+    });
+    if (raw is! Map || raw['role_id'] != roleId ||
+        raw['code'] != code || raw['allowed'] != allowed) {
+      throw StateError('Permission change was not confirmed');
     }
   }
 
