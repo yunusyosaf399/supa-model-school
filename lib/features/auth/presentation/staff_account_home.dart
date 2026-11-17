@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../auth/data/staff_auth_gateway.dart';
+import '../../auth/data/staff_permission_gateway.dart';
 import '../../auth/data/account_password_gateway.dart';
 import '../../auth/presentation/account_password_page.dart';
 
@@ -9,10 +10,12 @@ class StaffAccountHome extends StatelessWidget {
   const StaffAccountHome({
     super.key,required this.staff,required this.onSignOut,
     required this.passwordGateway,
+    this.permissionGateway,
   });
   final SchoolStaffAccess staff;
   final Future<void> Function() onSignOut;
   final AccountPasswordGateway passwordGateway;
+  final StaffPermissionGateway? permissionGateway;
 
   @override
   Widget build(BuildContext context)=>Scaffold(
@@ -45,6 +48,37 @@ class StaffAccountHome extends StatelessWidget {
               'the password assigned by the school Owner below.'),
           ]),
         )),
+        ),
+        if (permissionGateway != null) Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Card(child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: FutureBuilder<Set<String>>(
+              future: permissionGateway!.allowedActions(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) return const Text(
+                  'Assigned permissions could not be loaded.');
+                if (!snapshot.hasData) return const LinearProgressIndicator();
+                final sections = snapshot.data!
+                  .map(StaffPermissionTitles.title).toSet().toList()..sort();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Assigned sections', style:
+                      TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    if (sections.isEmpty)
+                      const Text('No operational modules have been granted.'),
+                    if (sections.isNotEmpty) Wrap(spacing: 6, children: [
+                      for (final section in sections) Chip(label: Text(section)),
+                    ]),
+                    const Text('Sections still in development do not yet '
+                      'provide operational screens.'),
+                  ],
+                );
+              },
+            ),
+          )),
         ),
         Expanded(child:AccountPasswordPage(
           gateway:passwordGateway,
