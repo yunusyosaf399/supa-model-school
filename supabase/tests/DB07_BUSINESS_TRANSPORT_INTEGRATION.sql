@@ -345,7 +345,9 @@ BEGIN
  EXCEPTION WHEN SQLSTATE '23514' THEN NULL;
  END;
  BEGIN
-  TRUNCATE public.canteen_sale_lines;
+  -- CASCADE ensures the integrity trigger, rather than a preemptive FK
+  -- TRUNCATE restriction, rejects bulk deletion of posted evidence.
+  TRUNCATE public.canteen_sale_lines CASCADE;
   RAISE EXCEPTION 'Retail sale evidence TRUNCATE bypass succeeded';
  EXCEPTION WHEN SQLSTATE '23514' THEN NULL;
  END;
