@@ -37,7 +37,7 @@ BEGIN
    device_id,school_id,campus_id,last_reported_applied_seq)
   VALUES(dev,s,cb,0);
   RAISE EXCEPTION 'CROSS CAMPUS device cursor accepted';
- EXCEPTION WHEN foreign_key_violation THEN NULL;
+ EXCEPTION WHEN foreign_key_violation OR SQLSTATE '23514' THEN NULL;
  END;
  INSERT INTO public.db09_operation_receipts(
  school_id,operation_id,campus_id,device_id,actor_id,entity_kind,
