@@ -23,19 +23,23 @@ echo "== Baseline schema sanity =="
 psql "$PGURL" -X -v ON_ERROR_STOP=1 -qAt -c "select count(*) from public.schools" >/dev/null
 psql "$PGURL" -X -v ON_ERROR_STOP=1 -qAt -c "select count(*) from public.student_enrollments" >/dev/null
 
-echo "== Apply DB03–DB09 sequentially to local test database ONLY =="
-for name in \
-  DB03_FEES_BILLING_SCHEMA.sql \
-  DB04_ATTENDANCE_SCHEMA.sql \
-  DB05_EMPLOYEES_PAYROLL_SCHEMA.sql \
-  DB06_FINANCE_CASHBOOK_SCHEMA.sql \
-  DB07_INVENTORY_CANTEEN_UNIFORM_TRANSPORT_SCHEMA.sql \
-  DB08_APPROVALS_PERMISSIONS_AUDIT_SCHEMA.sql \
-  DB09_SYNC_BACKUP_REPORTING_SCHEMA.sql
-do
-  echo "Running $name"
-  psql "$PGURL" -X -v ON_ERROR_STOP=1 -q -f "supabase/drafts/$name"
-done
+echo "== Apply/verify DB03–DB09 in isolated local test database =="
+if compgen -G 'supabase/migrations/*_db09_sync_backup_reporting_20261117.sql' >/dev/null; then
+  echo "Using versioned SQL migrations already loaded by supabase db start"
+else
+  for name in \
+    DB03_FEES_BILLING_SCHEMA.sql \
+    DB04_ATTENDANCE_SCHEMA.sql \
+    DB05_EMPLOYEES_PAYROLL_SCHEMA.sql \
+    DB06_FINANCE_CASHBOOK_SCHEMA.sql \
+    DB07_INVENTORY_CANTEEN_UNIFORM_TRANSPORT_SCHEMA.sql \
+    DB08_APPROVALS_PERMISSIONS_AUDIT_SCHEMA.sql \
+    DB09_SYNC_BACKUP_REPORTING_SCHEMA.sql
+  do
+    echo "Running $name"
+    psql "$PGURL" -X -v ON_ERROR_STOP=1 -q -f "supabase/drafts/$name"
+  done
+fi
 
 echo "== Confirm all 7 schema domains and RLS =="
 psql "$PGURL" -X -v ON_ERROR_STOP=1 <<'SQL'
