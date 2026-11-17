@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'features/auth/data/owner_auth_gateway.dart';
 
 import 'features/admissions/presentation/admission_wizard_page.dart';
+import 'features/admissions/presentation/admission_draft_list_page.dart';
 import 'features/admissions/data/admission_draft_repository.dart';
 import 'features/academics/data/academic_structure_repository.dart';
 import 'features/academics/presentation/academic_structure_page.dart';
@@ -210,6 +211,7 @@ class _SchoolShell extends StatefulWidget {
 class _SchoolShellState extends State<_SchoolShell> {
   int selected = 0;
   String? activeCampusId;
+  int _admissionListRevision = 0;
 
   @override
   void initState() {
@@ -242,8 +244,8 @@ class _SchoolShellState extends State<_SchoolShell> {
     Icons.school_outlined,
   ];
 
-  void _newAdmission() {
-    Navigator.of(context).push(MaterialPageRoute<void>(
+  Future<void> _newAdmission() async {
+    await Navigator.of(context).push<void>(MaterialPageRoute<void>(
       builder: (_) => AdmissionWizardPage(
         // Only a verified Owner receives real academic options. The
         // unauthenticated debug preview intentionally has no sample IDs.
@@ -259,6 +261,30 @@ class _SchoolShellState extends State<_SchoolShell> {
         onNavigateModule: (index) => setState(() => selected = index),
       ),
     ));
+    if (mounted) setState(() => _admissionListRevision++);
+  }
+
+  Future<void> _resumeAdmission(AdmissionDraftRecord record) async {
+    final owner = widget.owner;
+    if (owner == null ||
+        record.academicYearId != owner.activeYearId ||
+        !owner.campuses.any((campus) => campus.id == record.campusId)) {
+      return;
+    }
+    await Navigator.of(context).push<void>(MaterialPageRoute<void>(
+      builder: (_) => AdmissionWizardPage(
+        owner: owner,
+        academicRepository: widget.academicRepository,
+        admissionRepository: widget.admissionRepository,
+        selectedCampusId: record.campusId,
+        initialRecord: record,
+        onOpenSearch: _showGlobalSearch,
+        onCampusChanged: (campusId) =>
+            setState(() => activeCampusId = campusId),
+        onNavigateModule: (index) => setState(() => selected = index),
+      ),
+    ));
+    if (mounted) setState(() => _admissionListRevision++);
   }
 
   void _showGlobalSearch() {
@@ -335,6 +361,17 @@ class _SchoolShellState extends State<_SchoolShell> {
         onCampusChanged: (campusId) =>
             setState(() => activeCampusId = campusId),
         repository: widget.dashboardRepository,
+      );
+    }
+    if (selected == 2 && widget.owner != null &&
+        widget.admissionRepository != null) {
+      return AdmissionDraftListPage(
+        key: ValueKey('admissions-$_admissionListRevision-$activeCampusId'),
+        owner: widget.owner!,
+        repository: widget.admissionRepository!,
+        selectedCampusId: activeCampusId,
+        onNewAdmission: _newAdmission,
+        onOpenDraft: _resumeAdmission,
       );
     }
     if (selected == 1) {
