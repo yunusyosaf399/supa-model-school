@@ -93,7 +93,9 @@ class AdmissionDraft {
         if (transferCertificateApplicable) 'School leaving / transfer certificate',
       ];
 
-  String? validateStep(AdmissionStep step, {DateTime? today}) {
+  String? validateStep(AdmissionStep step, {
+    DateTime? today, bool documentsOutstanding = true,
+  }) {
     final localToday = today ?? DateTime.now();
     final day = DateTime(localToday.year, localToday.month, localToday.day);
 
@@ -143,6 +145,7 @@ class AdmissionDraft {
         return null;
 
       case AdmissionStep.documents:
+        if (!documentsOutstanding) return null;
         // The server will use the school-configured timezone and actual
         // verified Storage records. The local check is only a UX preview.
         if (missingDocumentsDueOn == null) {
@@ -167,7 +170,8 @@ class AdmissionDraft {
 
       case AdmissionStep.review:
         for (final previous in AdmissionStep.values.take(5)) {
-          final problem = validateStep(previous, today: day);
+          final problem = validateStep(previous, today: day,
+              documentsOutstanding: documentsOutstanding);
           if (problem != null) return problem;
         }
         return null;

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:math';
 import '../data/admission_draft_repository.dart';
 import '../data/admission_document_service.dart';
@@ -10,11 +11,8 @@ import '../../auth/data/owner_auth_gateway.dart';
 import '../models/admission_draft.dart';
 import '../../../ui/school_brand.dart';
 
-/// First-stage admissions UI for Windows and Android.
-///
-/// Only the academic selectors can load read-only, authorized DB01 records.
-/// The applicant form remains strictly in memory: no DB02 admission/identity
-/// writes, private document uploads, offline queue, or payment operations.
+/// Owner Admissions wizard: authenticated draft saving, private certificate/photo
+/// uploads and Principal-only submission. Fee posting remains separate.
 class AdmissionWizardPage extends StatefulWidget {
   const AdmissionWizardPage({
     super.key,
@@ -73,6 +71,17 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   bool _submitted = false;
   AdmissionSubmitRequest? _pendingSubmission;
 
+  bool get _requiresDocumentDeadline => _serverDocuments.any((doc) =>
+    doc.required && doc.applicable &&
+    (doc.status == 'missing' || doc.status == 'rejected'));
+
+  AdmissionDocumentRecord? get _photoDocument {
+    for (final doc in _serverDocuments) {
+      if (doc.kind == 'photo') return doc;
+    }
+    return null;
+  }
+
   bool get _canSubmit =>
     !_submitted && !_submitting && !_savingDraft &&
     _uploadingDocumentId == null && !_documentLoading &&
@@ -98,9 +107,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         setState(() => _error = 'Choose an authorized campus, year and class.');
         return;
       }
-      final missing = _serverDocuments.any((document) =>
-        document.required && document.applicable &&
-        document.status != 'verified');
+      final missing = _requiresDocumentDeadline;
       if (missing) {
         final issue = _draft.validateStep(AdmissionStep.documents);
         if (issue != null) {
@@ -113,7 +120,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         builder: (dialogContext) => AlertDialog(
           title: const Text('Forward to Principal?'),
           content: Text(missing
-            ? 'Some required documents are missing or unverified. '
+            ? 'Some required documents are missing or rejected. '
               'Forward with the selected deadline and reason? '
               'No student record is created until Principal approval.'
             : 'Forward this application to the Principal? '
@@ -127,9 +134,19 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         ),
       );
       if (!mounted || confirmed != true) return;
+      // Persist the latest student, guardian and class edits before submitting.
+      // Users may have saved an earlier incomplete draft just to upload files.
+      final latest = await _persistDraft(showNotice:false);
+      if (!mounted || latest == null) return;
+      if (_requiresDocumentDeadline && !missing) {
+        setState(() => _error = 'A required certificate was added while '
+          'saving your latest details. Upload it or set a conditional deadline '
+          'before forwarding to the Principal.');
+        return;
+      }
       _pendingSubmission = AdmissionSubmitRequest(
-        applicationId: _savedDraft!.id,
-        expectedRevision: _savedDraft!.revision,
+        applicationId: latest.id,
+        expectedRevision: latest.revision,
         operationId: SupabaseAdmissionApprovalRepository.operationUuid(),
         conditionalDue: missing ? _draft.missingDocumentsDueOn : null,
         conditionalReason: missing ? _draft.conditionalReason.trim() : null,
@@ -148,12 +165,16 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         content: Text('Application ${result.applicationId} submitted. '
           'The Principal must approve before a student is enrolled.'),
       ));
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
+      final message = error is PostgrestException
+        ? error.message
+        : error is StateError ? error.message : 'Network or server error';
       setState(() {
         _submitting = false;
-        _error = 'Submission was not confirmed. Retry to repeat the '
-          'same operation without making a duplicate application.';
+        _error = 'Submission not confirmed: '
+          '${message.length > 220 ? message.substring(0,220) : message}. '
+          'Retry uses the same operation ID; no duplicate application is created.';
       });
     }
   }
@@ -215,6 +236,43 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     }
   }
 
+  Future<void> _uploadPhoto() async {
+    final owner=widget.owner;
+    final service=widget.documentService;
+    final application=_savedDraft?.id;
+    if(owner==null || service==null || application==null ||
+       _draft.campusId==null || _uploadingDocumentId!=null ||
+       _savingDraft || _submitting || _submitted) {
+      if(application==null) {
+        setState(()=>_error='Save Draft before uploading the student photo.');
+      }
+      return;
+    }
+    setState(() { _uploadingDocumentId='photo'; _documentError=null; });
+    try {
+      final photo=_photoDocument ?? await service.preparePhoto(application);
+      if(photo==null || photo.kind!='photo') {
+        throw StateError('Student photo is not available');
+      }
+      final uploaded=await service.pickAndUploadPhoto(
+        schoolId:owner.schoolId,
+        campusId:_draft.campusId!,
+        applicationId:application,
+        document:photo);
+      if(!mounted)return;
+      if(uploaded) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content:Text('Student photo uploaded privately.')));
+      }
+      await _loadDocuments();
+    } catch(error) {
+      if(!mounted)return;
+      setState(()=>_error='Photo upload failed: '        '${error is StateError ? error.message : 'check the file and connection'}.');
+    } finally {
+      if(mounted)setState(()=>_uploadingDocumentId=null);
+    }
+  }
+
   bool get _canSaveDraft =>
       !_submitting && !_submitted && !_savingDraft && widget.owner?.setupComplete == true &&
       widget.admissionRepository != null;
@@ -229,8 +287,8 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         '${h.substring(12,16)}-${h.substring(16,20)}-${h.substring(20)}';
   }
 
-  Future<void> _saveDraft() async {
-    if (!_canSaveDraft) return;
+  Future<SavedAdmissionDraft?> _persistDraft({bool showNotice = true}) async {
+    if (!_canSaveDraft) return null;
     final owner = widget.owner!;
     if (_pendingSave == null) {
       if (_draft.studentName.trim().length < 2 ||
@@ -241,7 +299,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           (_draft.sectionId != null && !_sectionChoices.containsKey(_draft.sectionId))) {
         setState(() => _error =
             'Enter a student name and choose a valid campus, year and class.');
-        return;
+        return null;
       }
       final guardians = <Map<String, dynamic>>[
         for (final guardian in _draft.guardians)
@@ -257,7 +315,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       if (guardians.length > 8 ||
           guardians.where((g) => g['is_primary'] == true).length > 1) {
         setState(() => _error = 'Review guardian details before saving.');
-        return;
+        return null;
       }
       _pendingSave = AdmissionDraftSaveRequest(
         schoolId: owner.schoolId,
@@ -295,25 +353,33 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     setState(() { _savingDraft = true; _error = null; });
     try {
       final result = await widget.admissionRepository!.saveDraft(_pendingSave!);
-      if (!mounted) return;
+      if (!mounted) return null;
       setState(() {
         _savedDraft = result;
         _pendingSave = null;
         _savingDraft = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Draft saved in Supabase (revision ${result.revision}). '
-            'Not submitted or approved.'),
-      ));
+      if (showNotice) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Draft saved in Supabase (revision ${result.revision}). '
+              'Not submitted or approved.'),
+        ));
+      }
       await _loadDocuments();
+      return result;
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted) return null;
       setState(() {
         _savingDraft = false;
         _error = 'Save not confirmed. Retry to repeat the same operation '
             'without creating a duplicate draft.';
       });
+      return null;
     }
+  }
+
+  Future<void> _saveDraft() async {
+    await _persistDraft();
   }
 
 
@@ -547,7 +613,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         return;
       }
     }
-    final error = _draft.validateStep(AdmissionStep.values[_step]);
+    final error = _draft.validateStep(AdmissionStep.values[_step],
+      documentsOutstanding: _requiresDocumentDeadline ||
+        (_serverDocuments.isEmpty && _savedDraft == null));
     if (error != null) {
       setState(() => _error = error);
       return;
@@ -1299,28 +1367,44 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     ]);
 
   Widget _photoPlaceholder() => Tooltip(
-    message: 'Photo uploads require the private admission upload service.',
-    child: Container(
-      key: Key('admission-photo-placeholder'),
-      width: 140, height: 158,
-      padding: EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: _pale,
-        border: Border.all(color: Color(0xFFABDCD0),
-          style: BorderStyle.solid)),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.cloud_upload_outlined, size: 35, color: _teal),
-          SizedBox(height: 8),
-          Text('Photo Upload', style: TextStyle(
-            fontWeight: FontWeight.w800, color: _teal, fontSize: 12)),
-          SizedBox(height: 4),
-          Text('Coming soon\nJPG, PNG • max 2 MB',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 10, color: _muted)),
-        ],
+    message: _savedDraft == null
+      ? 'Save Draft first to upload the student photo'
+      : 'Private photo upload (JPG, PNG, WebP, 2 MiB maximum)',
+    child: InkWell(
+      key:const Key('admission-photo-upload'),
+      borderRadius:BorderRadius.circular(12),
+      onTap:_uploadingDocumentId==null && !_submitted
+        ? _uploadPhoto : null,
+      child:Container(
+        width:140,height:158,
+        padding:const EdgeInsets.all(10),
+        decoration:BoxDecoration(
+          borderRadius:BorderRadius.circular(12),
+          color:_pale,
+          border:Border.all(color:const Color(0xFFABDCD0))),
+        child:Column(
+          mainAxisAlignment:MainAxisAlignment.center,
+          children:[
+            Icon(_photoDocument?.status=='uploaded' ||
+                 _photoDocument?.status=='verified'
+              ? Icons.check_circle_outline
+              : Icons.add_a_photo_outlined,size:35,color:_teal),
+            const SizedBox(height:8),
+            Text(_photoDocument?.status=='uploaded' ||
+                 _photoDocument?.status=='verified'
+              ? 'Photo Uploaded' : 'Upload Photo',
+              textAlign:TextAlign.center,
+              style:TextStyle(fontWeight:FontWeight.w800,
+                color:_teal,fontSize:12)),
+            const SizedBox(height:4),
+            Text(_savedDraft==null ? 'Save Draft first'
+              : _uploadingDocumentId=='photo'
+                ? 'Uploading...'
+                : 'JPG / PNG / WebP\nmax 2 MiB',
+              textAlign:TextAlign.center,
+              style:TextStyle(fontSize:10,color:_muted)),
+          ],
+        ),
       ),
     ),
   );
@@ -1723,8 +1807,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       SizedBox(height: 7),
       Text(_savedDraft == null
         ? 'Save the admission draft before uploading certificates.'
-        : 'Private uploads are recorded as Uploaded, not Verified. '
-          'Principal approval remains unavailable.',
+        : 'Uploaded certificates are supplied. The Principal verifies '
+          'them before approving the student. A deadline is needed only '
+          'when a required certificate is missing or rejected.',
         style: TextStyle(fontSize: 12, color: _muted)),
       SizedBox(height: 14),
       if (_documentLoading)
@@ -1738,7 +1823,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         ),
       if (_savedDraft != null && _serverDocuments.isNotEmpty)
         for (final doc in _serverDocuments)
-          if (doc.applicable)
+          if (doc.applicable && doc.kind != 'photo')
             Card.outlined(
               key: Key('admission-document-' + doc.kind),
               child: ListTile(
@@ -1777,15 +1862,18 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
             'PDF/JPG/PNG/WebP up to 10 MiB. No document is verified automatically.'),
         )),
       SizedBox(height: 16),
+      if (_requiresDocumentDeadline || _serverDocuments.isEmpty)
       Text('Conditional Document Submission',
         style: TextStyle(color: _teal, fontSize: 15,
           fontWeight: FontWeight.w900)),
       SizedBox(height: 6),
-      Text('Outstanding certificates can be assigned a deadline up to '
-        'two calendar months. This deadline selection is not yet stored '
-        'by the draft-saving API.',
+      if (_requiresDocumentDeadline || _serverDocuments.isEmpty)
+      Text('Only missing or rejected certificates need a deadline of up '
+        'to two months and a reason. Uploaded certificates do not.',
         style: TextStyle(fontSize: 12, color: _muted)),
+      if (_requiresDocumentDeadline || _serverDocuments.isEmpty)
       SizedBox(height: 13),
+      if (_requiresDocumentDeadline || _serverDocuments.isEmpty)
       OutlinedButton.icon(
         key: Key('document-deadline'),
         onPressed: _chooseDocumentDeadline,
@@ -1793,7 +1881,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         label: Text('Submission Deadline *: ' +
           _dateLabel(_draft.missingDocumentsDueOn)),
       ),
+      if (_requiresDocumentDeadline || _serverDocuments.isEmpty)
       SizedBox(height: 13),
+      if (_requiresDocumentDeadline || _serverDocuments.isEmpty)
       _styledField(
         key: Key('conditional-reason'),
         label: 'Reason for Outstanding Documents', isRequired: true,
@@ -1802,8 +1892,10 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         maxLines: 3,
         onChanged: (v) => _draft.conditionalReason = v),
       SizedBox(height: 12),
-      Text('Deadline saving, verification and Principal review '
-        'require separate authorized workflow tests.',
+      Text(_requiresDocumentDeadline
+        ? 'The Principal can review the application conditionally.'
+        : 'No document deadline is needed once all required certificates '
+          'are uploaded. Principal review remains mandatory.',
         style: TextStyle(fontSize: 11, color: _muted)),
     ],
   );
@@ -1976,11 +2068,18 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           _sectionChoices[_draft.sectionId] ?? 'Unassigned'),
       ]),
       _reviewSection('Documents', Icons.description_outlined, [
-        for (final name in _draft.requiredDocumentNames)
-          _summaryRow(name, 'Not uploaded / unverified'),
-        _summaryRow('Conditional Deadline',
-          _dateLabel(_draft.missingDocumentsDueOn)),
-        _summaryRow('Reason', _draft.conditionalReason),
+        for (final doc in _serverDocuments)
+          if (doc.required && doc.applicable)
+            _summaryRow(doc.kind=='birth_certificate'
+              ? 'Birth certificate' : 'School leaving / transfer certificate',
+              doc.status.toUpperCase()),
+        if (_photoDocument != null)
+          _summaryRow('Student photo',_photoDocument!.status.toUpperCase()),
+        if (_requiresDocumentDeadline) ...[
+          _summaryRow('Conditional Deadline',
+            _dateLabel(_draft.missingDocumentsDueOn)),
+          _summaryRow('Reason', _draft.conditionalReason),
+        ],
       ]),
       _reviewSection('Fee Preferences', Icons.savings_outlined, [
         _summaryRow('Admission Fee', _draft.admissionFeeStatus),
@@ -2002,7 +2101,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
             _savedDraft == null
             ? 'Save a complete draft first. Submission requires validated student, guardian and academic data plus certificate status.'
             : _submitted ? 'Submitted to Principal. No student is enrolled before the assigned Principal approves.'
-              : 'Draft saved. Forward to Principal with verified certificates or a conditional deadline and reason. All current form fields are saved in this draft; fee/discount/transport choices are preferences, not financial postings.',
+              : 'Draft saved. Forward to Principal with uploaded certificates, or a conditional deadline only for missing/rejected certificates. All current form fields are saved in this draft; fee/discount/transport choices are preferences, not financial postings.',
             style: TextStyle(fontSize: 12))),
         ]),
       ),

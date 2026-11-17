@@ -26,9 +26,14 @@ class FakeAcademics implements AcademicStructureRepository {
 }
 
 class FakeDrafts implements AdmissionDraftRepository {
+  int saveCount=0;
+  AdmissionDraftSaveRequest? lastSave;
   @override
-  Future<SavedAdmissionDraft> saveDraft(AdmissionDraftSaveRequest request) =>
-    throw UnimplementedError();
+  Future<SavedAdmissionDraft> saveDraft(AdmissionDraftSaveRequest request) async {
+    saveCount++;
+    lastSave=request;
+    return const SavedAdmissionDraft(id:'application-1',revision:5);
+  }
   @override
   Future<List<AdmissionDraftRecord>> listDrafts({
     required String schoolId,required String campusId,
@@ -36,10 +41,19 @@ class FakeDrafts implements AdmissionDraftRepository {
 }
 
 class FakeDocuments implements AdmissionDocumentService {
+  const FakeDocuments({this.status='verified'});
   @override
-  Future<List<AdmissionDocumentRecord>> listDocuments(String id) async => const [
+  Future<AdmissionDocumentRecord?> preparePhoto(String applicationId) async => null;
+  @override
+  Future<bool> pickAndUploadPhoto({
+    required String schoolId,required String campusId,
+    required String applicationId,required AdmissionDocumentRecord document,
+  }) => throw UnimplementedError();
+  final String status;
+  @override
+  Future<List<AdmissionDocumentRecord>> listDocuments(String id) async => [
     AdmissionDocumentRecord(id:'doc-1',kind:'birth_certificate',
-      status:'verified',revision:2,required:true,applicable:true,version:1),
+      status:status,revision:2,required:true,applicable:true,version:1),
   ];
   @override
   Future<bool> pickAndUpload({
@@ -93,12 +107,13 @@ void main(){
    await tester.binding.setSurfaceSize(const Size(1550,950));
    addTearDown(()=>tester.binding.setSurfaceSize(null));
    final approval=FakeApproval();
+   final drafts=FakeDrafts();
    await tester.pumpWidget(MaterialApp(home:AdmissionWizardPage(
      owner:owner,
      initialStep:AdmissionStep.review,
      selectedCampusId:'campus-1',
      academicRepository:const FakeAcademics(),
-     admissionRepository:FakeDrafts(),
+     admissionRepository:drafts,
      documentService:FakeDocuments(),
      approvalRepository:approval,
      initialRecord:AdmissionDraftRecord(
@@ -124,8 +139,57 @@ void main(){
    await tester.pumpAndSettle();
    expect(approval.count,1);
    expect(approval.last?.applicationId,'application-1');
-   expect(approval.last?.expectedRevision,4);
+   expect(approval.last?.expectedRevision,5);
+   expect(drafts.saveCount,1);
+   expect(drafts.lastSave?.applicationId,'application-1');
+   expect(drafts.lastSave?.expectedRevision,4);
    expect(approval.last?.conditionalDue,isNull);
    expect(tester.widget<FilledButton>(submit).onPressed,isNull);
  });
+ testWidgets('uploaded certificate submits without a deadline before verification',
+    (tester) async {
+   await tester.binding.setSurfaceSize(const Size(1550,950));
+   addTearDown(()=>tester.binding.setSurfaceSize(null));
+   final approval=FakeApproval();
+   final drafts=FakeDrafts();
+   await tester.pumpWidget(MaterialApp(home:AdmissionWizardPage(
+     owner:owner, initialStep:AdmissionStep.review,
+     selectedCampusId:'campus-1',
+     academicRepository:const FakeAcademics(),
+     admissionRepository:drafts,
+     documentService:const FakeDocuments(status:'uploaded'),
+     approvalRepository:approval,
+     initialRecord:AdmissionDraftRecord(
+       id:'application-1',revision:4,name:'TEST Uploaded Applicant',
+       status:'draft',campusId:'campus-1',academicYearId:'year-1',
+       classId:'class-1',sectionId:'section-1',
+       dateOfBirth:DateTime(2018,1,1),
+       guardians:const [
+         {'full_name':'TEST Guardian','relationship':'father',
+          'phone':'03001234567','is_primary':true,'is_legal_guardian':true},
+       ],
+       documents:const [],
+     ),
+   )));
+   await tester.pumpAndSettle();
+   final submit=find.byKey(const Key('wizard-submit-disabled'));
+   expect(tester.widget<FilledButton>(submit).onPressed,isNotNull);
+   await tester.tap(submit);
+   await tester.pumpAndSettle();
+   await tester.tap(find.text('Forward for Approval'));
+   await tester.pumpAndSettle();
+   expect(approval.count,1);
+   expect(drafts.saveCount,1);
+   expect(approval.last?.expectedRevision,5);
+   expect(approval.last?.conditionalDue,isNull);
+   expect(approval.last?.conditionalReason,isNull);
+ });
+ test('conditional deadline only for missing or rejected documents',(){
+   final draft=AdmissionDraft();
+   expect(draft.validateStep(AdmissionStep.documents,
+      documentsOutstanding:false),isNull);
+   expect(draft.validateStep(AdmissionStep.documents,
+      documentsOutstanding:true),contains('deadline'));
+ });
+
 }

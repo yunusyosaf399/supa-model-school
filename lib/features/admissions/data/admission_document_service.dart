@@ -38,6 +38,19 @@ abstract class AdmissionDocumentService {
   const AdmissionDocumentService();
   Future<List<AdmissionDocumentRecord>> listDocuments(String applicationId);
 
+  /// Optional student photo is private and never substitutes for certificates.
+  Future<AdmissionDocumentRecord?> preparePhoto(String applicationId) async => null;
+
+  Future<bool> pickAndUploadPhoto({
+    required String schoolId,
+    required String campusId,
+    required String applicationId,
+    required AdmissionDocumentRecord document,
+  }) => pickAndUpload(
+    schoolId: schoolId,campusId: campusId,
+    applicationId: applicationId,document: document,
+  );
+
   /// Returns false on picker cancellation; true only when registration succeeds.
   Future<bool> pickAndUpload({
     required String schoolId,
@@ -60,6 +73,7 @@ class SupabaseAdmissionDocumentService implements AdmissionDocumentService {
 
   static const bucket = 'sms-admission-documents';
   static const maxBytes = 10485760;
+  static const maxPhotoBytes = 2097152;
 
   static String _randomUuid() {
     final rng = Random.secure();
@@ -76,6 +90,15 @@ class SupabaseAdmissionDocumentService implements AdmissionDocumentService {
         (await client.auth.getUser()).user == null) {
       throw StateError('Verified school sign-in required');
     }
+  }
+
+  @override
+  Future<AdmissionDocumentRecord> preparePhoto(String applicationId) async {
+    await _requireAuth();
+    final data = await client.rpc('owner_prepare_admission_photo',
+      params: {'p_application_id':applicationId});
+    if (data is! Map) throw StateError('Photo preparation not confirmed');
+    return AdmissionDocumentRecord.fromJson(Map<String,dynamic>.from(data));
   }
 
   @override
@@ -146,7 +169,30 @@ class SupabaseAdmissionDocumentService implements AdmissionDocumentService {
     required String campusId,
     required String applicationId,
     required AdmissionDocumentRecord document,
+  }) => _pickAndUpload(
+    schoolId:schoolId,campusId:campusId,
+    applicationId:applicationId,document:document,photoOnly:false);
+
+  @override
+  Future<bool> pickAndUploadPhoto({
+    required String schoolId,
+    required String campusId,
+    required String applicationId,
+    required AdmissionDocumentRecord document,
+  }) => _pickAndUpload(
+    schoolId:schoolId,campusId:campusId,
+    applicationId:applicationId,document:document,photoOnly:true);
+
+  Future<bool> _pickAndUpload({
+    required String schoolId,
+    required String campusId,
+    required String applicationId,
+    required AdmissionDocumentRecord document,
+    required bool photoOnly,
   }) async {
+    if (photoOnly != (document.kind == 'photo')) {
+      throw StateError('Invalid photo document type');
+    }
     await _requireAuth();
     if (!document.applicable ||
         !{'missing', 'uploaded', 'rejected'}.contains(document.status)) {
@@ -159,7 +205,9 @@ class SupabaseAdmissionDocumentService implements AdmissionDocumentService {
     }
     final selection = await FilePicker.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
+      allowedExtensions: photoOnly
+        ? const ['jpg','jpeg','png','webp']
+        : const ['pdf','jpg','jpeg','png','webp'],
       withData: true,
       allowMultiple: false,
     );
@@ -169,8 +217,11 @@ class SupabaseAdmissionDocumentService implements AdmissionDocumentService {
     final rawExt = selected.extension?.toLowerCase();
     final extension = rawExt == 'jpeg' ? 'jpg' : rawExt;
     if (bytes == null || extension == null ||
-        _mime(extension) == null || !_validBytes(bytes, extension)) {
-      throw StateError('Invalid certificate. Use a PDF/JPG/PNG/WebP under 10 MiB.');
+        _mime(extension) == null || !_validBytes(bytes, extension) ||
+        (photoOnly && (bytes.length > maxPhotoBytes || extension == 'pdf'))) {
+      throw StateError(photoOnly
+        ? 'Invalid student photo. Use JPG/PNG/WebP under 2 MiB.'
+        : 'Invalid certificate. Use PDF/JPG/PNG/WebP under 10 MiB.');
     }
     final objectPath = '$schoolId/$campusId/$applicationId/'
         '${document.id}/${_randomUuid()}.$extension';
