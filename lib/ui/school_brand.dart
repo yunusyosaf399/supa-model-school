@@ -1,12 +1,29 @@
 import 'package:flutter/material.dart';
 import 'school_theme.dart';
+import '../features/owner/data/school_logo_service.dart';
 
 class SchoolMark extends StatelessWidget {
-  const SchoolMark({super.key, this.size = 68});
+  const SchoolMark({super.key, this.size = 68, this.logoService});
   final double size;
+  final SchoolLogoService? logoService;
 
   @override
   Widget build(BuildContext context) {
+    final service = logoService;
+    if (service != null) {
+      return AnimatedBuilder(
+        animation: service,
+        builder: (context, _) {
+          final bytes = service.bytes;
+          if (bytes == null) return SchoolMark(size: size);
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(size * .18),
+            child: Image.memory(bytes, width: size, height: size,
+              fit: BoxFit.contain, gaplessPlayback: true),
+          );
+        },
+      );
+    }
     final primary = Theme.of(context).brightness == Brightness.dark
         ? const Color(0xFF65DCCF)
         : SchoolPalette.teal;
