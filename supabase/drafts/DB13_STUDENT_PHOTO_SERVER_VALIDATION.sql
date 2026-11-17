@@ -91,4 +91,4 @@ begin
   return jsonb_build_object('document_id',p_document_id,
     'revision',v_doc.revision,'status','uploaded','version',v_version);
 end;
-$function$
+$function$;
