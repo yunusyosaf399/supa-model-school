@@ -27,6 +27,12 @@ jobs:
         run: flutter pub get
       - name: Generate Drift code
         run: dart run build_runner build --delete-conflicting-outputs
+      - name: Report resolved dependency lockfile
+        run: |
+          echo 'PUBSPEC_LOCK_BEGIN'
+          base64 -w0 pubspec.lock
+          echo
+          echo 'PUBSPEC_LOCK_END'
       - name: Dart analyzer
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
       - name: Student directory widget regression
@@ -35,3 +41,5 @@ jobs:
         run: flutter test test/features/admissions/admission_live_save_widget_test.dart
       - name: Admissions worklist widget regression
         run: flutter test test/features/admissions/admission_worklist_widget_test.dart
+      - name: Admission document upload widget regression
+        run: flutter test test/features/admissions/admission_document_upload_widget_test.dart
