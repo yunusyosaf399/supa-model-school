@@ -705,7 +705,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 fontSize: desktop ? 27 : 19, letterSpacing: -.6)),
           ),
           if (desktop && (badge != null || detail != null)) ...[
-            const SizedBox(height: 5),
+            SizedBox(height: desktop ? 5 : 2),
             Row(children: [
               if (badge != null) Flexible(child: Text(badge,
                 overflow: TextOverflow.ellipsis,
