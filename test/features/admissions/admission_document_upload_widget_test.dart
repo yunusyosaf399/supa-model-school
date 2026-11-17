@@ -86,6 +86,6 @@ void main() {
     expect(documents.calls, 1);
     expect(find.textContaining('UPLOADED'), findsWidgets);
     expect(find.textContaining('Not verified'), findsWidgets);
-    expect(find.text('Submit for Approval'), findsOneWidget);
+    expect(find.textContaining('Principal approval remains unavailable'), findsWidgets);
   });
 }
