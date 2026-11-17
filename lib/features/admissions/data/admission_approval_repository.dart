@@ -48,6 +48,38 @@ class PrincipalApprovalItem {
       );
 }
 
+class PrincipalDocumentRecord {
+  const PrincipalDocumentRecord({
+    required this.id, required this.kind, required this.status,
+    required this.revision, required this.applicable,
+    required this.required, this.uploadId, this.bucket,
+    this.objectPath, this.contentType, this.version,
+  });
+  final String id,kind,status;
+  final int revision;
+  final bool applicable,required;
+  final String? uploadId,bucket,objectPath,contentType;
+  final int? version;
+  bool get canInspect =>
+    status == 'uploaded' && uploadId != null &&
+    bucket == 'sms-admission-documents' && objectPath != null;
+
+  factory PrincipalDocumentRecord.fromJson(Map<String,dynamic> json) =>
+    PrincipalDocumentRecord(
+      id: json['id'] as String,
+      kind: json['kind'] as String,
+      status: json['status'] as String,
+      revision: (json['revision'] as num).toInt(),
+      required: json['required'] == true,
+      applicable: json['applicable'] == true,
+      uploadId: json['upload_id'] as String?,
+      bucket: json['bucket'] as String?,
+      objectPath: json['object_path'] as String?,
+      contentType: json['content_type'] as String?,
+      version: (json['version'] as num?)?.toInt(),
+    );
+}
+
 class PrincipalDecisionResult {
   const PrincipalDecisionResult({
     required this.applicationId, required this.status, this.studentId,
@@ -61,6 +93,12 @@ abstract class AdmissionApprovalRepository {
   Future<AdmissionSubmitResult> submit(AdmissionSubmitRequest request);
   Future<List<PrincipalApprovalItem>> listPending({
     required String schoolId, required String campusId,
+  });
+  Future<List<PrincipalDocumentRecord>> listDocuments(String applicationId);
+  Future<String> signedDocumentUrl(PrincipalDocumentRecord record);
+  Future<void> reviewDocument({
+    required String documentId, required int expectedRevision,
+    required String operationId, required String decision, String? reason,
   });
   Future<PrincipalDecisionResult> review({
     required String applicationId, required int expectedRevision,
@@ -146,6 +184,49 @@ class SupabaseAdmissionApprovalRepository implements AdmissionApprovalRepository
       }
     }
     return List.unmodifiable(results);
+  }
+
+  @override
+  Future<List<PrincipalDocumentRecord>> listDocuments(String applicationId) async {
+    await _signedIn();
+    final response = await client.rpc('principal_document_review_list',
+      params: {'p_application_id':applicationId});
+    if (response is! List) throw StateError('Invalid Principal document list');
+    return List.unmodifiable(response.map((row) =>
+      PrincipalDocumentRecord.fromJson(Map<String,dynamic>.from(row as Map))));
+  }
+
+  @override
+  Future<String> signedDocumentUrl(PrincipalDocumentRecord record) async {
+    await _signedIn();
+    if (!record.canInspect) throw StateError('Document not ready for inspection');
+    // The database Storage SELECT policy checks the Principal's campus role
+    // for this exact registered object. Link expires after 60 seconds.
+    return client.storage.from(record.bucket!).createSignedUrl(
+      record.objectPath!,60);
+  }
+
+  @override
+  Future<void> reviewDocument({
+    required String documentId,required int expectedRevision,
+    required String operationId,required String decision,String? reason,
+  }) async {
+    await _signedIn();
+    if (decision != 'verify' && decision != 'reject') {
+      throw ArgumentError.value(decision,'decision');
+    }
+    final response = await client.rpc('principal_review_admission_document',
+      params: {
+        'p_document_id':documentId,
+        'p_expected_revision':expectedRevision,
+        'p_operation_id':operationId,
+        'p_decision':decision,
+        'p_reason':reason,
+      });
+    if (response is! Map || response['status'] !=
+        (decision == 'verify' ? 'verified' : 'rejected')) {
+      throw StateError('Document verification not confirmed');
+    }
   }
 
   @override
