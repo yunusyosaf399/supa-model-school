@@ -166,6 +166,7 @@ CREATE TABLE public.db08_approval_sources (
  REFERENCES public.db08_workflow_subjects(id,school_id),
  CHECK(num_nonnulls(expense_request_id,leave_request_id,attendance_request_id,
  transfer_request_id,stock_count_id,workflow_subject_id)=1),
+ CHECK(source_kind='workflow' OR campus_id IS NOT NULL),
  CHECK((source_kind='expense' AND expense_request_id IS NOT NULL) OR
   (source_kind='leave' AND leave_request_id IS NOT NULL) OR
   (source_kind='attendance' AND attendance_request_id IS NOT NULL) OR
@@ -300,6 +301,26 @@ END;
 $db08$;
 CREATE TRIGGER db08_decision_self_guard BEFORE INSERT ON public.db08_approval_decisions
  FOR EACH ROW EXECUTE FUNCTION app_private.db08_no_self_approval();
+CREATE FUNCTION app_private.db08_request_revision_guard()
+RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
+AS $db08$
+BEGIN
+ IF OLD.status NOT IN ('pending','returned')
+ OR NEW.id IS DISTINCT FROM OLD.id OR NEW.school_id IS DISTINCT FROM OLD.school_id
+ OR NEW.campus_id IS DISTINCT FROM OLD.campus_id
+ OR NEW.policy_id IS DISTINCT FROM OLD.policy_id
+ OR NEW.source_kind IS DISTINCT FROM OLD.source_kind
+ OR NEW.requester_id IS DISTINCT FROM OLD.requester_id
+ OR NEW.operation_id IS DISTINCT FROM OLD.operation_id
+ OR NEW.revision<>OLD.revision+1 THEN
+  RAISE EXCEPTION 'Approval request identity or revision invalid' USING ERRCODE='23514';
+ END IF;
+ RETURN NEW;
+END;
+$db08$;
+CREATE TRIGGER db08_request_revision_guard BEFORE UPDATE
+ ON public.db08_approval_requests FOR EACH ROW
+ EXECUTE FUNCTION app_private.db08_request_revision_guard();
 CREATE FUNCTION app_private.db08_reject_audit_edit()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
 AS $db08$
@@ -372,6 +393,7 @@ REVOKE ALL ON public.db08_roles,
  public.db08_notification_events,
  public.db08_user_shortcuts,
  public.db08_operation_receipts FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION app_private.db08_request_revision_guard() FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION app_private.db08_no_self_approval() FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION app_private.db08_reject_audit_edit() FROM PUBLIC,anon,authenticated;
 
