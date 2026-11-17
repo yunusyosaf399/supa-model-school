@@ -1154,7 +1154,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         icon: Icon(Icons.save_outlined),
         label: Text(_savingDraft ? 'Saving...' : 'Save Draft'))),
       SizedBox(width: 11),
-      Expanded(child: _step == AdmissionStep.review
+      Expanded(child: _step == AdmissionStep.review.index
         ? FilledButton.icon(
             key: Key('wizard-submit-disabled'),
             onPressed: _canSubmit ? _submitForApproval : null,
