@@ -49,3 +49,5 @@ jobs:
         run: flutter test test/features/admissions/admission_submit_widget_test.dart test/features/admissions/principal_approval_widget_test.dart
       - name: Principal login role and secure shell regression
         run: flutter test test/features/auth/principal_auth_widget_test.dart
+      - name: Complete Owner admission registry regression
+        run: flutter test test/features/admissions/admission_registry_widget_test.dart
