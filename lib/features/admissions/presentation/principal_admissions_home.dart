@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../auth/data/principal_auth_gateway.dart';
 import '../../auth/data/staff_permission_gateway.dart';
+import '../../students/data/student_directory_repository.dart';
+import '../../students/presentation/student_directory_page.dart';
 import '../data/admission_approval_repository.dart';
 import 'principal_approval_page.dart';
 import '../../auth/data/account_password_gateway.dart';
@@ -14,12 +16,14 @@ class PrincipalAdmissionsHome extends StatefulWidget {
     required this.onSignOut,
     this.passwordGateway,
     this.permissionGateway,
+    this.studentRepository,
   });
   final PrincipalAccess principal;
   final AdmissionApprovalRepository repository;
   final Future<void> Function() onSignOut;
   final AccountPasswordGateway? passwordGateway;
   final StaffPermissionGateway? permissionGateway;
+  final StudentDirectoryRepository? studentRepository;
 
   @override
   State<PrincipalAdmissionsHome> createState()=>_PrincipalAdmissionsHomeState();
@@ -28,6 +32,7 @@ class PrincipalAdmissionsHome extends StatefulWidget {
 class _PrincipalAdmissionsHomeState extends State<PrincipalAdmissionsHome> {
   late String _campusId;
   bool _showPassword=false;
+  bool _showStudents=false;
   Future<Set<String>>? _actions;
 
   @override
@@ -84,10 +89,39 @@ class _PrincipalAdmissionsHomeState extends State<PrincipalAdmissionsHome> {
               ],
             ),
           )),
-          Expanded(child: allowed.contains('admissions.review')
-            ? _approvalQueue()
-            : const Center(child: Text(
-                'Admission approval access is disabled for this account.'))),
+          if (allowed.contains('admissions.review') ||
+              (allowed.contains('students.read') && widget.studentRepository != null))
+            Padding(padding: const EdgeInsets.all(7),
+              child: Row(children: [
+                if (allowed.contains('admissions.review'))
+                  TextButton.icon(
+                    key: const Key('principal-approvals-tab'),
+                    onPressed: () => setState(() => _showStudents=false),
+                    icon: const Icon(Icons.fact_check_outlined),
+                    label: const Text('Approvals')),
+                if (allowed.contains('students.read') &&
+                    widget.studentRepository != null)
+                  TextButton.icon(
+                    key: const Key('principal-students-tab'),
+                    onPressed: () => setState(() => _showStudents=true),
+                    icon: const Icon(Icons.groups_outlined),
+                    label: const Text('Students')),
+              ])),
+          Expanded(child: _showStudents &&
+                  allowed.contains('students.read') &&
+                  widget.studentRepository != null
+              ? StudentDirectoryPage(
+                  key: ValueKey('principal-students-$_campusId'),
+                  onNewAdmission: () {},
+                  allowNewAdmission: false,
+                  staffSchoolId: widget.principal.schoolId,
+                  staffCampusId: _campusId,
+                  repository: widget.studentRepository,
+                )
+              : allowed.contains('admissions.review')
+                ? _approvalQueue()
+                : const Center(child: Text(
+                  'No available operational section is enabled.'))),
         ]);
       },
     );
@@ -131,7 +165,7 @@ class _PrincipalAdmissionsHomeState extends State<PrincipalAdmissionsHome> {
               ],
               onChanged:(id){
                 if(id!=null && campuses.any((c)=>c.id==id)) {
-                  setState(()=>_campusId=id);
+                  setState(() { _campusId=id; _showStudents=false; });
                 }
               },
             )
