@@ -28,7 +28,7 @@ begin
  values(v_employee,'00000000-0000-0000-0000-000000000000',
  'authenticated','authenticated',
  'db11-staff-'||v_employee::text||'@example.invalid',
- now(),'!no-real-password!','{}'::jsonb,'{}'::jsonb,now(),now(),now(),false);
+ null,'!no-real-password!','{}'::jsonb,'{}'::jsonb,now(),now(),now(),false);
  -- Mimic the sole server-side Edge Function role-registration call as DB admin.
  select (app_private.owner_register_invited_user(
   v_actor,v_employee,v_school,v_campus,'principal',
