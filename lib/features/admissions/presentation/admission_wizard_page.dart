@@ -337,11 +337,11 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     final discard = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Discard admission preview?'),
+        title: Text(_savedDraft == null ? 'Discard admission preview?' : 'Leave saved draft?'),
         content: Text(
-          'Only academic options may be read from your school database. '
-          'No admission details have been saved. All entered information '
-          'will be lost when you leave.',
+          _savedDraft == null
+            ? 'Unsaved admission details will be lost when you leave.'
+            : 'The last confirmed draft is saved in Supabase. Unsaved changes will be lost.',
         ),
         actions: [
           TextButton(
@@ -350,7 +350,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text('Discard preview'),
+            child: Text(_savedDraft == null ? 'Discard preview' : 'Leave draft'),
           ),
         ],
       ),
@@ -744,8 +744,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     if (wide) ...[
       OutlinedButton.icon(
         key: Key('admission-save-draft-disabled'),
-        onPressed: null, icon: Icon(Icons.save_outlined),
-        label: Text('Save Draft')),
+        onPressed: _canSaveDraft ? _saveDraft : null,
+        icon: Icon(Icons.save_outlined),
+        label: Text(_savingDraft ? 'Saving...' : 'Save Draft')),
       SizedBox(width: 10),
       FilledButton.icon(
         onPressed: null,
@@ -933,8 +934,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           ]),
         ),
         SizedBox(height: 8),
-        Text('No application has been saved. Uploads and '
-          'verification are pending.',
+        Text(_savedDraft == null
+          ? 'No confirmed draft saved. Uploads and verification are pending.'
+          : 'Saved draft ${_savedDraft!.id}; revision ${_savedDraft!.revision}. Not submitted.',
           style: TextStyle(fontSize: 12)),
       ])),
   ]);
@@ -946,9 +948,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     child: Row(children: [
       Expanded(child: OutlinedButton.icon(
         key: Key('admission-save-draft-disabled'),
-        onPressed: null,
+        onPressed: _canSaveDraft ? _saveDraft : null,
         icon: Icon(Icons.save_outlined),
-        label: Text('Save Draft'))),
+        label: Text(_savingDraft ? 'Saving...' : 'Save Draft'))),
       SizedBox(width: 11),
       Expanded(child: _step == AdmissionStep.review
         ? FilledButton.icon(
