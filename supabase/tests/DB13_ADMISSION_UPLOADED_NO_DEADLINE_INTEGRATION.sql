@@ -92,8 +92,7 @@ do $principal_check$
 declare f db13_case%rowtype;v_revision bigint;
 begin
  select * into strict f from db13_case;
- select revision into strict v_revision from public.admission_applications
-  where id=f.application_id;
+ v_revision:=f.revision+1;
  begin
   perform public.principal_review_admission(
     f.application_id,v_revision,gen_random_uuid(),'approve',null);
@@ -114,8 +113,7 @@ do $principal_approve$
 declare f db13_case%rowtype;v_revision bigint;v_result jsonb;
 begin
  select * into strict f from db13_case;
- select revision into strict v_revision from public.admission_applications
-  where id=f.application_id;
+ v_revision:=f.revision+1;
  v_result:=public.principal_review_admission(
    f.application_id,v_revision,gen_random_uuid(),'approve',null);
  if v_result->>'status'<>'approved' or v_result->>'student_id' is null then
