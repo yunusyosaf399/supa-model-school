@@ -890,7 +890,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(flex: 7, child: Column(children: [
             _mainStepPanel(),
-            if (_step == AdmissionStep.student) ...[
+            if (_step == AdmissionStep.student.index) ...[
               SizedBox(height: 12),
               _contactPanel(),
             ],
@@ -900,7 +900,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         ])
       else ...[
         _mainStepPanel(),
-        if (_step == AdmissionStep.student) ...[
+        if (_step == AdmissionStep.student.index) ...[
           SizedBox(height: 13),
           _contactPanel(),
         ],
