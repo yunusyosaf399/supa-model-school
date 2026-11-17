@@ -37,6 +37,13 @@ class FakeDrafts implements AdmissionDraftRepository {
 
 class FakeDocuments implements AdmissionDocumentService {
   const FakeDocuments({this.status='verified'});
+  @override
+  Future<AdmissionDocumentRecord?> preparePhoto(String applicationId) async => null;
+  @override
+  Future<bool> pickAndUploadPhoto({
+    required String schoolId,required String campusId,
+    required String applicationId,required AdmissionDocumentRecord document,
+  }) => throw UnimplementedError();
   final String status;
   @override
   Future<List<AdmissionDocumentRecord>> listDocuments(String id) async => [
