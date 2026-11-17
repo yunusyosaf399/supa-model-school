@@ -124,3 +124,21 @@ to design (DB08–DB09); 7 remain undeployed (DB03–DB09).**
 - `drafts/DB08_APPROVALS_RUNBOOK.md`: permission/approval acceptance gates.
 - `../docs/37_DB08_APPROVALS_PERMISSIONS_DESIGN.md`: design contract.
 **1 domain remains to design (DB09); 7 domains undeployed (DB03–DB09).**
+
+## DB09 offline sync, backup/restore and reporting — schema design NOT deployed
+- `drafts/DB09_SYNC_BACKUP_REPORTING_SCHEMA.sql`: 18 public RLS-denied
+  tables, per-school row-locked commit-order sequence trigger, campus-only
+  device authorization, immutable UUID+SHA256 receipt, conflicts, tombstones,
+  cursor claims, backup manifests/artifact checksums, restore approvals and
+  scoped reports with explicit demo flags.
+- `tests/DB09_SYNC_BACKUP_INTEGRATION.sql`: fictional local rollback-only
+  two-campus device/cursor, receipt, sequence, conflict, backup and restore
+  fixture — NOT EXECUTED.
+- `tests/check_db09_schema.py`: static schema guard, not runtime proof.
+- `drafts/DB09_SYNC_BACKUP_RUNBOOK.md`: local tests and protocol gates.
+- `../docs/38_DB09_SYNC_BACKUP_REPORTING_DESIGN.md`: domain design.
+
+**0 of 9 core schema domains remain to design; 7 DB03–DB09 domains still
+need full local SQL/RLS/security tests, cross-domain reconciliation and
+reviewed deployment.** Older D04 ingest/change-feed drafts are not merged
+and must NOT create duplicate feed systems. No Flutter or hosted SQL changes.
