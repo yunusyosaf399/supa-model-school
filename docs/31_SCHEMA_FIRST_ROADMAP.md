@@ -29,7 +29,7 @@ mistaken for the number of schemas.
 | DB06 | Ledger accounts, double-entry cash/bank, expenses, transfers, capital, closing and reconciliation | **20-table SQL design in stacked draft** | NOT deployed | PostgreSQL/RLS tests, DB08 approvals and trusted financial posting RPCs |
 | DB07 | Inventory, canteen, uniforms, production, transport, vehicles and maintenance | **37-table SQL design in stacked draft** | NOT deployed | Local SQL/RLS testing, stock/COGS posting, finance source integration, driver permissions |
 | DB08 | Expanded role catalog, campus permissions, approvals, audit, templates and notifications | **18-table SQL design in stacked draft** | NOT deployed | Test local SQL, role migration/RLS, reviewer workflow, DB09 device approval flow |
-| DB09 | Offline sync, device receipts/cursor, backups and reporting projections | PARTIAL drafts exist, full design incomplete | Dashboard demo/read-only portion deployed; sync NOT deployed | Complete unified device sync, backups and status schema |
+| DB09 | Windows campus-only offline sync, cloud change feed, conflict receipts, encrypted backup/restore, reporting | **18-table complete SQL domain source drafted** | Dashboard demo/read-only portion deployed; unified sync/backup NOT deployed | Reconcile old D04 ingestion/change-feed drafts; local SQL/RLS/concurrency/restore tests |
 
 Naming caveat: existing `DB05_UI_PREFERENCES.sql` is a small auxiliary
 preferences draft and NOT the DB05 payroll domain; the existing
@@ -40,14 +40,13 @@ projection and NOT a complete DB09 sync/backup architecture.
 
 - **Baseline deployed:** 2 of 9 domains (DB01, DB02).
   DB01/DB02 operational workflows still have unresolved gaps.
-- **New designs authored but not deployed:** 6 of 9 (DB03–DB08).
-- **Full-domain designs remaining after DB08:** **1** (DB09).
-  DB09 has preliminary server-sync code but not a finished domain.
+- **New domain designs authored but not fully deployed:** 7 of 9 (DB03–DB09).
+- **Full-domain designs remaining after DB09:** **0**. All 9 core domains have source design; this does NOT mean the migrations or runtime are approved.
 - **Core domains still requiring deployment:** **7** (DB03–DB09).
   Previously deployed DB01/DB02 are not rolled back.
 
 Before DB03 source design was started: 7 full-domain designs remained.
-After DB03 source design is reviewed: 6 remain; after DB04: 5 remain; after DB05: 4 remain; after DB06: 3 remain; after DB07: 2 remain; after DB08: 1 remains. Counts are **domains**,
+After DB03 source design is reviewed: 6 remain; after DB04: 5 remain; after DB05: 4 remain; after DB06: 3 remain; after DB07: 2 remain; after DB08: 1 remains; after DB09: 0 remain. Counts are **domains**,
 not SQL files, tables, Flutter screens or total project tasks.
 
 ## Cross-domain dependency decisions
@@ -79,7 +78,7 @@ Owner dashboard with example fee collection/dues. DB03 fee panels must
 not claim real collections before DB03+DB06 posted financial transactions
 and authorized dashboard projections exist.
 
-**Next domain to author: DB09 Offline Synchronization, Backup, Restore and Reporting.**
+**Next stage: cross-domain integration review, PostgreSQL/RLS/concurrency testing and approved migrations; NO Flutter code in this workstream.**
 
 ## DB04 attendance schema, 2026-11-16
 11 RLS-denied tables designed on stacked draft DB04 branch, including
@@ -133,3 +132,15 @@ trigger, immutable decisions/audit, document templates, notifications and
 operation receipts. No live role/policy or RPC changes. See
 `docs/37_DB08_APPROVALS_PERMISSIONS_DESIGN.md`.
 **1 full domain remains to design (DB09); 7 remain undeployed (DB03–DB09).**
+
+## DB09 sync, backup/restore and reporting schema source (2026-11-17)
+18 deny-by-default RLS public tables designed for assigned-campus Windows
+devices, revocation, per-operation SHA256 receipts, row-locked commit-order
+change feed, tombstones, durable cursor claims, conflicts/resolutions, Owner
+configurable encrypted backup destinations, manifests, restore checks and
+scoped real/demo reporting. Android is online-only in v1. Earlier unmerged
+D04-T03/T04 ingest/change-feed drafts must be consolidated, not duplicated.
+See `docs/38_DB09_SYNC_BACKUP_REPORTING_DESIGN.md`.
+**0 full schema domains left undesigned. 7 DB03–DB09 domains require local
+acceptance, migration reconciliation and deployment** (DB09's earlier demo
+read-only portion is not its core sync implementation).
