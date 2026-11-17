@@ -163,4 +163,3 @@ grant execute on function app_private.owner_register_admission_upload(uuid,text,
  to authenticated;
 grant execute on function public.owner_register_admission_upload(uuid,text,bigint)
  to authenticated;
- then
