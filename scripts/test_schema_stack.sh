@@ -60,4 +60,21 @@ END;
 $verify$;
 SQL
 
-echo "PASS: all seven domain DDL scripts applied and RLS smoke checks passed on isolated local database"
+echo "== Seed fictional LOCAL Auth identities for rollback-only domain fixtures =="
+psql "$PGURL" -X -v ON_ERROR_STOP=1 -q -f supabase/tests/CI_FAKE_AUTH_USERS.sql
+
+echo "== Run DB03–DB09 fictional rollback-only PostgreSQL fixtures =="
+for name in \
+  DB03_FEES_SCHEMA_INTEGRATION.sql \
+  DB04_ATTENDANCE_SCHEMA_INTEGRATION.sql \
+  DB05_PAYROLL_SCHEMA_INTEGRATION.sql \
+  DB06_FINANCE_SCHEMA_INTEGRATION.sql \
+  DB07_BUSINESS_TRANSPORT_INTEGRATION.sql \
+  DB08_APPROVALS_INTEGRATION.sql \
+  DB09_SYNC_BACKUP_INTEGRATION.sql
+do
+  echo "Testing $name"
+  psql "$PGURL" -X -v ON_ERROR_STOP=1 -q -f "supabase/tests/$name"
+done
+
+echo "PASS: all seven schema DDL scripts, RLS smoke checks and rollback-only fictional domain fixtures succeeded on isolated local database"
