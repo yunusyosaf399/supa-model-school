@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/admission_approval_repository.dart';
+import 'principal_documents_page.dart';
 
 /// Principal-only review surface. Parent router must supply a separately
 /// verified Principal campus context; Owner shell must never route here.
@@ -201,6 +202,21 @@ class _PrincipalApprovalPageState extends State<PrincipalApprovalPage> {
                     Text('Document deadline: ${item.conditionalDue}'),
                   const SizedBox(height: 10),
                   Wrap(spacing: 8,runSpacing: 8,children: [
+                    OutlinedButton.icon(
+                      key: Key('principal-documents-${item.id}'),
+                      onPressed: _processingId == null ? () async {
+                        await Navigator.of(context).push<void>(
+                          MaterialPageRoute<void>(builder: (_) =>
+                            PrincipalDocumentsPage(
+                              applicationId: item.id,
+                              repository: widget.repository,
+                            )),
+                        );
+                        if (mounted) _reload();
+                      } : null,
+                      icon: const Icon(Icons.description_outlined),
+                      label: const Text('Review certificates'),
+                    ),
                     FilledButton(
                       key: Key('principal-approve-${item.id}'),
                       onPressed: _processingId == null
