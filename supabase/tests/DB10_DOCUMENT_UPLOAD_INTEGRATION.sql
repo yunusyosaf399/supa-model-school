@@ -17,6 +17,7 @@ end $preflight$;
 create temporary table db10_upload_case (
   document_id uuid, object_path text, revision bigint, owner_id uuid
 ) on commit drop;
+grant select on db10_upload_case to authenticated;
 
 select set_config('request.jwt.claim.sub',
  (select r.user_id::text from public.user_roles r
