@@ -45,3 +45,5 @@ jobs:
         run: flutter test test/features/admissions/admission_document_upload_widget_test.dart
       - name: Principal approval and certificate regression
         run: flutter test test/features/admissions/principal_approval_widget_test.dart
+      - name: Owner admission submission regression
+        run: flutter test test/features/admissions/admission_submit_widget_test.dart
