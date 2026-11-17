@@ -38,9 +38,54 @@ class SavedAdmissionDraft {
   final int revision;
 }
 
+class AdmissionDraftRecord {
+  const AdmissionDraftRecord({
+    required this.id, required this.revision, required this.name,
+    required this.campusId, required this.academicYearId,
+    required this.status, required this.guardians, required this.documents,
+    this.dateOfBirth, this.previousSchool = '', this.classId, this.sectionId,
+  });
+  final String id, name, campusId, academicYearId, status;
+  final int revision;
+  final DateTime? dateOfBirth;
+  final String previousSchool;
+  final String? classId, sectionId;
+  final List<Map<String, dynamic>> guardians, documents;
+
+  factory AdmissionDraftRecord.fromJson(Map<String, dynamic> value) {
+    List<Map<String, dynamic>> array(String key) {
+      final items = value[key];
+      if (items is! List) throw StateError('Invalid admission details');
+      return List.unmodifiable(items.map((item) =>
+        Map<String, dynamic>.from(item as Map)));
+    }
+    final status = value['status'] as String?;
+    if (status != 'draft' && status != 'returned') {
+      throw StateError('Unexpected admission state');
+    }
+    return AdmissionDraftRecord(
+      id: value['id'] as String,
+      revision: (value['revision'] as num).toInt(),
+      name: value['name'] as String,
+      campusId: value['campus_id'] as String,
+      academicYearId: value['academic_year_id'] as String,
+      status: status!,
+      dateOfBirth: DateTime.tryParse(value['date_of_birth']?.toString() ?? ''),
+      previousSchool: value['previous_school'] as String? ?? '',
+      classId: value['class_id'] as String?,
+      sectionId: value['section_id'] as String?,
+      guardians: array('guardians'),
+      documents: array('documents'),
+    );
+  }
+}
+
 abstract class AdmissionDraftRepository {
   const AdmissionDraftRepository();
   Future<SavedAdmissionDraft> saveDraft(AdmissionDraftSaveRequest request);
+  Future<List<AdmissionDraftRecord>> listDrafts({
+    required String schoolId, required String campusId,
+  }) => throw UnimplementedError('Draft listing is not configured');
 }
 
 class SupabaseAdmissionDraftRepository implements AdmissionDraftRepository {
@@ -52,6 +97,49 @@ class SupabaseAdmissionDraftRepository implements AdmissionDraftRepository {
       : '${date.year.toString().padLeft(4, '0')}-'
         '${date.month.toString().padLeft(2, '0')}-'
         '${date.day.toString().padLeft(2, '0')}';
+
+  @override
+  Future<List<AdmissionDraftRecord>> listDrafts({
+    required String schoolId,
+    required String campusId,
+  }) async {
+    if (client.auth.currentSession == null ||
+        (await client.auth.getUser()).user == null) {
+      throw StateError('Sign in before reading admissions');
+    }
+    final records = <AdmissionDraftRecord>[];
+    const pageSize = 100;
+    var offset = 0;
+    while (true) {
+      final response = await client.rpc('owner_admission_worklist', params: {
+        'p_school_id': schoolId,
+        'p_campus_id': campusId,
+        'p_limit': pageSize,
+        'p_offset': offset,
+      });
+      if (response is! Map) throw StateError('Invalid worklist response');
+      final map = Map<String, dynamic>.from(response);
+      final total = map['total'];
+      final raw = map['applications'];
+      if (total is! num || total < 0 || total > 5000 || raw is! List) {
+        throw StateError('Admission list too large or malformed');
+      }
+      for (final item in raw) {
+        final record = AdmissionDraftRecord.fromJson(
+          Map<String, dynamic>.from(item as Map));
+        if (record.campusId != campusId) {
+          throw StateError('Server returned another campus admission');
+        }
+        records.add(record);
+      }
+      offset += raw.length;
+      if (offset >= total.toInt()) break;
+      if (raw.isEmpty || records.length > 5000) {
+        throw StateError('Incomplete admission list');
+      }
+    }
+    return List.unmodifiable(records);
+  }
 
   @override
   Future<SavedAdmissionDraft> saveDraft(AdmissionDraftSaveRequest request) async {
