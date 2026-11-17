@@ -1,4 +1,5 @@
-/// A UI-only admission draft. No persistence or server privileges are provided.
+/// Admission form state. Authenticated persistence is implemented by the repository;
+/// the model itself grants no privileges and performs no direct database writes.
 enum AdmissionStep {
   student,
   guardians,
@@ -42,8 +43,8 @@ class AdmissionDraft {
   DateTime? dateOfBirth;
   String gender = 'unspecified';
   String previousSchool = '';
-  // Additional student/contact fields for the six-step UI preview. These
-  // values are never persisted before the approved DB02 intake endpoint.
+  // Additional admission data saved through the Owner-only DB10 v2 draft API.
+  // Access is controlled on the server; no direct write to student tables.
   String nationality = '';
   String religion = '';
   String primaryLanguage = '';
@@ -66,9 +67,8 @@ class AdmissionDraft {
     GuardianDraft(localId: 1, isPrimary: true),
   ];
 
-  // The document upload/verification service is not yet connected.
-  // Required documents remain unverified regardless of a user's intention
-  // to provide them. The preview therefore uses conditional admission.
+  // These values are submitted atomically with the Principal review request.
+  // Upload does not itself verify certificates; conditional admission may apply.
   DateTime? missingDocumentsDueOn;
   String conditionalReason = '';
 
