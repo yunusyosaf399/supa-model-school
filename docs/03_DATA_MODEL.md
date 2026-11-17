@@ -8,7 +8,7 @@ DB05 payroll: employee_departments, employee_positions, employees, employee_assi
 DB06 money: ledger_accounts, financial_accounts, expense_categories, expense_requests, expenses, account_transfers, capital_transactions, account_opening_entries, accounting_periods, ledger_journals, ledger_lines, ledger_reversals, ledger_source_links, cash_closings, cash_closing_counts, cash_closing_adjustments, bank_statement_lines, bank_reconciliations, bank_reconciliation_matches, financial_operation_receipts.
 DB07 business: inventory_categories, inventory_items, inventory_locations, inventory_suppliers, inventory_purchase_orders, inventory_purchase_lines, inventory_goods_receipts, inventory_receipt_lines, inventory_lots, inventory_transfers, inventory_transfer_lines, inventory_counts, inventory_count_lines, canteen_products, canteen_prices, canteen_sales, canteen_sale_lines, uniform_products, uniform_recipes, uniform_recipe_lines, uniform_production_batches, uniform_material_issues, uniform_production_outputs, uniform_sales, uniform_sale_lines, transport_vehicles, transport_routes, transport_route_stops, transport_student_assignments, transport_driver_assignments, transport_trip_logs, transport_maintenance_events, transport_expense_links, inventory_stock_movements, inventory_movement_sources, retail_sale_reversals, db07_operation_receipts.
 DB08 controls: db08_roles, db08_permissions, db08_role_grants, db08_user_overrides, db08_role_audit, db08_approval_policies, db08_approval_steps, db08_workflow_subjects, db08_approval_requests, db08_approval_sources, db08_approval_delegations, db08_approval_decisions, db08_audit_events, db08_document_templates, db08_notification_messages, db08_notification_events, db08_user_shortcuts, db08_operation_receipts.
-DB09 sync: processed_operations, cloud_change_log, sync_conflicts, device_sync_status, backup_manifests and client-local sync_outbox/sync_state.
+DB09 sync: db09_device_authorizations, db09_device_access_events, db09_operation_receipts, db09_change_clocks, db09_cloud_changes, db09_tombstones, db09_device_cursors, db09_sync_conflicts, db09_conflict_resolutions, db09_sync_runs, db09_backup_destinations, db09_backup_manifests, db09_backup_artifacts, db09_restore_sessions, db09_restore_check_events, db09_report_definitions, db09_report_snapshots, db09_device_reassign_events; client-local sync_outbox/sync_state remain separate Windows Drift scope.
 
 **Integrity:** UUID primary keys; school/campus FK containment; document and academic history; exact money in minor units or NUMERIC on cloud; unique scheduled-charge source keys, unique receipt operation IDs, unique enrollment per active academic year. Cash and bank internal transfers are not revenue.
 
@@ -83,3 +83,13 @@ multi-step approval, immutable reviews and role audit, notification/template
 and shortcut records. No approval API, cross-domain posting or role RLS
 policies yet. See `docs/37_DB08_APPROVALS_PERMISSIONS_DESIGN.md`.
 **1 domain remains to design (DB09); 7 undeployed (DB03–DB09).**
+
+## DB09 complete cloud sync/backup/reporting source design (2026-11-17)
+18 RLS-denied tables for assigned campus device auth, stable SHA256
+receipts, commit-ordered cloud changes/tombstones, conflicts, device
+cursor claims, encrypted backup manifest/restore checks and dashboard
+report source projections. Earlier separate D04-T03/T04 ingest/change-feed
+SQL drafts are not merged into this migration; reconcile them before local
+SQL tests and deployment. See `docs/38_DB09_SYNC_BACKUP_REPORTING_DESIGN.md`.
+**All 9 core domains now have schema source designs; 0 remain to design.
+7 DB03–DB09 domains remain to integrate, test and deploy.**
