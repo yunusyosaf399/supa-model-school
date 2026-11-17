@@ -38,6 +38,10 @@ abstract class AdmissionDocumentService {
   const AdmissionDocumentService();
   Future<List<AdmissionDocumentRecord>> listDocuments(String applicationId);
 
+  Uint8List? photoPreviewBytes(String applicationId) => null;
+  Future<Uint8List?> loadPhotoPreview(String applicationId) async =>
+      photoPreviewBytes(applicationId);
+
   /// Optional student photo is private and never substitutes for certificates.
   Future<AdmissionDocumentRecord?> preparePhoto(String applicationId) async => null;
 
@@ -70,6 +74,23 @@ class SupabaseAdmissionDocumentService implements AdmissionDocumentService {
   SupabaseAdmissionDocumentService(this.client);
   final SupabaseClient client;
   final Map<String, _PendingRegistration> _pending = {};
+  final Map<String, Uint8List> _photoCache = {};
+
+  @override
+  Uint8List? photoPreviewBytes(String applicationId) => _photoCache[applicationId];
+
+  @override
+  Future<Uint8List?> loadPhotoPreview(String applicationId) async {
+    await _requireAuth();
+    final path = await client.rpc('owner_admission_photo_path', params: {
+      'p_application': applicationId,
+    });
+    if (path is! String || path.isEmpty) return _photoCache[applicationId];
+    final bytes = await client.storage.from(bucket).download(path);
+    if (bytes.length > maxPhotoBytes) return null;
+    _photoCache[applicationId] = bytes;
+    return bytes;
+  }
 
   static const bucket = 'sms-admission-documents';
   static const maxBytes = 10485760;
@@ -237,6 +258,7 @@ class SupabaseAdmissionDocumentService implements AdmissionDocumentService {
     final pending = _PendingRegistration(objectPath, document.revision);
     _pending[document.id] = pending;
     await _register(document, pending);
+    if (photoOnly) _photoCache[applicationId] = bytes;
     return true;
   }
 }
