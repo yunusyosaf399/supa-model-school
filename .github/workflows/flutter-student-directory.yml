@@ -51,3 +51,5 @@ jobs:
         run: flutter test test/features/auth/principal_auth_widget_test.dart
       - name: Complete Owner admission registry regression
         run: flutter test test/features/admissions/admission_registry_widget_test.dart
+      - name: Owner staff invitation and role management widgets
+        run: flutter test test/features/owner/owner_user_management_widget_test.dart

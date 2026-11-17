@@ -17,6 +17,7 @@ import 'features/dashboard/presentation/dashboard_page.dart';
 import 'features/dashboard/presentation/dashboard_visuals.dart';
 import 'features/dashboard/data/dashboard_repository.dart';
 import 'features/owner/presentation/owner_control_panel_page.dart';
+import 'features/owner/data/owner_user_management_repository.dart';
 import 'features/students/presentation/student_directory_page.dart';
 import 'features/students/data/student_directory_repository.dart';
 import 'ui/school_brand.dart';
@@ -37,6 +38,7 @@ Future<void> main() async {
   AdmissionDraftRepository? admissionRepo;
   AdmissionDocumentService? documentService;
   AdmissionApprovalRepository? approvalRepo;
+  OwnerUserManagementRepository? ownerUsersRepo;
   PrincipalAuthGateway principalAuth = const UnconfiguredPrincipalAuthGateway();
   if (url.isNotEmpty && key.isNotEmpty) {
     await Supabase.initialize(
@@ -56,6 +58,7 @@ Future<void> main() async {
     admissionRepo = SupabaseAdmissionDraftRepository(Supabase.instance.client);
     documentService = SupabaseAdmissionDocumentService(Supabase.instance.client);
     approvalRepo = SupabaseAdmissionApprovalRepository(Supabase.instance.client);
+    ownerUsersRepo = SupabaseOwnerUserManagementRepository(Supabase.instance.client);
     principalAuth = SupabasePrincipalAuthGateway(Supabase.instance.client);
   }
   runApp(SupaModelSchoolApp(
@@ -66,6 +69,7 @@ Future<void> main() async {
     admissionRepository: admissionRepo,
     admissionDocumentService: documentService,
     admissionApprovalRepository: approvalRepo,
+    ownerUserManagementRepository: ownerUsersRepo,
     principalAuthGateway: principalAuth,
   ));
 }
@@ -82,6 +86,7 @@ class SupaModelSchoolApp extends StatefulWidget {
     this.admissionRepository,
     this.admissionDocumentService,
     this.admissionApprovalRepository,
+    this.ownerUserManagementRepository,
     this.principalAuthGateway,
   });
   final bool startInPreview;
@@ -92,6 +97,7 @@ class SupaModelSchoolApp extends StatefulWidget {
   final AdmissionDraftRepository? admissionRepository;
   final AdmissionDocumentService? admissionDocumentService;
   final AdmissionApprovalRepository? admissionApprovalRepository;
+  final OwnerUserManagementRepository? ownerUserManagementRepository;
   final PrincipalAuthGateway? principalAuthGateway;
 
   @override
@@ -215,6 +221,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   admissionRepository: widget.admissionRepository,
                   admissionDocumentService: widget.admissionDocumentService,
                   admissionApprovalRepository: widget.admissionApprovalRepository,
+                  ownerUserManagementRepository: widget.ownerUserManagementRepository,
                   themeMode: themeMode,
                   onThemeChanged: (mode) => setState(() => themeMode = mode),
                   onExit: _exitShell,
@@ -252,6 +259,7 @@ class _SchoolShell extends StatefulWidget {
     this.admissionRepository,
     this.admissionDocumentService,
     this.admissionApprovalRepository,
+    this.ownerUserManagementRepository,
     this.owner,
   });
   final OwnerAccess? owner;
@@ -261,6 +269,7 @@ class _SchoolShell extends StatefulWidget {
   final AdmissionDraftRepository? admissionRepository;
   final AdmissionDocumentService? admissionDocumentService;
   final AdmissionApprovalRepository? admissionApprovalRepository;
+  final OwnerUserManagementRepository? ownerUserManagementRepository;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
   final VoidCallback onExit;
@@ -462,6 +471,7 @@ class _SchoolShellState extends State<_SchoolShell> {
           setState(() => activeCampusId = updated.campuses.first.id);
         },
         onOpenAcademicStructure: () => setState(() => selected = 11),
+        userManagementRepository: widget.ownerUserManagementRepository,
       );
     }
     if (selected == 11 && widget.owner != null) {

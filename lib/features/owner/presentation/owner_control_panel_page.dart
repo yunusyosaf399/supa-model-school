@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../auth/data/owner_auth_gateway.dart';
 import 'owner_initial_setup_form.dart';
+import '../data/owner_user_management_repository.dart';
+import 'owner_user_control_panel_page.dart';
 
 /// Owner Settings: atomic, audited one-time school setup; password management
 /// stays in Supabase Auth. Further school changes require a future workflow.
@@ -14,6 +16,7 @@ class OwnerControlPanelPage extends StatefulWidget {
     required this.onSaveSetup,
     required this.onSetupSaved,
     required this.onOpenAcademicStructure,
+    this.userManagementRepository,
   });
 
   final OwnerAccess owner;
@@ -23,6 +26,7 @@ class OwnerControlPanelPage extends StatefulWidget {
   final Future<OwnerAccess> Function(OwnerInitialSetupRequest) onSaveSetup;
   final ValueChanged<OwnerAccess> onSetupSaved;
   final VoidCallback onOpenAcademicStructure;
+  final OwnerUserManagementRepository? userManagementRepository;
 
   @override
   State<OwnerControlPanelPage> createState() =>
@@ -36,6 +40,7 @@ class _OwnerControlPanelPageState extends State<OwnerControlPanelPage> {
   final _confirm = TextEditingController();
   bool _saving = false;
   bool _passwordVisible = false;
+  bool _showUserManagement = false;
 
   @override
   void dispose() {
@@ -72,6 +77,14 @@ class _OwnerControlPanelPageState extends State<OwnerControlPanelPage> {
 
   @override
   Widget build(BuildContext context) {
+    final repo=widget.userManagementRepository;
+    if(_showUserManagement && repo!=null) {
+      return OwnerUserControlPanelPage(
+        owner:widget.owner,
+        repository:repo,
+        onBack:()=>setState(()=>_showUserManagement=false),
+      );
+    }
     final owner = widget.owner;
     final pendingCurrency = owner.currencyCode == 'XXX';
     final pendingTimezone = owner.timezoneName == 'Etc/UTC';
@@ -122,6 +135,32 @@ class _OwnerControlPanelPageState extends State<OwnerControlPanelPage> {
           ),
         ),
         const SizedBox(height: 12),
+        if (owner.setupComplete && widget.userManagementRepository!=null) ...[
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Users & Access Control',
+                    style:Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height:8),
+                  const Text('Invite Principals, teachers and other staff. '
+                    'Assign a campus, review invitations and activate or '
+                    'deactivate roles. User passwords remain private.'),
+                  const SizedBox(height:12),
+                  FilledButton.icon(
+                    key:const Key('owner-open-user-management'),
+                    icon:const Icon(Icons.manage_accounts_outlined),
+                    onPressed:()=>setState(()=>_showUserManagement=true),
+                    label:const Text('Manage Users & Roles'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height:12),
+        ],
         if (owner.setupComplete) ...[
           Card(
             child: Padding(
