@@ -1587,82 +1587,77 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         style: TextStyle(color: _teal, fontSize: 15,
           fontWeight: FontWeight.w900)),
       SizedBox(height: 7),
-      Text('Documents are awaiting secure upload and verification. '
-        'No file has been stored from this preview.',
+      Text(_savedDraft == null
+        ? 'Save the admission draft before uploading certificates.'
+        : 'Private uploads are recorded as Uploaded, not Verified. '
+          'Principal approval remains unavailable.',
         style: TextStyle(fontSize: 12, color: _muted)),
       SizedBox(height: 14),
-      for (final name in _draft.requiredDocumentNames)
-        Container(
-          margin: EdgeInsets.only(bottom: 10),
-          padding: EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            border: Border.all(color: _line),
-            borderRadius: BorderRadius.circular(11),
-            color: _subSurface),
-          child: Row(children: [
-            Container(width: 44, height: 44,
-              decoration: BoxDecoration(
-                color: _pale, borderRadius: BorderRadius.circular(9)),
-              child: Icon(Icons.description_outlined,
-                color: _teal)),
-            SizedBox(width: 12),
-            Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: TextStyle(
-                  fontWeight: FontWeight.w800, fontSize: 13)),
-                SizedBox(height: 4),
-                Text('Not uploaded • Not verified',
-                  style: TextStyle(
-                    color: _muted, fontSize: 11)),
-              ],
-            )),
-            Chip(
-              visualDensity: VisualDensity.compact,
-              backgroundColor: Color(0xFFFFE9C5),
-              side: BorderSide.none,
-              label: Text('Pending',
-                style: TextStyle(
-                  color: Color(0xFF986313), fontSize: 11))),
-          ]),
+      if (_documentLoading)
+        const LinearProgressIndicator(key: Key('admission-document-loading')),
+      if (_documentError != null)
+        ListTile(
+          leading: const Icon(Icons.error_outline),
+          title: Text(_documentError!),
+          trailing: TextButton(
+            onPressed: _loadDocuments, child: const Text('Retry')),
         ),
-      Container(
-        key: Key('admission-upload-disabled'),
-        padding: EdgeInsets.symmetric(vertical: 19, horizontal: 10),
-        decoration: BoxDecoration(
-          border: Border.all(color: Color(0xFFB3CDD8)),
-          color: _subSurface,
-          borderRadius: BorderRadius.circular(12)),
-        child: Column(children: [
-          Icon(Icons.cloud_upload_outlined, size: 39, color: _teal),
-          SizedBox(height: 5),
-          Text('Secure document upload coming soon',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: _teal,
-              fontWeight: FontWeight.w800)),
-          SizedBox(height: 4),
-          Text('PDF, JPG, PNG • verification by authorized staff',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: _muted, fontSize: 11)),
-        ]),
-      ),
+      if (_savedDraft != null && _serverDocuments.isNotEmpty)
+        for (final doc in _serverDocuments)
+          if (doc.applicable)
+            Card.outlined(
+              key: Key('admission-document-' + doc.kind),
+              child: ListTile(
+                leading: const Icon(Icons.description_outlined),
+                title: Text(doc.kind == 'birth_certificate'
+                  ? 'Birth Certificate'
+                  : doc.kind == 'transfer_certificate'
+                    ? 'School Leaving / Transfer Certificate'
+                    : doc.kind),
+                subtitle: Text(doc.status.toUpperCase() + ' • Version ' +
+                  (doc.version ?? 0).toString() +
+                  ' • Not verified unless reviewed by authorized staff'),
+                trailing: OutlinedButton(
+                  key: Key('admission-upload-' + doc.kind),
+                  onPressed: _uploadingDocumentId == null &&
+                    !_documentLoading && !_savingDraft &&
+                    widget.documentService != null &&
+                    doc.status != 'verified'
+                      ? () => _uploadDocument(doc) : null,
+                  child: Text(_uploadingDocumentId == doc.id
+                    ? 'Uploading...' : 'Upload'),
+                ),
+              ),
+            ),
+      if (_savedDraft != null && _serverDocuments.isEmpty &&
+          !_documentLoading && _documentError == null)
+        TextButton.icon(
+          onPressed: _loadDocuments,
+          icon: const Icon(Icons.refresh),
+          label: const Text('Load document requirements'),
+        ),
+      if (_savedDraft == null)
+        const Card(child: Padding(
+          padding: EdgeInsets.all(14),
+          child: Text('Certificate upload is available after Save Draft. '
+            'PDF/JPG/PNG/WebP up to 10 MiB. No document is verified automatically.'),
+        )),
       SizedBox(height: 16),
       Text('Conditional Document Submission',
         style: TextStyle(color: _teal, fontSize: 15,
           fontWeight: FontWeight.w900)),
       SizedBox(height: 6),
-      Text('Where required certificates are missing, the school may '
-        'permit a deadline up to two calendar months. '
-        'An overdue certificate never automatically deletes the student.',
+      Text('Outstanding certificates can be assigned a deadline up to '
+        'two calendar months. This deadline selection is not yet stored '
+        'by the draft-saving API.',
         style: TextStyle(fontSize: 12, color: _muted)),
       SizedBox(height: 13),
       OutlinedButton.icon(
         key: Key('document-deadline'),
         onPressed: _chooseDocumentDeadline,
         icon: Icon(Icons.calendar_month_outlined, color: _teal),
-        label: Text('Submission Deadline *: '
-          '${_dateLabel(_draft.missingDocumentsDueOn)}'),
+        label: Text('Submission Deadline *: ' +
+          _dateLabel(_draft.missingDocumentsDueOn)),
       ),
       SizedBox(height: 13),
       _styledField(
@@ -1673,8 +1668,8 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         maxLines: 3,
         onChanged: (v) => _draft.conditionalReason = v),
       SizedBox(height: 12),
-      Text('Deadline decisions and document verification will be '
-        'audited when the trusted admissions service is enabled.',
+      Text('Deadline saving, verification and Principal review '
+        'require separate authorized workflow tests.',
         style: TextStyle(fontSize: 11, color: _muted)),
     ],
   );
