@@ -188,7 +188,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     if (!_submitted) return;
     setState(() => _allowExit = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) Navigator.of(context).pop();
+      if (!mounted) return;
+      widget.onNavigateModule?.call(0); // Home dashboard, not prior module.
+      Navigator.of(context).pop();
     });
   }
 
