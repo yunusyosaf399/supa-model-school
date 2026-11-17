@@ -298,6 +298,12 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   }
 
   void _chooseCampus(String? id) {
+    if (_savedDraft != null && id != _draft.campusId) {
+      setState(() => _error =
+          'A saved draft belongs to its original campus. '
+          'Open a new admission for a different campus.');
+      return;
+    }
     if (!_academicReady || (id != null && !_campusChoices.containsKey(id))) {
       return;
     }
