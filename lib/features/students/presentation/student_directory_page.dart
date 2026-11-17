@@ -474,8 +474,8 @@ class StudentProfilePreviewPage extends StatelessWidget {
             children: [
               Card(
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                child: const Padding(
-                  padding: EdgeInsets.all(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
                   child: Text(isLive
                     ? 'Read-only student summary from Supabase. Detailed guardians, documents, fees and attendance are not yet connected.'
                     : 'FICTIONAL PREVIEW — not a real pupil, not a saved record. Guardian documents, fee balance and attendance are unavailable until authorized backend integration.'),
