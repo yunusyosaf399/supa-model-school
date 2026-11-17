@@ -145,9 +145,10 @@ class _StudentDirectoryPageState extends State<StudentDirectoryPage> {
         builder: (_) => StudentProfilePreviewPage(
           student: student,
           isLive: widget.owner != null,
-          onUpdate: widget.owner == null || widget.repository == null
+          onUpdate: widget.owner == null ||
+                    widget.repository is! StudentProfileUpdateRepository
               ? null : (name, status) async {
-                  await widget.repository!.updateProfile(
+                  await (widget.repository! as StudentProfileUpdateRepository).updateProfile(
                     schoolId: widget.owner!.schoolId,
                     campusId: student.campusId,
                     student: student,
