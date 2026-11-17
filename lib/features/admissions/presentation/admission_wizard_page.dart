@@ -120,7 +120,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         builder: (dialogContext) => AlertDialog(
           title: const Text('Forward to Principal?'),
           content: Text(missing
-            ? 'Some required documents are missing or unverified. '
+            ? 'Some required documents are missing or rejected. '
               'Forward with the selected deadline and reason? '
               'No student record is created until Principal approval.'
             : 'Forward this application to the Principal? '
@@ -134,9 +134,19 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         ),
       );
       if (!mounted || confirmed != true) return;
+      // Persist the latest student, guardian and class edits before submitting.
+      // Users may have saved an earlier incomplete draft just to upload files.
+      final latest = await _persistDraft(showNotice:false);
+      if (!mounted || latest == null) return;
+      if (_requiresDocumentDeadline && !missing) {
+        setState(() => _error = 'A required certificate was added while '
+          'saving your latest details. Upload it or set a conditional deadline '
+          'before forwarding to the Principal.');
+        return;
+      }
       _pendingSubmission = AdmissionSubmitRequest(
-        applicationId: _savedDraft!.id,
-        expectedRevision: _savedDraft!.revision,
+        applicationId: latest.id,
+        expectedRevision: latest.revision,
         operationId: SupabaseAdmissionApprovalRepository.operationUuid(),
         conditionalDue: missing ? _draft.missingDocumentsDueOn : null,
         conditionalReason: missing ? _draft.conditionalReason.trim() : null,
@@ -277,8 +287,8 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         '${h.substring(12,16)}-${h.substring(16,20)}-${h.substring(20)}';
   }
 
-  Future<void> _saveDraft() async {
-    if (!_canSaveDraft) return;
+  Future<SavedAdmissionDraft?> _persistDraft({bool showNotice = true}) async {
+    if (!_canSaveDraft) return null;
     final owner = widget.owner!;
     if (_pendingSave == null) {
       if (_draft.studentName.trim().length < 2 ||
@@ -289,7 +299,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           (_draft.sectionId != null && !_sectionChoices.containsKey(_draft.sectionId))) {
         setState(() => _error =
             'Enter a student name and choose a valid campus, year and class.');
-        return;
+        return null;
       }
       final guardians = <Map<String, dynamic>>[
         for (final guardian in _draft.guardians)
@@ -305,7 +315,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       if (guardians.length > 8 ||
           guardians.where((g) => g['is_primary'] == true).length > 1) {
         setState(() => _error = 'Review guardian details before saving.');
-        return;
+        return null;
       }
       _pendingSave = AdmissionDraftSaveRequest(
         schoolId: owner.schoolId,
@@ -343,25 +353,33 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     setState(() { _savingDraft = true; _error = null; });
     try {
       final result = await widget.admissionRepository!.saveDraft(_pendingSave!);
-      if (!mounted) return;
+      if (!mounted) return null;
       setState(() {
         _savedDraft = result;
         _pendingSave = null;
         _savingDraft = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Draft saved in Supabase (revision ${result.revision}). '
-            'Not submitted or approved.'),
-      ));
+      if (showNotice) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Draft saved in Supabase (revision ${result.revision}). '
+              'Not submitted or approved.'),
+        ));
+      }
       await _loadDocuments();
+      return result;
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted) return null;
       setState(() {
         _savingDraft = false;
         _error = 'Save not confirmed. Retry to repeat the same operation '
             'without creating a duplicate draft.';
       });
+      return null;
     }
+  }
+
+  Future<void> _saveDraft() async {
+    await _persistDraft();
   }
 
 
