@@ -95,7 +95,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // This RPC is service_role-only, and independently rechecks the verified
   // Owner, target Auth email, campus and role in a single SQL transaction.
   const { data: assigned, error: assignmentError } =
-    await administrator.schema("app_private").rpc("owner_register_invited_user", {
+    await administrator.rpc("server_register_invited_user", {
       p_actor: identity.user.id,
       p_target: invitation.user.id,
       p_school: payload.school_id,
