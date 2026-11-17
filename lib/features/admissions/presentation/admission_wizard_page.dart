@@ -73,6 +73,17 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   bool _submitted = false;
   AdmissionSubmitRequest? _pendingSubmission;
 
+  bool get _requiresDocumentDeadline => _serverDocuments.any((doc) =>
+    doc.required && doc.applicable &&
+    (doc.status == 'missing' || doc.status == 'rejected'));
+
+  AdmissionDocumentRecord? get _photoDocument {
+    for (final doc in _serverDocuments) {
+      if (doc.kind == 'photo') return doc;
+    }
+    return null;
+  }
+
   bool get _canSubmit =>
     !_submitted && !_submitting && !_savingDraft &&
     _uploadingDocumentId == null && !_documentLoading &&
@@ -98,9 +109,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         setState(() => _error = 'Choose an authorized campus, year and class.');
         return;
       }
-      final missing = _serverDocuments.any((document) =>
-        document.required && document.applicable &&
-        document.status != 'verified');
+      final missing = _requiresDocumentDeadline;
       if (missing) {
         final issue = _draft.validateStep(AdmissionStep.documents);
         if (issue != null) {
@@ -148,12 +157,16 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         content: Text('Application ${result.applicationId} submitted. '
           'The Principal must approve before a student is enrolled.'),
       ));
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
+      final message = error is PostgrestException
+        ? error.message
+        : error is StateError ? error.message : 'Network or server error';
       setState(() {
         _submitting = false;
-        _error = 'Submission was not confirmed. Retry to repeat the '
-          'same operation without making a duplicate application.';
+        _error = 'Submission not confirmed: '
+          '${message.length > 220 ? message.substring(0,220) : message}. '
+          'Retry uses the same operation ID; no duplicate application is created.';
       });
     }
   }
@@ -212,6 +225,43 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         'a file already stored if necessary.');
     } finally {
       if (mounted) setState(() => _uploadingDocumentId = null);
+    }
+  }
+
+  Future<void> _uploadPhoto() async {
+    final owner=widget.owner;
+    final service=widget.documentService;
+    final application=_savedDraft?.id;
+    if(owner==null || service==null || application==null ||
+       _draft.campusId==null || _uploadingDocumentId!=null ||
+       _savingDraft || _submitting || _submitted) {
+      if(application==null) {
+        setState(()=>_error='Save Draft before uploading the student photo.');
+      }
+      return;
+    }
+    setState(() { _uploadingDocumentId='photo'; _documentError=null; });
+    try {
+      final photo=_photoDocument ?? await service.preparePhoto(application);
+      if(photo==null || photo.kind!='photo') {
+        throw StateError('Student photo is not available');
+      }
+      final uploaded=await service.pickAndUploadPhoto(
+        schoolId:owner.schoolId,
+        campusId:_draft.campusId!,
+        applicationId:application,
+        document:photo);
+      if(!mounted)return;
+      if(uploaded) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content:Text('Student photo uploaded privately.')));
+      }
+      await _loadDocuments();
+    } catch(error) {
+      if(!mounted)return;
+      setState(()=>_error='Photo upload failed: '        '${error is StateError ? error.message : 'check the file and connection'}.');
+    } finally {
+      if(mounted)setState(()=>_uploadingDocumentId=null);
     }
   }
 
@@ -547,7 +597,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         return;
       }
     }
-    final error = _draft.validateStep(AdmissionStep.values[_step]);
+    final error = _draft.validateStep(AdmissionStep.values[_step],
+      documentsOutstanding: _requiresDocumentDeadline ||
+        (_serverDocuments.isEmpty && _savedDraft == null));
     if (error != null) {
       setState(() => _error = error);
       return;
