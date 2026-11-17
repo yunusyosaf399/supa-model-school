@@ -28,7 +28,7 @@ mistaken for the number of schemas.
 | DB05 | Employees, multi-campus assignments, teaching duties, leave, salary and advance recovery | **20-table SQL design in stacked draft** | NOT deployed | Local SQL/RLS, salary payment concurrency, DB06 account posting and DB08 approvals |
 | DB06 | Ledger accounts, double-entry cash/bank, expenses, transfers, capital, closing and reconciliation | **20-table SQL design in stacked draft** | NOT deployed | PostgreSQL/RLS tests, DB08 approvals and trusted financial posting RPCs |
 | DB07 | Inventory, canteen, uniforms, production, transport, vehicles and maintenance | **37-table SQL design in stacked draft** | NOT deployed | Local SQL/RLS testing, stock/COGS posting, finance source integration, driver permissions |
-| DB08 | Approvals, audit, correction workflows, templates, notifications | NOT fully designed | NOT deployed | Full schema design |
+| DB08 | Expanded role catalog, campus permissions, approvals, audit, templates and notifications | **18-table SQL design in stacked draft** | NOT deployed | Test local SQL, role migration/RLS, reviewer workflow, DB09 device approval flow |
 | DB09 | Offline sync, device receipts/cursor, backups and reporting projections | PARTIAL drafts exist, full design incomplete | Dashboard demo/read-only portion deployed; sync NOT deployed | Complete unified device sync, backups and status schema |
 
 Naming caveat: existing `DB05_UI_PREFERENCES.sql` is a small auxiliary
@@ -40,14 +40,14 @@ projection and NOT a complete DB09 sync/backup architecture.
 
 - **Baseline deployed:** 2 of 9 domains (DB01, DB02).
   DB01/DB02 operational workflows still have unresolved gaps.
-- **New designs authored but not deployed:** 5 of 9 (DB03, DB04, DB05, DB06 and DB07).
-- **Full-domain designs remaining after DB07:** **2** (DB08–DB09).
+- **New designs authored but not deployed:** 6 of 9 (DB03–DB08).
+- **Full-domain designs remaining after DB08:** **1** (DB09).
   DB09 has preliminary server-sync code but not a finished domain.
 - **Core domains still requiring deployment:** **7** (DB03–DB09).
   Previously deployed DB01/DB02 are not rolled back.
 
 Before DB03 source design was started: 7 full-domain designs remained.
-After DB03 source design is reviewed: 6 remain; after DB04: 5 remain; after DB05: 4 remain; after DB06: 3 remain; after DB07: 2 remain. Counts are **domains**,
+After DB03 source design is reviewed: 6 remain; after DB04: 5 remain; after DB05: 4 remain; after DB06: 3 remain; after DB07: 2 remain; after DB08: 1 remains. Counts are **domains**,
 not SQL files, tables, Flutter screens or total project tasks.
 
 ## Cross-domain dependency decisions
@@ -79,7 +79,7 @@ Owner dashboard with example fee collection/dues. DB03 fee panels must
 not claim real collections before DB03+DB06 posted financial transactions
 and authorized dashboard projections exist.
 
-**Next domain to author: DB08 Approval Workflows, Role Security, Audit and Notifications.**
+**Next domain to author: DB09 Offline Synchronization, Backup, Restore and Reporting.**
 
 ## DB04 attendance schema, 2026-11-16
 11 RLS-denied tables designed on stacked draft DB04 branch, including
@@ -123,3 +123,13 @@ DB06 needs a **reviewed journal kind/source extension** for actual canteen,
 uniform, inventory and COGS posting before any migration is prepared.
 No Flutter or hosted Supabase SQL deployment occurred. **2 full domains
 remain to design (DB08–DB09); 7 domains remain undeployed (DB03–DB09).**
+
+## DB08 approval/role/audit source (2026-11-17)
+Designed 18 deny-by-default RLS tables, expanding DB01 school/campus role
+whitelist to school Owner, teachers, transport, Store Keeper, parents etc.
+Per-school role permission mapping, expiry-bound overrides, policy versions,
+sequential reviewer steps, typed approval source references, no-self-review
+trigger, immutable decisions/audit, document templates, notifications and
+operation receipts. No live role/policy or RPC changes. See
+`docs/37_DB08_APPROVALS_PERMISSIONS_DESIGN.md`.
+**1 full domain remains to design (DB09); 7 remain undeployed (DB03–DB09).**
