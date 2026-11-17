@@ -1065,7 +1065,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     message: 'Photo uploads require the private admission upload service.',
     child: Container(
       key: Key('admission-photo-placeholder'),
-      width: 140, height: 134,
+      width: 140, height: 158,
       padding: EdgeInsets.all(10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
