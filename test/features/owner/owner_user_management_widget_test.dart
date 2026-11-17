@@ -73,6 +73,7 @@ void main(){
       'TestCreatePassword123!');
     await tester.enterText(find.byKey(const Key('staff-confirm-password')),
       'TestCreatePassword123!');
+    await tester.ensureVisible(find.byKey(const Key('staff-create-account')));
     await tester.tap(find.byKey(const Key('staff-create-account')));
     await tester.pumpAndSettle();
     expect(repo.created,0);
@@ -83,6 +84,8 @@ void main(){
     expect(repo.last?.campusId,'campus-1');
     expect(repo.last?.email,'teacher@example.test');
     expect(repo.last?.password,'TestCreatePassword123!');
+    expect(tester.widget<TextFormField>(find.byKey(
+      const Key('staff-password'))).controller?.text,isEmpty);
   });
 
   testWidgets('Owner can deactivate Principal without deleting history',
