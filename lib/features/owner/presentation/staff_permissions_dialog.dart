@@ -8,9 +8,11 @@ Future<void> showStaffPermissionsDialog(
   OwnerStaffAccount staff,
   OwnerUserManagementRepository repository,
 ) async {
+  final access = repository is OwnerPermissionRepository ? repository : null;
+  if (access == null) return;
   List<StaffPermission> permissions;
   try {
-    permissions = await repository.permissions(staff.roleId);
+    permissions = await access.permissions(staff.roleId);
   } catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -64,7 +66,7 @@ Future<void> showStaffPermissionsDialog(
                       onChanged: saving ? null : (allowed) async {
                         updateDialog(() { saving = true; errorText = null; });
                         try {
-                          await repository.setPermission(
+                          await access.setPermission(
                             staff.roleId, p.code, allowed);
                           if (!dialogContext.mounted) return;
                           updateDialog(() {
