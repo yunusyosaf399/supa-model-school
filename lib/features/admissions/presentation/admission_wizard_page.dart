@@ -267,6 +267,23 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         applicantName: _draft.studentName.trim(),
         dateOfBirth: _draft.dateOfBirth,
         previousSchool: _draft.previousSchool,
+        extraDetails: {
+          'gender': _draft.gender,
+          'nationality': _draft.nationality.trim(),
+          'religion': _draft.religion.trim(),
+          'primary_language': _draft.primaryLanguage.trim(),
+          'notes': _draft.notes.trim(),
+          'birth_certificate_number': _draft.birthCertificateNumber.trim(),
+          'identity_number': _draft.identityNumber.trim(),
+          'address': _draft.address.trim(),
+          'city': _draft.city.trim(),
+          'emergency_contact': _draft.emergencyContact.trim(),
+          'admission_fee_status': _draft.admissionFeeStatus,
+          'uses_transport': _draft.usesTransport,
+          'transport_notes': _draft.transportNotes.trim(),
+          'requests_discount': _draft.requestsDiscount,
+          'discount_notes': _draft.discountNotes.trim(),
+        },
         classId: _draft.classId,
         sectionId: _draft.sectionId,
         guardians: guardians,
@@ -352,6 +369,24 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       _draft.studentName = existing.name;
       _draft.dateOfBirth = existing.dateOfBirth;
       _draft.previousSchool = existing.previousSchool;
+      final details = existing.extraDetails;
+      _draft.gender = details['gender'] as String? ?? 'unspecified';
+      _draft.nationality = details['nationality'] as String? ?? '';
+      _draft.religion = details['religion'] as String? ?? '';
+      _draft.primaryLanguage = details['primary_language'] as String? ?? '';
+      _draft.notes = details['notes'] as String? ?? '';
+      _draft.birthCertificateNumber =
+          details['birth_certificate_number'] as String? ?? '';
+      _draft.identityNumber = details['identity_number'] as String? ?? '';
+      _draft.address = details['address'] as String? ?? '';
+      _draft.city = details['city'] as String? ?? '';
+      _draft.emergencyContact = details['emergency_contact'] as String? ?? '';
+      _draft.admissionFeeStatus =
+          details['admission_fee_status'] as String? ?? 'not_recorded';
+      _draft.usesTransport = details['uses_transport'] == true;
+      _draft.transportNotes = details['transport_notes'] as String? ?? '';
+      _draft.requestsDiscount = details['requests_discount'] == true;
+      _draft.discountNotes = details['discount_notes'] as String? ?? '';
       _draft.campusId = existing.campusId;
       _draft.academicYearId = existing.academicYearId;
       _draft.classId = existing.classId;
