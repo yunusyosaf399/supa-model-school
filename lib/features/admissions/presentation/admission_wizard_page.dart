@@ -10,6 +10,7 @@ import '../../academics/data/academic_structure_repository.dart';
 import '../../auth/data/owner_auth_gateway.dart';
 import '../models/admission_draft.dart';
 import '../../../ui/school_brand.dart';
+import '../../owner/data/school_logo_service.dart';
 
 /// Owner Admissions wizard: authenticated draft saving, private certificate/photo
 /// uploads and Principal-only submission. Fee posting remains separate.
@@ -21,6 +22,7 @@ class AdmissionWizardPage extends StatefulWidget {
     this.admissionRepository,
     this.documentService,
     this.approvalRepository,
+    this.logoService,
     this.initialRecord,
     this.initialStep = AdmissionStep.student,
     this.selectedCampusId,
@@ -39,6 +41,7 @@ class AdmissionWizardPage extends StatefulWidget {
   final AdmissionDraftRepository? admissionRepository;
   final AdmissionDocumentService? documentService;
   final AdmissionApprovalRepository? approvalRepository;
+  final SchoolLogoService? logoService;
   final AdmissionDraftRecord? initialRecord;
   final String? selectedCampusId;
   final VoidCallback? onOpenSearch;
@@ -763,7 +766,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   Widget _brandRow({bool mobile = false}) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      SchoolMark(size: mobile ? 57 : 65),
+      SchoolMark(size: mobile ? 48 : 65, logoService: widget.logoService),
       SizedBox(width: 11),
       Flexible(child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
