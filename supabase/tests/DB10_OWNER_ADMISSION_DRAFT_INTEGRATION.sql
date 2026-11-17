@@ -47,9 +47,7 @@ begin
    '[{"full_name":"TEST DB10 Guardian","relationship":"father","phone":"03000000000","is_primary":true,"is_legal_guardian":true}]'::jsonb);
  v_id := (v_result->>'application_id')::uuid;
  if v_result->>'status'<>'draft' or (v_result->>'revision')::int<>1
-    or (select count(*) from public.student_documents where application_id=v_id)<>2
-    or (select count(*) from public.admission_action_events where application_id=v_id)<>1
- then raise exception 'Admission draft create/documents/audit failed: %',v_result; end if;
+ then raise exception 'Admission draft creation failed: %',v_result; end if;
 
  v_second := public.owner_save_admission_draft(
    v_school,v_campus,v_year,null,null,v_operation,
@@ -57,7 +55,6 @@ begin
    'TEST Previous School',v_class,v_section,
    '[]'::jsonb);
  if v_second->>'application_id'<>v_result->>'application_id'
-   or (select count(*) from public.admission_applications where id=v_id)<>1
  then raise exception 'Idempotent retry created duplicate'; end if;
 
  v_second := public.owner_save_admission_draft(
@@ -75,11 +72,21 @@ begin
    raise exception 'Stale revision accepted';
  exception when SQLSTATE '40001' then null; end;
 
- if (select count(*) from public.students)<>32
- then raise exception 'Draft must not create student records'; end if;
 end $owner$;
 
 reset role;
+-- Administrator-only fixture checks; the application role must NOT read these tables.
+do $admin_verify$
+declare v_id uuid;
+begin
+ select id into strict v_id from public.admission_applications
+ where applicant_name='TEST DB10 ROLLBACK Applicant Updated';
+ if (select count(*) from public.student_documents where application_id=v_id)<>2
+  or (select count(*) from public.admission_action_events where application_id=v_id)<>2
+  or (select count(*) from public.students)<>32
+ then raise exception 'Draft documents/audit/student safety checks failed'; end if;
+end $admin_verify$;
+
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',true);
 set local role authenticated;
 do $denied$
