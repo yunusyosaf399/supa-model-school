@@ -19,8 +19,10 @@ abstract class StudentProfileUpdateRepository {
 }
 
 class SupabaseStudentDirectoryRepository implements StudentDirectoryRepository, StudentProfileUpdateRepository {
-  const SupabaseStudentDirectoryRepository(this.client);
+  const SupabaseStudentDirectoryRepository(this.client,
+    {this.rpcName = 'owner_student_directory'});
   final SupabaseClient client;
+  final String rpcName;
 
   @override
   Future<void> updateProfile({
@@ -56,7 +58,7 @@ class SupabaseStudentDirectoryRepository implements StudentDirectoryRepository, 
     final records = <StudentSummary>[];
     var offset = 0;
     while (true) {
-      final response = await client.rpc('owner_student_directory', params: {
+      final response = await client.rpc(rpcName, params: {
         'p_school_id': schoolId,
         'p_campus_id': campusId,
         'p_limit': pageSize,
@@ -103,4 +105,21 @@ class SupabaseStudentDirectoryRepository implements StudentDirectoryRepository, 
       records: List.unmodifiable(records),
     );
   }
+}
+
+
+/// Read-only Principal/staff projection. Separate secure RPC enforces
+/// individual students.read action plus assigned campus on every request.
+class SupabaseStaffStudentDirectoryRepository
+    implements StudentDirectoryRepository {
+  const SupabaseStaffStudentDirectoryRepository(this.client);
+  final SupabaseClient client;
+
+  @override
+  Future<StudentDirectoryProjection> load({
+    required String schoolId,
+    required String campusId,
+  }) => SupabaseStudentDirectoryRepository(
+      client, rpcName: 'sms_staff_student_directory',
+    ).load(schoolId: schoolId, campusId: campusId);
 }
