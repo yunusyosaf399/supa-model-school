@@ -8,14 +8,17 @@ abstract class StudentDirectoryRepository {
     required String schoolId,
     required String campusId,
   });
+}
+
+abstract class StudentProfileUpdateRepository {
   Future<void> updateProfile({
     required String schoolId,required String campusId,
     required StudentSummary student,required String name,
     required StudentStatus status,
-  }) async => throw UnsupportedError('Student editing is not configured');
+  });
 }
 
-class SupabaseStudentDirectoryRepository implements StudentDirectoryRepository {
+class SupabaseStudentDirectoryRepository implements StudentDirectoryRepository, StudentProfileUpdateRepository {
   const SupabaseStudentDirectoryRepository(this.client);
   final SupabaseClient client;
 
