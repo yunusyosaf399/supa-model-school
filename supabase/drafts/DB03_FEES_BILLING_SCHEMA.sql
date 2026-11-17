@@ -11,6 +11,11 @@ BEGIN;
 ALTER TABLE public.student_enrollments
   ADD CONSTRAINT db03_enrollment_finance_scope_unique
   UNIQUE (id,student_id,school_id,campus_id,academic_year_id,class_id);
+-- Student fee rules do not carry class_id, so their 5-column FK requires
+-- its own exact unique key in PostgreSQL.
+ALTER TABLE public.student_enrollments
+  ADD CONSTRAINT db03_enrollment_fee_year_scope_unique
+  UNIQUE (id,student_id,school_id,campus_id,academic_year_id);
 
 CREATE TABLE public.fee_categories (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
