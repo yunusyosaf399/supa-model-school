@@ -67,6 +67,63 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   List<AdmissionDocumentRecord> _serverDocuments = const [];
   int _documentRequest = 0;
 
+  Future<void> _loadDocuments() async {
+    final id = _savedDraft?.id;
+    final service = widget.documentService;
+    if (id == null || service == null) return;
+    final request = ++_documentRequest;
+    setState(() { _documentLoading = true; _documentError = null; });
+    try {
+      final records = await service.listDocuments(id);
+      if (!mounted || request != _documentRequest) return;
+      setState(() {
+        _serverDocuments = records;
+        _documentLoading = false;
+      });
+    } catch (_) {
+      if (!mounted || request != _documentRequest) return;
+      setState(() {
+        _documentLoading = false;
+        _documentError = 'Cannot load certificate statuses. Retry when online.';
+      });
+    }
+  }
+
+  Future<void> _uploadDocument(AdmissionDocumentRecord document) async {
+    final owner = widget.owner;
+    final service = widget.documentService;
+    final application = _savedDraft?.id;
+    if (owner == null || service == null || application == null ||
+        _draft.campusId == null || _uploadingDocumentId != null ||
+        _savingDraft) return;
+    setState(() {
+      _uploadingDocumentId = document.id;
+      _documentError = null;
+    });
+    try {
+      final stored = await service.pickAndUpload(
+        schoolId: owner.schoolId,
+        campusId: _draft.campusId!,
+        applicationId: application,
+        document: document,
+      );
+      if (!mounted) return;
+      if (stored) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Certificate uploaded. Awaiting staff verification.'),
+        ));
+        await _loadDocuments();
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _documentError =
+        'Upload could not be confirmed. Retry to finish registering '
+        'a file already stored if necessary.');
+    } finally {
+      if (mounted) setState(() => _uploadingDocumentId = null);
+    }
+  }
+
   bool get _canSaveDraft =>
       !_savingDraft && widget.owner?.setupComplete == true &&
       widget.admissionRepository != null;
