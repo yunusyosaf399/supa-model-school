@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../ui/school_brand.dart';
 import '../../auth/data/owner_auth_gateway.dart';
+import '../../owner/data/school_logo_service.dart';
 import '../data/dashboard_repository.dart';
 import 'dashboard_visuals.dart';
 
@@ -25,6 +26,7 @@ class DashboardPage extends StatefulWidget {
     this.owner,
     this.selectedCampusId,
     this.repository = const UnconfiguredDashboardRepository(),
+     this.logoService,
   });
 
   final VoidCallback onNewAdmission;
@@ -39,6 +41,7 @@ class DashboardPage extends StatefulWidget {
   final OwnerAccess? owner;
   final String? selectedCampusId;
   final DashboardRepository repository;
+  final SchoolLogoService? logoService;
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -569,7 +572,7 @@ class _DashboardPageState extends State<DashboardPage> {
         padding: const EdgeInsets.fromLTRB(5, 7, 5, 6),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            const SchoolMark(size: 40),
+            SchoolMark(size: 40, logoService: widget.logoService),
             const SizedBox(width: 6),
             Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
