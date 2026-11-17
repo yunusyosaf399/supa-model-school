@@ -2,7 +2,7 @@
 
 Private development repository for the Supa Model School Windows and Android Flutter app and its Supabase backend.
 
-**Status:** Architecture and schema authoring in progress. **Not production ready.** No school-domain database schema has been deployed.
+**Status (2026-11-17):** DB01–DB09 schema deployed (169 RLS-enabled public tables). **Not production ready:** server operations, end-to-end role/security checks, desktop sync, and application integration remain unfinished.
 
 - Online backend: Supabase project `uebzvfzpbqqttbqyxxos` (`ap-south-1`).
 - Desktop: assigned-campus SQLite/Drift offline + authenticated two-way sync.
@@ -16,7 +16,7 @@ Private development repository for the Supa Model School Windows and Android Flu
 - `docs/03_DATA_MODEL.md` — domain entities and integrity constraints.
 - `docs/04_SYNC_PROTOCOL.md` — offline sync, conflicts, idempotency.
 - `docs/05_PERMISSIONS.md` — campus roles and permissions.
-- `supabase/drafts/` — **review-only** SQL drafts; not deployed.
+- `supabase/drafts/` — review-only prototypes; deployed DB01–DB09 migration history is separate. DB10 RPC is a new review-only draft.
 - `planning/STATUS.md` — verified work state, blockers and next tasks.
 
 **Security:** Never commit database passwords, service-role keys or secrets. Do not enter real student/financial data until RLS, offline sync, transaction safety and restore tests pass.
@@ -67,13 +67,13 @@ connected device or running emulator. Follow `flutter doctor -v` findings.
 
 - Admission wizard and student directory show **fictional preview data only**,
   and submission/upload is disabled.
-- Supabase SQL under `supabase/drafts/` is **review-only**; no live schema has
-  been deployed or migrated. The Edge Function is not deployed.
+- Supabase SQL under `supabase/drafts/` is **review-only**; DB01–DB09 schemas
+  have been deployed, but DB10 APIs and live operational integrations are not deployed.
 - Drift offline database/outbox code is **not wired to the UI**. It needs
   verified campus/device authorization, encryption, generated code and runtime
   tests before storing any real student/guardian information.
 - Flutter code generation, analyzer, widget tests, Windows/Android launch,
-  PostgreSQL SQL execution and device sync are **not verified yet**.
+  end-to-end service authorization and device sync are **not verified yet**; schema-level PostgreSQL checks have run.
 - No GitHub Actions workflows were run or requested for these merges.
 
 Start by running the commands above and share any failures; test results will
