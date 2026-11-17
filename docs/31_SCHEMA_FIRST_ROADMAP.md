@@ -1,8 +1,15 @@
 # Supa Model School — Schema-First Roadmap (DB01–DB09)
 
-**As of 2026-11-16.** This is the canonical COUNT of major schema
+**Current verified deployment 2026-11-17.** This is the canonical COUNT of major schema
 domains; the separate 114-task tracker includes UI/tests and MUST NOT be
 mistaken for the number of schemas.
+
+
+## Latest deployment verification (2026-11-17)
+
+All nine DB01–DB09 **SQL schemas have now been deployed**. GitHub Actions [seven-domain local acceptance](https://github.com/yunusyosaf399/supa-model-school/actions/runs/44031312887) passed, and the [versioned migration PR check](https://github.com/yunusyosaf399/supa-model-school/actions/runs/44032342791) passed before [PR #34 merged](https://github.com/yunusyosaf399/supa-model-school/pull/34). New live migration versions are 20261117062924, 20261117062944, 20261117063002, 20261117063034, 20261117063050, 20261117063105 and 20261117063123. Current hosted project: **169 public tables, 169 RLS-enabled, 14 migration history entries**; one existing school, campus and role retained. **0 SQL domain schemas await deployment.**
+
+This does **not** mean the application is ready for live data entry. Security-granted authenticated read/write workflows, fee/payroll accounting posting, DB07 COGS, DB08 approvals, DB09 real offline synchronization and encryption/backups, two-session concurrency and privacy/restore drills are still unfinished. Some archival sections below reflect the *predeployment design stage*.
 
 ## Nonnegotiable development order
 
@@ -23,13 +30,13 @@ mistaken for the number of schemas.
 | --- | --- | --- | --- | --- |
 | DB01 | School foundation, Auth roles, campuses, academic years/classes | Baseline authored + deployed | Deployed | Expand complete role catalog, user access, tests/review |
 | DB02 | Students, admissions, guardians, enrollments, documents | Baseline authored + deployed | Deployed | Full document upload/verification service and acceptance testing |
-| DB03 | Fee plans, discounts, charges, partial receipts, credit, bank claims | **18-table SQL design in draft PR (2026-11-16)** | NOT deployed | Test SQL; design atomic server posting, DB06 account links |
-| DB04 | Student/staff attendance, school calendar, teacher duties and corrections | **11-table SQL design in stacked draft** | NOT deployed | Run SQL/RLS tests; teacher-role expansion, signed posting operations |
-| DB05 | Employees, multi-campus assignments, teaching duties, leave, salary and advance recovery | **20-table SQL design in stacked draft** | NOT deployed | Local SQL/RLS, salary payment concurrency, DB06 account posting and DB08 approvals |
-| DB06 | Ledger accounts, double-entry cash/bank, expenses, transfers, capital, closing and reconciliation | **20-table SQL design in stacked draft** | NOT deployed | PostgreSQL/RLS tests, DB08 approvals and trusted financial posting RPCs |
-| DB07 | Inventory, canteen, uniforms, production, transport, vehicles and maintenance | **37-table SQL design in stacked draft** | NOT deployed | Local SQL/RLS testing, stock/COGS posting, finance source integration, driver permissions |
-| DB08 | Expanded role catalog, campus permissions, approvals, audit, templates and notifications | **18-table SQL design in stacked draft** | NOT deployed | Test local SQL, role migration/RLS, reviewer workflow, DB09 device approval flow |
-| DB09 | Windows campus-only offline sync, cloud change feed, conflict receipts, encrypted backup/restore, reporting | **18-table complete SQL domain source drafted** | Dashboard demo/read-only portion deployed; unified sync/backup NOT deployed | Reconcile old D04 ingestion/change-feed drafts; local SQL/RLS/concurrency/restore tests |
+| DB03 | Fee plans, discounts, charges, partial receipts, credit, bank claims | **SQL schema deployed 2026-11-17** | **Deployed (schema only)** | Implement fee charge/discount/receipt authorization, exact accounting posting and concurrent over-allocation prevention; add role-based RLS |
+| DB04 | Student/staff attendance, school calendar, teacher duties and corrections | **SQL schema deployed 2026-11-17** | **Deployed (schema only)** | Implement teacher duties and current-campus attendance submission/correction authorization, class assignments and RLS integration |
+| DB05 | Employees, multi-campus assignments, teaching duties, leave, salary and advance recovery | **SQL schema deployed 2026-11-17** | **Deployed (schema only)** | Implement payroll privacy/approval, salary payment and advance recovery concurrency; link DB06 accounting |
+| DB06 | Ledger accounts, double-entry cash/bank, expenses, transfers, capital, closing and reconciliation | **SQL schema deployed 2026-11-17** | **Deployed (schema only)** | Implement trusted financial posting, matched fee/payroll/DB07 retail and COGS sources, balance/closed-period concurrency |
+| DB07 | Inventory, canteen, uniforms, production, transport, vehicles and maintenance | **SQL schema deployed 2026-11-17** | **Deployed (schema only)** | Implement no-negative-stock, approved sales/transfers, driver eligibility and matching DB06 inventory/COGS journals |
+| DB08 | Expanded role catalog, campus permissions, approvals, audit, templates and notifications | **SQL schema deployed 2026-11-17** | **Deployed (schema only)** | Implement trusted multi-step approval engine, role/permission grants and current actor/campus RLS verification |
+| DB09 | Windows campus-only offline sync, cloud change feed, conflict receipts, encrypted backup/restore, reporting | **SQL schema deployed 2026-11-17** | **Deployed (schema only)** | Reconcile legacy D04 offline drafts; implement authenticated sync APIs, SQLite encryption, backup/restore and multi-device concurrency |
 
 Naming caveat: existing `DB05_UI_PREFERENCES.sql` is a small auxiliary
 preferences draft and NOT the DB05 payroll domain; the existing
@@ -38,12 +45,11 @@ projection and NOT a complete DB09 sync/backup architecture.
 
 ## Remaining-count rule for EACH response
 
-- **Baseline deployed:** 2 of 9 domains (DB01, DB02).
+- **Deployed SQL schema domains:** 9 of 9 (DB01–DB09).
   DB01/DB02 operational workflows still have unresolved gaps.
-- **New domain designs authored but not fully deployed:** 7 of 9 (DB03–DB09).
+- **New schema domains deployed on 2026-11-17:** 7 of 9 (DB03–DB09); business services/role policies are not complete.
 - **Full-domain designs remaining after DB09:** **0**. All 9 core domains have source design; this does NOT mean the migrations or runtime are approved.
-- **Core domains still requiring deployment:** **7** (DB03–DB09).
-  Previously deployed DB01/DB02 are not rolled back.
+- **Core domains still requiring initial SQL schema deployment:** **0**. All DB01–DB09 SQL deployed; server operations and stronger role-based security tests remain.
 
 Before DB03 source design was started: 7 full-domain designs remained.
 After DB03 source design is reviewed: 6 remain; after DB04: 5 remain; after DB05: 4 remain; after DB06: 3 remain; after DB07: 2 remain; after DB08: 1 remains; after DB09: 0 remain. Counts are **domains**,

@@ -1,7 +1,24 @@
 # Supabase schema workspace
 
 Project: `uebzvfzpbqqttbqyxxos` (SUPA MODEL SCHOOL link), region `ap-south-1`.
-**Live status 2026-11-16:** DB01 school foundation and DB02 admissions baseline have been deployed, with RLS enabled. See docs/27_DB02_ADMISSIONS_RESTRICTED_BACKEND.md. The new DB03 fee schema is DESIGN ONLY and has not been deployed.
+**Current live status 2026-11-17:** All nine core DB01–DB09 SQL schemas DEPLOYED; DB03–DB09 were tested in isolated GitHub Actions, deployed as seven tracked migrations and merged via PR #34. Hosted public tables: 169, all RLS-enabled. No completed payment, attendance, approval, inventory posting or offline sync APIs are implied.
+
+
+## Versioned migrations and CI (2026-11-17)
+
+The following migrations are **already deployed to hosted Supa Model School**, and are committed with the exact versions in `supabase/migrations/`:
+
+- `20261117062924_db03_fees_billing_schema_20261117.sql`
+- `20261117062944_db04_attendance_schema_20261117.sql`
+- `20261117063002_db05_employees_payroll_schema_20261117.sql`
+- `20261117063034_db06_finance_cashbook_schema_20261117.sql`
+- `20261117063050_db07_inventory_canteen_uniform_transport_20261117.sql`
+- `20261117063105_db08_approvals_permissions_audit_20261117.sql`
+- `20261117063123_db09_sync_backup_reporting_20261117.sql`
+
+Local-only validation: `.github/workflows/db-schema-stack-test.yml` and `scripts/test_schema_stack.sh` run a disposable Supabase database, check schema RLS and run all seven fictional rollback-only SQL fixtures. [Passing migration CI](https://github.com/yunusyosaf399/supa-model-school/actions/runs/44032342791) and [merged PR #34](https://github.com/yunusyosaf399/supa-model-school/pull/34) establish the reproducible SQL state. The CI workflow has **no production database credentials** and never deploys automatically.
+
+**Operational limitations:** New domain tables deny direct `anon`/`authenticated` access by default until dedicated current-role/campus policies and trusted server functions are reviewed. Not yet functional: fee/payroll payments, POS/COGS double-entry posting, approval engine, real offline sync, encrypted local backup and restore. Historical draft notes below may say “not deployed”; those statements describe the earlier authoring stage and are superseded by this current status.
 
 - `drafts/DB01_foundation.sql` — foundation/auth/RLS **review draft**.
 - `drafts/DB02_admissions.sql` — students, conditional admissions, document uploads/reviews/deadline history **review draft**.
@@ -114,7 +131,7 @@ DB07 inventory, POS sales and COGS journal kinds before reviewed migrations.
 No Flutter files or hosted Supabase SQL changes; **2 full domains remain
 to design (DB08–DB09); 7 remain undeployed (DB03–DB09).**
 
-## DB08 expanded roles, approvals and audit — SQL design NOT deployed
+## DB08 expanded roles, approvals and audit — SQL schema deployed (service not yet active)
 - `drafts/DB08_APPROVALS_PERMISSIONS_AUDIT_SCHEMA.sql`: 18 deny-by-default
   RLS tables and expanded DB01 role whitelist, campus permission grants,
   versioned approval policies/steps, typed request sources, delegated
@@ -125,7 +142,7 @@ to design (DB08–DB09); 7 remain undeployed (DB03–DB09).**
 - `../docs/37_DB08_APPROVALS_PERMISSIONS_DESIGN.md`: design contract.
 **1 domain remains to design (DB09); 7 domains undeployed (DB03–DB09).**
 
-## DB09 offline sync, backup/restore and reporting — schema design NOT deployed
+## DB09 offline sync, backup/restore and reporting — SQL schema deployed (service not yet active)
 - `drafts/DB09_SYNC_BACKUP_REPORTING_SCHEMA.sql`: 18 public RLS-denied
   tables, per-school row-locked commit-order sequence trigger, campus-only
   device authorization, immutable UUID+SHA256 receipt, conflicts, tombstones,

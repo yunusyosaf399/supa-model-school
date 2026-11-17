@@ -1,10 +1,7 @@
 # All Core Schema Designs Authored — Migration and Integration Gates
 
-**2026-11-17 — Source-design milestone, NOT a production-readiness certificate.**
-Nine domains DB01–DB09 have schema design sources. DB01/DB02 baselines are
-deployed; DB03–DB09 remain UNDEPLOYED (DB09 has an earlier limited read-only
-Owner dashboard, NOT a working offline sync/backup service). No Flutter
-changes have been made in this schema-design workstream.
+**Current verified 2026-11-17 — ALL DB01–DB09 SQL SCHEMAS DEPLOYED; NOT a production-readiness certificate.**
+DB03–DB09 were successfully tested via isolated GitHub Actions and applied as seven tracked migrations to the connected Supa Model School project. [PR #34](https://github.com/yunusyosaf399/supa-model-school/pull/34) merged the exact migration files to main. 169 public tables, all RLS-enabled; original school/campus/role preserved. **Remaining items below are security, service/API, accounting, real synchronization and operational-test gates—not yet-to-deploy schema DDL.** No Flutter changes in this workstream.
 
 ## Correct stacked source review order
 
