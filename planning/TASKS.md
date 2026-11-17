@@ -4,7 +4,7 @@ Last verified: 2026-11-16.
 **114 tasks: 31 DONE / 82 TODO / 1 IN_PROGRESS / 0 BLOCKED.**
 Authoritative machine-readable status: [tasks.csv](tasks.csv).
 
-**Important:** D03-T03–T05 and D04-T01–T04 are DONE for code authoring/static source review only. The user reports Windows Flutter tests and build passed on 2026-11-15; logs were not independently inspected. Schema-first design is prioritized: DB03 PR #25, DB04 PR #26, DB05 PR #29, DB06 PR #30 and DB07 PR #31 remain DRAFT and NOT deployed, and no Flutter changes are planned in this workstream. Android runtime, Flutter analyzer evidence, PostgreSQL RLS/Edge, offline security, and hosted deployment remain unfinished.
+**Important:** D03-T03–T05 and D04-T01–T04 are DONE for code authoring/static source review only. The user reports Windows Flutter tests and build passed on 2026-11-15; logs were not independently inspected. Schema-first domain designs are now authored for all DB01–DB09. DB03 PR #25, DB04 PR #26, DB05 PR #29, DB06 PR #30, DB07 PR #31, DB08 PR #32 and DB09 PR #33 remain DRAFT and NOT deployed, and no Flutter changes are planned in this workstream. Android runtime, Flutter analyzer evidence, PostgreSQL RLS/Edge, offline security, and hosted deployment remain unfinished.
 
 ## Setup
 - [x] `SETUP-01` Identify Supabase link and organization — **DONE**
@@ -170,3 +170,6 @@ Authoritative machine-readable status: [tasks.csv](tasks.csv).
 - [Week 2 issue](https://github.com/yunusyosaf399/supa-model-school/issues/4)
 - [Week 3 issue](https://github.com/yunusyosaf399/supa-model-school/issues/5)
 - [Schema draft PR #1](https://github.com/yunusyosaf399/supa-model-school/pull/1)
+
+## DB01–DB09 schema-source milestone (2026-11-17)
+All nine major core domain schema designs are authored; **zero full domain designs remain**. DB01/DB02 baseline are deployed, while DB03–DB09 (seven domains) require dependent draft review, local PostgreSQL parser/integration/security/RLS and concurrency tests, source reconciliation and reviewed migrations before hosted deployment. **Do not mark implementation/backlog tasks DONE for SQL design alone.** See docs/39_ALL_SCHEMAS_INTEGRATION_GATES.md on stacked DB09 PR #33. The overall 114-task counts remain 31 DONE, 82 TODO, 1 IN_PROGRESS, 0 BLOCKED. No Flutter code or hosted SQL deployment occurred in DB08/DB09 schema-design sessions.
