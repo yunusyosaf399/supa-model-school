@@ -106,7 +106,7 @@ void main() {
       home:PrincipalDocumentsPage(applicationId:'app-1',repository:repo)));
     await tester.pumpAndSettle();
     expect(find.text('birth_certificate'),findsOneWidget);
-    expect(find.text('transfer_certificate'),findOneWidget);
+    expect(find.text('transfer_certificate'),findsOneWidget);
     final verify=tester.widget<FilledButton>(
       find.byKey(const Key('verify-document-doc-1')));
     expect(verify.onPressed,isNull);
