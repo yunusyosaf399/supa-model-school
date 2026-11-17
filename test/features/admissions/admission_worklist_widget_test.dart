@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:supa_model_school/features/admissions/data/admission_draft_repository.dart';
 import 'package:supa_model_school/features/admissions/presentation/admission_draft_list_page.dart';
 import 'package:supa_model_school/features/auth/data/owner_auth_gateway.dart';
+import 'package:supa_model_school/features/admissions/presentation/admission_wizard_page.dart';
+import 'package:supa_model_school/features/academics/data/academic_structure_repository.dart';
 
 const owner = OwnerAccess(
   userId:'test-owner', displayName:'Owner',
@@ -59,6 +61,37 @@ void main() {
     expect(opened?.id,'draft-id');
     expect(opened?.revision,2);
   });
+  testWidgets('saved draft restores applicant and guardian without creating another ID',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1550, 950));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+    final existing = AdmissionDraftRecord(
+      id:'existing-id',revision:4,status:'draft',
+      name:'TEST Restored Applicant',
+      campusId:'campus-a',academicYearId:'year-1',
+      classId:'class-1',sectionId:'section-1',
+      dateOfBirth:DateTime(2017,3,5),
+      guardians:const [
+        {'full_name':'TEST Restored Guardian','relationship':'father',
+         'phone':'03000000000','is_primary':true,'is_legal_guardian':true},
+      ],
+      documents:const [],
+    );
+    await tester.pumpWidget(MaterialApp(home: AdmissionWizardPage(
+      owner:owner,
+      academicRepository:const UnconfiguredAcademicStructureRepository(),
+      admissionRepository:FakeWorklist(),
+      initialRecord:existing,
+      selectedCampusId:'campus-a',
+    )));
+    await tester.pumpAndSettle();
+    final name = tester.widget<TextFormField>(
+      find.byKey(const Key('student-name')));
+    expect(name.initialValue,'TEST Restored Applicant');
+    expect(find.text('Date of Birth'),findsWidgets);
+    expect(find.textContaining('TEST Restored Applicant'),findsWidgets);
+  });
+
   testWidgets('failed authorization never shows stale or demo admissions',
       (tester) async {
     final repo=FakeWorklist(fail:true);
