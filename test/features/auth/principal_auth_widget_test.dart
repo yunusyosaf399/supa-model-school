@@ -3,7 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:supa_model_school/main.dart';
 import 'package:supa_model_school/features/auth/data/owner_auth_gateway.dart';
 import 'package:supa_model_school/features/auth/data/principal_auth_gateway.dart';
+import 'package:supa_model_school/features/auth/data/account_password_gateway.dart';
 import 'package:supa_model_school/features/admissions/data/admission_approval_repository.dart';
+
+class TestPrincipalPasswordGateway implements AccountPasswordGateway {
+  const TestPrincipalPasswordGateway();
+  @override Future<void> changePassword(String current,String next) async {}
+}
 
 class NonOwner implements OwnerAuthGateway {
   @override bool get configured=>true;
@@ -78,6 +84,7 @@ void main() {
       authGateway:NonOwner(),
       principalAuthGateway:gateway,
       admissionApprovalRepository:approvals,
+      accountPasswordGateway:const TestPrincipalPasswordGateway(),
     ));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('login-email')),
@@ -90,6 +97,12 @@ void main() {
     expect(find.byKey(const Key('principal-approval-page')),findsOneWidget);
     expect(find.byKey(const Key('dashboard-page')),findsNothing);
     expect(approvals.readCount,1);
+    await tester.tap(find.byKey(const Key('principal-account-password')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('account-password-page')),findsOneWidget);
+    await tester.tap(find.byKey(const Key('principal-account-password')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('principal-approval-page')),findsOneWidget);
     await tester.tap(find.byKey(const Key('principal-sign-out')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Sign out').last);
