@@ -28,10 +28,11 @@ class StaffAccountHome extends StatelessWidget {
         ),
       ],
     ),
-    body:ListView(
-      padding:const EdgeInsets.all(16),
+    body:Column(
       children:[
-        Card(child:Padding(padding:const EdgeInsets.all(16),
+        Padding(
+          padding:const EdgeInsets.fromLTRB(16,16,16,0),
+          child:Card(child:Padding(padding:const EdgeInsets.all(16),
           child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
             Text('Welcome, ${staff.displayName}',
               style:Theme.of(context).textTheme.titleLarge),
@@ -44,10 +45,11 @@ class StaffAccountHome extends StatelessWidget {
               'the password assigned by the school Owner below.'),
           ]),
         )),
-        AccountPasswordPage(
+        ),
+        Expanded(child:AccountPasswordPage(
           gateway:passwordGateway,
           onPasswordChanged:onSignOut,
-        ),
+        )),
       ],
     ),
   );
