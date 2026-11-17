@@ -179,6 +179,14 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     }
   }
 
+  void _closeSubmitted() {
+    if (!_submitted) return;
+    setState(() => _allowExit = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.of(context).pop();
+    });
+  }
+
   Future<void> _loadDocuments() async {
     final id = _savedDraft?.id;
     final service = widget.documentService;
@@ -1021,7 +1029,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     if (!wide)
       IconButton(
         key: Key('admission-back-button'),
-        onPressed: _step == 0 ? _confirmExit : _previous,
+        onPressed: _submitted ? _closeSubmitted : (_step == 0 ? _confirmExit : _previous),
         icon: Icon(Icons.arrow_back_ios_new_rounded,
             color: _teal)),
     Container(width: 5, height: wide ? 49 : 53,
@@ -1058,9 +1066,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         label: Text(_submitted ? 'Submitted' : _submitting ? 'Submitting...' : 'Submit for Approval')),
       SizedBox(width: 10),
       OutlinedButton.icon(
-        onPressed: _confirmExit,
-        icon: Icon(Icons.close),
-        label: Text('Cancel')),
+        onPressed: _submitted ? _closeSubmitted : _confirmExit,
+         icon: Icon(Icons.close),
+         label: Text(_submitted ? 'Close' : 'Cancel')),
     ] else
       Chip(
         avatar: Icon(Icons.description_outlined, color: _teal, size: 18),
@@ -1246,7 +1254,17 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       ])),
   ]);
 
-  Widget _mobileActions() => Container(
+  Widget _mobileActions() {
+    if (_submitted) return Padding(
+      padding: const EdgeInsets.all(12),
+      child: FilledButton.icon(
+        key: const Key('admission-close-after-submit'),
+        onPressed: _closeSubmitted,
+        icon: const Icon(Icons.check_circle_outline),
+        label: const Text('Close and Return to Dashboard'),
+      ),
+    );
+    return Container(
     padding: EdgeInsets.fromLTRB(15, 11, 15, 12),
     decoration: BoxDecoration(color: _surface,
         border: Border(top: BorderSide(color: _line))),
@@ -1270,6 +1288,8 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
             label: Text('Next Step'))),
     ]),
   );
+
+  }
 
   Widget _footerBar() => Container(
     height: 39,
@@ -2142,7 +2162,14 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     );
   }
 
-  Widget _actions() => Row(children: [
+  Widget _actions() {
+    if (_submitted) return FilledButton.icon(
+      key: const Key('admission-close-after-submit'),
+      onPressed: _closeSubmitted,
+      icon: const Icon(Icons.check_circle_outline),
+      label: const Text('Close and Return to Dashboard'),
+    );
+    return Row(children: [
     Expanded(child: OutlinedButton.icon(
       onPressed: _step == 0 ? null : _previous,
       icon: Icon(Icons.arrow_back),
@@ -2163,5 +2190,6 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           label: Text(_submitted ? 'Submitted' : _submitting ? 'Submitting...' : 'Submit for Approval')),
     ),
   ]);
+  }
 
 }
