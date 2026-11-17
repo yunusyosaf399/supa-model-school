@@ -2002,7 +2002,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
             _savedDraft == null
             ? 'Save a complete draft first. Submission requires validated student, guardian and academic data plus certificate status.'
             : _submitted ? 'Submitted to Principal. No student is enrolled before the assigned Principal approves.'
-              : 'Draft saved. Forward to Principal with verified certificates or a conditional deadline and reason. Some optional UI fields are not yet saved.',
+              : 'Draft saved. Forward to Principal with verified certificates or a conditional deadline and reason. All current form fields are saved in this draft; fee/discount/transport choices are preferences, not financial postings.',
             style: TextStyle(fontSize: 12))),
         ]),
       ),
