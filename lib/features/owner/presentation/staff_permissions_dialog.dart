@@ -8,7 +8,8 @@ Future<void> showStaffPermissionsDialog(
   OwnerStaffAccount staff,
   OwnerUserManagementRepository repository,
 ) async {
-  final access = repository is OwnerPermissionRepository ? repository : null;
+  final OwnerPermissionRepository? access = repository is OwnerPermissionRepository
+      ? repository as OwnerPermissionRepository : null;
   if (access == null) return;
   List<StaffPermission> permissions;
   try {
