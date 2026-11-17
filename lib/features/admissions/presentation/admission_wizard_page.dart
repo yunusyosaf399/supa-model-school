@@ -197,6 +197,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         content: Text('Draft saved in Supabase (revision ${result.revision}). '
             'Not submitted or approved.'),
       ));
+      await _loadDocuments();
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -280,7 +281,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           localId: _nextGuardianId++, isPrimary: true));
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _loadClasses(existing.campusId);
+        if (!mounted) return;
+        _loadClasses(existing.campusId);
+        _loadDocuments();
       });
     } else if (_academicReady) {
       _draft.academicYearId = widget.owner!.activeYearId;
