@@ -38,9 +38,6 @@ abstract class AdmissionDocumentService {
   const AdmissionDocumentService();
   Future<List<AdmissionDocumentRecord>> listDocuments(String applicationId);
 
-  Uint8List? photoPreviewBytes(String applicationId) => null;
-  Future<Uint8List?> loadPhotoPreview(String applicationId) async =>
-      photoPreviewBytes(applicationId);
 
   /// Optional student photo is private and never substitutes for certificates.
   Future<AdmissionDocumentRecord?> preparePhoto(String applicationId) async => null;
@@ -70,7 +67,12 @@ class _PendingRegistration {
   final int revision;
 }
 
-class SupabaseAdmissionDocumentService implements AdmissionDocumentService {
+abstract class AdmissionPhotoPreviewService {
+  Uint8List? photoPreviewBytes(String applicationId);
+  Future<Uint8List?> loadPhotoPreview(String applicationId);
+}
+
+class SupabaseAdmissionDocumentService implements AdmissionDocumentService, AdmissionPhotoPreviewService {
   SupabaseAdmissionDocumentService(this.client);
   final SupabaseClient client;
   final Map<String, _PendingRegistration> _pending = {};
