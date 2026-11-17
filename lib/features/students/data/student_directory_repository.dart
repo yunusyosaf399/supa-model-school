@@ -1,0 +1,75 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../models/student_directory.dart';
+
+abstract class StudentDirectoryRepository {
+  const StudentDirectoryRepository();
+  Future<StudentDirectoryProjection> load({
+    required String schoolId,
+    required String campusId,
+  });
+}
+
+class SupabaseStudentDirectoryRepository implements StudentDirectoryRepository {
+  const SupabaseStudentDirectoryRepository(this.client);
+  final SupabaseClient client;
+
+  @override
+  Future<StudentDirectoryProjection> load({
+    required String schoolId,
+    required String campusId,
+  }) async {
+    if (client.auth.currentSession == null) {
+      throw StateError('Owner sign-in is required');
+    }
+    const pageSize = 200;
+    final records = <StudentSummary>[];
+    var offset = 0;
+    while (true) {
+      final response = await client.rpc('owner_student_directory', params: {
+        'p_school_id': schoolId,
+        'p_campus_id': campusId,
+        'p_limit': pageSize,
+        'p_offset': offset,
+      });
+      if (response is! Map) throw StateError('Unexpected student response');
+      final data = Map<String, dynamic>.from(response);
+      final raw = data['students'];
+      final count = data['total'];
+      if (raw is! List || count is! num || count < 0 || count > 5000) {
+        throw StateError('Student directory response invalid or too large');
+      }
+      for (final item in raw) {
+        if (item is! Map) throw StateError('Invalid student row');
+        final row = Map<String, dynamic>.from(item);
+        if (row['campus_id'] != campusId) {
+          throw StateError('Unexpected campus data from server');
+        }
+        final status = StudentStatus.values.byName(
+          (row['status'] ?? 'active').toString(),
+        );
+        records.add(StudentSummary(
+          id: row['id'].toString(),
+          registrationNo: row['registration_no'].toString(),
+          fullName: row['full_name'].toString(),
+          campusId: row['campus_id'].toString(),
+          campusName: row['campus_name'].toString(),
+          classId: row['class_id'].toString(),
+          className: row['class_name'].toString(),
+          sectionName: row['section_name'].toString(),
+          academicYear: row['academic_year'].toString(),
+          status: status,
+        ));
+      }
+      offset += raw.length;
+      if (offset >= count.toInt()) break;
+      if (raw.isEmpty || records.length > 5000) {
+        throw StateError('Incomplete student page');
+      }
+    }
+    return StudentDirectoryProjection(
+      authorizedCampusIds: {campusId},
+      records: List.unmodifiable(records),
+    );
+  }
+}
