@@ -716,8 +716,8 @@ class _SchoolShellState extends State<_SchoolShell> {
       top: false,
       child: Container(
         key: const Key('mobile-navigation'),
-        height: 74,
-        padding: const EdgeInsets.fromLTRB(9, 7, 9, 6),
+        height: 66,
+         padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
         decoration: const BoxDecoration(
           color: Colors.white,
           border: Border(top: BorderSide(color: Color(0xFFD7E3E8))),
@@ -790,7 +790,10 @@ class _SchoolShellState extends State<_SchoolShell> {
       // The shell keeps one permanent sidebar. Changing modules replaces
       // only the right-hand content pane; no shared header/AppBar is added.
       appBar: null,
-      body: desktop
+      body: SafeArea(
+        top: !desktop,
+        bottom: false,
+        child: desktop
           ? Row(children: [
               _desktopSidebar(extended),
               const VerticalDivider(width: 1),
@@ -802,7 +805,7 @@ class _SchoolShellState extends State<_SchoolShell> {
           : Column(children: [
               if (selected == 10) _settingsAppearance(),
               Expanded(child: content),
-            ]),
+             ])),
       bottomNavigationBar: desktop
           ? (selected == 0 ? _dashboardFooter() : null)
           : selected == 0
