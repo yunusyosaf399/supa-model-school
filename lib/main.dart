@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'features/auth/data/owner_auth_gateway.dart';
 import 'features/auth/data/principal_auth_gateway.dart';
 import 'features/auth/data/staff_auth_gateway.dart';
+import 'features/auth/data/staff_permission_gateway.dart';
 import 'features/auth/data/account_password_gateway.dart';
 import 'features/auth/presentation/staff_account_home.dart';
 import 'features/admissions/presentation/principal_admissions_home.dart';
@@ -46,6 +47,7 @@ Future<void> main() async {
   SchoolLogoService? logoService;
   PrincipalAuthGateway principalAuth = const UnconfiguredPrincipalAuthGateway();
   StaffAuthGateway staffAuth = const UnconfiguredStaffAuthGateway();
+  StaffPermissionGateway? staffPermissions;
   AccountPasswordGateway? staffPasswordGateway;
   if (url.isNotEmpty && key.isNotEmpty) {
     await Supabase.initialize(
@@ -69,6 +71,7 @@ Future<void> main() async {
     logoService = SchoolLogoService(Supabase.instance.client);
     principalAuth = SupabasePrincipalAuthGateway(Supabase.instance.client);
     staffAuth = SupabaseStaffAuthGateway(Supabase.instance.client);
+    staffPermissions = SupabaseStaffPermissionGateway(Supabase.instance.client);
     staffPasswordGateway = SupabaseAccountPasswordGateway(Supabase.instance.client);
   }
   runApp(SupaModelSchoolApp(
@@ -83,6 +86,7 @@ Future<void> main() async {
     schoolLogoService: logoService,
     principalAuthGateway: principalAuth,
     staffAuthGateway: staffAuth,
+    staffPermissionGateway: staffPermissions,
     accountPasswordGateway: staffPasswordGateway,
   ));
 }
@@ -103,6 +107,7 @@ class SupaModelSchoolApp extends StatefulWidget {
     this.schoolLogoService,
     this.principalAuthGateway,
     this.staffAuthGateway,
+    this.staffPermissionGateway,
     this.accountPasswordGateway,
   });
   final bool startInPreview;
@@ -117,6 +122,7 @@ class SupaModelSchoolApp extends StatefulWidget {
   final SchoolLogoService? schoolLogoService;
   final PrincipalAuthGateway? principalAuthGateway;
   final StaffAuthGateway? staffAuthGateway;
+  final StaffPermissionGateway? staffPermissionGateway;
   final AccountPasswordGateway? accountPasswordGateway;
 
   @override
@@ -245,6 +251,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   key: ValueKey('principal-${_principal!.userId}'),
                   principal: _principal!,
                   repository: widget.admissionApprovalRepository!,
+                  permissionGateway: widget.staffPermissionGateway,
                   onSignOut: _exitShell,
                   passwordGateway: widget.accountPasswordGateway,
                 )
@@ -252,6 +259,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
               ? StaffAccountHome(
                   key: ValueKey('staff-${_staff!.userId}'),
                   staff: _staff!,
+                  permissionGateway: widget.staffPermissionGateway,
                   passwordGateway: widget.accountPasswordGateway!,
                   onSignOut: _exitShell,
                 )
