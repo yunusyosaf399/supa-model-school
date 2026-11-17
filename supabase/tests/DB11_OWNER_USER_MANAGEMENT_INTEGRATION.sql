@@ -24,11 +24,11 @@ begin
  where r.role='owner' and r.is_active and c.is_active limit 1;
  insert into auth.users(id,instance_id,aud,role,email,email_confirmed_at,
  encrypted_password,raw_app_meta_data,raw_user_meta_data,
- created_at,updated_at,is_anonymous)
+ created_at,updated_at,invited_at,is_anonymous)
  values(v_employee,'00000000-0000-0000-0000-000000000000',
  'authenticated','authenticated',
  'db11-staff-'||v_employee::text||'@example.invalid',
- now(),'!no-real-password!','{}'::jsonb,'{}'::jsonb,now(),now(),false);
+ now(),'!no-real-password!','{}'::jsonb,'{}'::jsonb,now(),now(),now(),false);
  -- Mimic the sole server-side Edge Function role-registration call as DB admin.
  select (app_private.owner_register_invited_user(
   v_actor,v_employee,v_school,v_campus,'principal',
