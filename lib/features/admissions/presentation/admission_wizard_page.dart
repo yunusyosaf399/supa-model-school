@@ -1767,11 +1767,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           Icon(Icons.lock_outline, color: Color(0xFF906115)),
           SizedBox(width: 12),
           Expanded(child: Text(
-            'This application has NOT been saved or submitted. '
-            'Real admission requires secure private document uploads '
-            'and an authenticated DB02 intake endpoint. '
-            'The Principal approval action stays disabled until those '
-            'services are deployed and tested.',
+            _savedDraft == null
+            ? 'Save Draft stores the core applicant, guardian, and academic fields in Supabase. Optional notes, fee preferences, and document deadlines are not saved yet. Submission and Principal approval remain disabled.'
+            : 'Confirmed draft saved in Supabase. This is NOT a submitted or approved admission. Additional notes, fee preferences, and documents are not saved yet.',
             style: TextStyle(fontSize: 12))),
         ]),
       ),
