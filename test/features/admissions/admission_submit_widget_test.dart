@@ -144,7 +144,11 @@ void main(){
    expect(drafts.lastSave?.applicationId,'application-1');
    expect(drafts.lastSave?.expectedRevision,4);
    expect(approval.last?.conditionalDue,isNull);
-   expect(tester.widget<FilledButton>(submit).onPressed,isNull);
+   // Confirmed submission replaces Submit with an explicit Close action.
+   final close=find.byKey(const Key('admission-close-after-submit'));
+   expect(close,findsOneWidget);
+   expect(tester.widget<FilledButton>(close).onPressed,isNotNull);
+   expect(submit,findsNothing);
  });
  testWidgets('uploaded certificate submits without a deadline before verification',
     (tester) async {
