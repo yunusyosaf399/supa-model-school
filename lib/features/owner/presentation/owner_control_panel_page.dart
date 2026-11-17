@@ -4,6 +4,8 @@ import '../../auth/data/owner_auth_gateway.dart';
 import 'owner_initial_setup_form.dart';
 import '../data/owner_user_management_repository.dart';
 import 'owner_user_control_panel_page.dart';
+import '../data/school_logo_service.dart';
+import '../../../ui/school_brand.dart';
 
 /// Owner Settings: atomic, audited one-time school setup; password management
 /// stays in Supabase Auth. Further school changes require a future workflow.
@@ -17,6 +19,7 @@ class OwnerControlPanelPage extends StatefulWidget {
     required this.onSetupSaved,
     required this.onOpenAcademicStructure,
     this.userManagementRepository,
+    this.logoService,
   });
 
   final OwnerAccess owner;
@@ -27,6 +30,7 @@ class OwnerControlPanelPage extends StatefulWidget {
   final ValueChanged<OwnerAccess> onSetupSaved;
   final VoidCallback onOpenAcademicStructure;
   final OwnerUserManagementRepository? userManagementRepository;
+  final SchoolLogoService? logoService;
 
   @override
   State<OwnerControlPanelPage> createState() =>
@@ -41,6 +45,25 @@ class _OwnerControlPanelPageState extends State<OwnerControlPanelPage> {
   bool _saving = false;
   bool _passwordVisible = false;
   bool _showUserManagement = false;
+  bool _uploadingLogo = false;
+
+  Future<void> _uploadSchoolLogo() async {
+    final service = widget.logoService;
+    if (service == null || _uploadingLogo) return;
+    setState(() => _uploadingLogo = true);
+    try {
+      final success = await service.upload(widget.owner.schoolId);
+      if (!mounted) return;
+      if (success) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('School logo saved in private Storage.')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('School logo not saved: $error')));
+    } finally {
+      if (mounted) setState(() => _uploadingLogo = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -132,6 +155,30 @@ class _OwnerControlPanelPageState extends State<OwnerControlPanelPage> {
                       'real finance or attendance operations.'),
               ],
             ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (owner.setupComplete && widget.logoService != null) Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(children: [
+              SchoolMark(size: 64, logoService: widget.logoService),
+              const SizedBox(width: 14),
+              Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('School Logo', style: Theme.of(context).textTheme.titleMedium),
+                  const Text('Private image stored in Supabase. PNG, JPG or WebP up to 2 MiB.'),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    key: const Key('owner-upload-school-logo'),
+                    onPressed: _uploadingLogo ? null : _uploadSchoolLogo,
+                    icon: const Icon(Icons.upload_file_outlined),
+                    label: Text(_uploadingLogo ? 'Uploading...' : 'Upload or Replace Logo'),
+                  ),
+                ],
+              )),
+            ]),
           ),
         ),
         const SizedBox(height: 12),
