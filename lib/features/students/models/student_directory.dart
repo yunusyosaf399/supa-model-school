@@ -29,6 +29,7 @@ class StudentSummary {
     required this.sectionName,
     required this.academicYear,
     required this.status,
+    this.revision = 1,
   });
 
   final String id;
@@ -41,6 +42,7 @@ class StudentSummary {
   final String sectionName;
   final String academicYear;
   final StudentStatus status;
+  final int revision;
 }
 
 class StudentDirectoryFilters {

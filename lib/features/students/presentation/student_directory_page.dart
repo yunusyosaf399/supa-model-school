@@ -17,6 +17,9 @@ class StudentDirectoryPage extends StatefulWidget {
     this.owner,
     this.selectedCampusId,
     this.repository,
+    this.staffSchoolId,
+    this.staffCampusId,
+    this.allowNewAdmission = true,
   });
 
   final VoidCallback onNewAdmission;
@@ -24,6 +27,8 @@ class StudentDirectoryPage extends StatefulWidget {
   final OwnerAccess? owner;
   final String? selectedCampusId;
   final StudentDirectoryRepository? repository;
+  final String? staffSchoolId, staffCampusId;
+  final bool allowNewAdmission;
 
   @override
   State<StudentDirectoryPage> createState() => _StudentDirectoryPageState();
@@ -38,12 +43,13 @@ class _StudentDirectoryPageState extends State<StudentDirectoryPage> {
   bool _loading = false;
   String? _error;
   int _request = 0;
+  bool get _isLive => widget.owner != null || widget.staffSchoolId != null;
 
   @override
   void initState() {
     super.initState();
-    _projection = widget.owner == null ? widget.projection : _empty();
-    if (widget.owner != null) {
+    _projection = !_isLive ? widget.projection : _empty();
+    if (_isLive) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _refresh();
       });
@@ -60,13 +66,15 @@ class _StudentDirectoryPageState extends State<StudentDirectoryPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.owner?.userId != widget.owner?.userId ||
         oldWidget.selectedCampusId != widget.selectedCampusId ||
+        oldWidget.staffSchoolId != widget.staffSchoolId ||
+        oldWidget.staffCampusId != widget.staffCampusId ||
         oldWidget.repository != widget.repository) {
       ++_request;
-      _projection = widget.owner == null ? widget.projection : _empty();
+      _projection = !_isLive ? widget.projection : _empty();
       _campusId = 'all';
       _classId = 'all';
       _status = 'all';
-      if (widget.owner != null) {
+      if (_isLive) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _refresh();
         });
@@ -76,9 +84,11 @@ class _StudentDirectoryPageState extends State<StudentDirectoryPage> {
 
   Future<void> _refresh() async {
     final owner = widget.owner;
-    if (owner == null) return;
+    final schoolId = owner?.schoolId ?? widget.staffSchoolId;
+    if (schoolId == null) return;
     final repo = widget.repository;
-    final campus = widget.selectedCampusId != null &&
+    final campus = owner == null ? widget.staffCampusId
+      : widget.selectedCampusId != null &&
             owner.campuses.any((c) => c.id == widget.selectedCampusId)
         ? widget.selectedCampusId
         : (owner.campuses.isEmpty ? null : owner.campuses.first.id);
@@ -98,7 +108,7 @@ class _StudentDirectoryPageState extends State<StudentDirectoryPage> {
       return;
     }
     try {
-      final value = await repo.load(schoolId: owner.schoolId, campusId: campus);
+      final value = await repo.load(schoolId: schoolId, campusId: campus);
       if (!mounted || request != _request) return;
       setState(() {
         _projection = value;
@@ -142,7 +152,22 @@ class _StudentDirectoryPageState extends State<StudentDirectoryPage> {
     // global/unfiltered lookup by UUID.
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => StudentProfilePreviewPage(student: student, isLive: widget.owner != null),
+        builder: (_) => StudentProfilePreviewPage(
+          student: student,
+          isLive: _isLive,
+          onUpdate: widget.owner == null ||
+                    widget.repository is! StudentProfileUpdateRepository
+              ? null : (name, status) async {
+                  await (widget.repository! as StudentProfileUpdateRepository).updateProfile(
+                    schoolId: widget.owner!.schoolId,
+                    campusId: student.campusId,
+                    student: student,
+                    name: name,
+                    status: status,
+                  );
+                  if (mounted) await _refresh();
+                },
+        ),
       ),
     );
   }
@@ -166,7 +191,7 @@ class _StudentDirectoryPageState extends State<StudentDirectoryPage> {
               trailing: TextButton(onPressed: _refresh, child: const Text('Retry')),
             ),
             const SizedBox(height: 12),
-            if (widget.owner == null) Card(
+            if (!_isLive) Card(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
               child: const Padding(
                 padding: EdgeInsets.all(12),
@@ -225,7 +250,7 @@ class _StudentDirectoryPageState extends State<StudentDirectoryPage> {
         Text('Student Directory',
             style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 4),
-        Text(widget.owner == null ? 'Campus-scoped list • synthetic preview records' : 'Live campus-scoped school records'),
+        Text(!_isLive ? 'Campus-scoped list • synthetic preview records' : 'Live campus-scoped school records'),
       ],
     );
     final addButton = FilledButton.icon(
@@ -237,14 +262,18 @@ class _StudentDirectoryPageState extends State<StudentDirectoryPage> {
     if (!wide) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [title, const SizedBox(height: 12), addButton],
+        children: [title,
+          if (widget.allowNewAdmission) ...[
+            const SizedBox(height: 12), addButton,
+          ]],
       );
     }
     return Row(
       children: [
         Expanded(child: title),
-        const SizedBox(width: 12),
-        addButton,
+        if (widget.allowNewAdmission) ...[
+          const SizedBox(width: 12), addButton,
+        ],
       ],
     );
   }
@@ -454,18 +483,93 @@ class _StudentDirectoryPageState extends State<StudentDirectoryPage> {
       );
 }
 
-/// A deliberately read-only profile shell. No guardians, finances, documents,
-/// history or sensitive PII are loaded or claimed from a real school.
+/// A live Owner-editable student profile. Other modules remain unavailable
+/// until their own secured workflows are implemented.
 class StudentProfilePreviewPage extends StatelessWidget {
-  const StudentProfilePreviewPage({super.key, required this.student, this.isLive = false});
-
+  const StudentProfilePreviewPage({
+    super.key, required this.student, this.isLive = false, this.onUpdate,
+  });
   final StudentSummary student;
   final bool isLive;
+  final Future<void> Function(String, StudentStatus)? onUpdate;
+
+  Future<void> _editStudent(BuildContext context) async {
+    final save = onUpdate;
+    if (save == null) return;
+    final name = TextEditingController(text: student.fullName);
+    var status = student.status == StudentStatus.active
+        ? StudentStatus.active : StudentStatus.inactive;
+    var saving = false;
+    String? errorText;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, refresh) => AlertDialog(
+          title: const Text('Edit Student'),
+          content: SizedBox(width: 440,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(
+                key: const Key('edit-student-name'),
+                controller: name,
+                maxLength: 200,
+                decoration: const InputDecoration(labelText: 'Full Name'),
+              ),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<StudentStatus>(
+                key: const Key('edit-student-status'),
+                initialValue: status,
+                decoration: const InputDecoration(labelText: 'Status'),
+                items: const [
+                  DropdownMenuItem(value: StudentStatus.active,
+                    child: Text('Active')),
+                  DropdownMenuItem(value: StudentStatus.inactive,
+                    child: Text('Inactive')),
+                ],
+                onChanged: saving ? null : (value) {
+                  if (value != null) refresh(() => status = value);
+                },
+              ),
+              if (saving) const LinearProgressIndicator(),
+              if (errorText != null)
+                Text(errorText!, style: TextStyle(
+                  color: Theme.of(dialogContext).colorScheme.error)),
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: saving ? null :
+              () => Navigator.pop(dialogContext),
+              child: const Text('Cancel')),
+            FilledButton(
+              key: const Key('save-student-profile'),
+              onPressed: saving ? null : () async {
+                refresh(() { saving = true; errorText = null; });
+                try {
+                  await save(name.text.trim(), status);
+                  if (!dialogContext.mounted) return;
+                  Navigator.pop(dialogContext);
+                  if (context.mounted) Navigator.pop(context);
+                } catch (_) {
+                  if (dialogContext.mounted) refresh(() {
+                    errorText = 'Update not saved. Check network, school '
+                      'permissions and record revision.';
+                    saving = false;
+                  });
+                }
+              },
+              child: const Text('Save Changes'),
+            ),
+          ],
+        ),
+      ),
+    );
+    // Text field is no longer referenced after the modal route is removed.
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(isLive ? 'Student Summary' : 'Student Profile (preview)')),
+      appBar: AppBar(title: Text(isLive
+        ? 'Student Profile' : 'Student Profile (preview)')),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 740),
@@ -477,8 +581,14 @@ class StudentProfilePreviewPage extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Text(isLive
-                    ? 'Read-only student summary from Supabase. Detailed guardians, documents, fees and attendance are not yet connected.'
-                    : 'FICTIONAL PREVIEW — not a real pupil, not a saved record. Guardian documents, fee balance and attendance are unavailable until authorized backend integration.'),
+                    ? (onUpdate == null
+                      ? 'Live student summary. Detailed modules are not yet connected.'
+                      : 'Live student record. Update name and active status. '
+                        'Guardian details, fees and attendance will be '
+                        'connected through their own authorized workflows.')
+                    : 'FICTIONAL PREVIEW — not a real pupil, not a saved record. '
+                      'Guardian documents, fee balance and attendance are unavailable '
+                      'until authorized backend integration.'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -488,9 +598,18 @@ class StudentProfilePreviewPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (onUpdate != null) Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton.icon(
+                          key: const Key('edit-student-profile'),
+                          onPressed: () => _editStudent(context),
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('Edit Student'),
+                        ),
+                      ),
                       Text(student.fullName,
-                          key: const Key('student-preview-name'),
-                          style: Theme.of(context).textTheme.headlineSmall),
+                        key: const Key('student-preview-name'),
+                        style: Theme.of(context).textTheme.headlineSmall),
                       const Divider(height: 24),
                       _field('Registration number', student.registrationNo),
                       _field('Campus', student.campusName),
@@ -510,17 +629,12 @@ class StudentProfilePreviewPage extends StatelessWidget {
   }
 
   Widget _field(String label, String value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 170,
-              child: Text(label, style: const TextStyle(
-                fontWeight: FontWeight.w600,
-              )),
-            ),
-            Expanded(child: Text(value)),
-          ],
-        ),
-      );
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Row(children: [
+      SizedBox(width: 170,
+        child: Text(label, style: const TextStyle(
+          fontWeight: FontWeight.w600))),
+      Expanded(child: Text(value)),
+    ]),
+  );
 }

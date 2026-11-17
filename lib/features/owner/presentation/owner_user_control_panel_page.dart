@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../auth/data/owner_auth_gateway.dart';
 import '../data/owner_user_management_repository.dart';
+import 'staff_permissions_dialog.dart';
 
 /// Owner-only user administration. Passwords are transient form inputs and
 /// are never saved in school tables, logs or on-device persistent storage.
@@ -371,11 +372,19 @@ class _OwnerUserControlPanelPageState extends State<OwnerUserControlPanelPage> {
                     '• ${user.active?'Active':'Inactive'}'),
                   isThreeLine:true,
                   trailing:user.role=='owner'||user.role=='super_admin'
-                    ? const Icon(Icons.lock_outline)
-                    : TextButton(
-                      key:Key('staff-toggle-${user.roleId}'),
-                      onPressed:_changing==null?()=>_changeStatus(user):null,
-                      child:Text(user.active?'Deactivate':'Reactivate')),
+                     ? const Icon(Icons.lock_outline)
+                     : Row(mainAxisSize:MainAxisSize.min,children:[
+                       IconButton(
+                         key:Key('staff-permissions-${user.roleId}'),
+                         tooltip:'Configure account permissions',
+                         onPressed:()=>showStaffPermissionsDialog(
+                           context,user,widget.repository),
+                         icon:const Icon(Icons.tune_outlined)),
+                       TextButton(
+                         key:Key('staff-toggle-${user.roleId}'),
+                         onPressed:_changing==null?()=>_changeStatus(user):null,
+                         child:Text(user.active?'Deactivate':'Reactivate')),
+                     ]),
                 )),
           ]),
         )),

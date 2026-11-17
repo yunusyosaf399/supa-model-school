@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:math';
+import 'dart:typed_data';
 import '../data/admission_draft_repository.dart';
 import '../data/admission_document_service.dart';
 import '../data/admission_approval_repository.dart';
@@ -10,6 +11,7 @@ import '../../academics/data/academic_structure_repository.dart';
 import '../../auth/data/owner_auth_gateway.dart';
 import '../models/admission_draft.dart';
 import '../../../ui/school_brand.dart';
+import '../../owner/data/school_logo_service.dart';
 
 /// Owner Admissions wizard: authenticated draft saving, private certificate/photo
 /// uploads and Principal-only submission. Fee posting remains separate.
@@ -21,6 +23,7 @@ class AdmissionWizardPage extends StatefulWidget {
     this.admissionRepository,
     this.documentService,
     this.approvalRepository,
+    this.logoService,
     this.initialRecord,
     this.initialStep = AdmissionStep.student,
     this.selectedCampusId,
@@ -39,6 +42,7 @@ class AdmissionWizardPage extends StatefulWidget {
   final AdmissionDraftRepository? admissionRepository;
   final AdmissionDocumentService? documentService;
   final AdmissionApprovalRepository? approvalRepository;
+  final SchoolLogoService? logoService;
   final AdmissionDraftRecord? initialRecord;
   final String? selectedCampusId;
   final VoidCallback? onOpenSearch;
@@ -66,6 +70,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   String? _documentError;
   String? _uploadingDocumentId;
   List<AdmissionDocumentRecord> _serverDocuments = const [];
+  Uint8List? _photoBytes;
   int _documentRequest = 0;
   bool _submitting = false;
   bool _submitted = false;
@@ -179,6 +184,16 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     }
   }
 
+  void _closeSubmitted() {
+    if (!_submitted) return;
+    setState(() => _allowExit = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.onNavigateModule?.call(0); // Home dashboard, not prior module.
+      Navigator.of(context).pop();
+    });
+  }
+
   Future<void> _loadDocuments() async {
     final id = _savedDraft?.id;
     final service = widget.documentService;
@@ -187,9 +202,21 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     setState(() { _documentLoading = true; _documentError = null; });
     try {
       final records = await service.listDocuments(id);
+      Uint8List? photo;
+      if (records.any((d) => d.kind == 'photo' &&
+          (d.status == 'uploaded' || d.status == 'verified'))) {
+        try {
+          photo = service is AdmissionPhotoPreviewService
+            ? await (service as AdmissionPhotoPreviewService).loadPhotoPreview(id) : null;
+        } catch (_) {
+          photo = service is AdmissionPhotoPreviewService
+            ? (service as AdmissionPhotoPreviewService).photoPreviewBytes(id) : null;
+        }
+      }
       if (!mounted || request != _documentRequest) return;
       setState(() {
         _serverDocuments = records;
+        _photoBytes = photo;
         _documentLoading = false;
       });
     } catch (_) {
@@ -261,7 +288,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         document:photo);
       if(!mounted)return;
       if(uploaded) {
-        ScaffoldMessenger.of(context).showSnackBar(
+         setState(() => _photoBytes = service is AdmissionPhotoPreviewService
+           ? (service as AdmissionPhotoPreviewService).photoPreviewBytes(application) : null);
+         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content:Text('Student photo uploaded privately.')));
       }
       await _loadDocuments();
@@ -755,7 +784,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   Widget _brandRow({bool mobile = false}) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      SchoolMark(size: mobile ? 57 : 65),
+      SchoolMark(size: mobile ? 48 : 65, logoService: widget.logoService),
       SizedBox(width: 11),
       Flexible(child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1021,7 +1050,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     if (!wide)
       IconButton(
         key: Key('admission-back-button'),
-        onPressed: _step == 0 ? _confirmExit : _previous,
+        onPressed: _submitted ? _closeSubmitted : (_step == 0 ? _confirmExit : _previous),
         icon: Icon(Icons.arrow_back_ios_new_rounded,
             color: _teal)),
     Container(width: 5, height: wide ? 49 : 53,
@@ -1058,9 +1087,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         label: Text(_submitted ? 'Submitted' : _submitting ? 'Submitting...' : 'Submit for Approval')),
       SizedBox(width: 10),
       OutlinedButton.icon(
-        onPressed: _confirmExit,
-        icon: Icon(Icons.close),
-        label: Text('Cancel')),
+        onPressed: _submitted ? _closeSubmitted : _confirmExit,
+         icon: Icon(Icons.close),
+         label: Text(_submitted ? 'Close' : 'Cancel')),
     ] else
       Chip(
         avatar: Icon(Icons.description_outlined, color: _teal, size: 18),
@@ -1246,7 +1275,17 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       ])),
   ]);
 
-  Widget _mobileActions() => Container(
+  Widget _mobileActions() {
+    if (_submitted) return Padding(
+      padding: const EdgeInsets.all(12),
+      child: FilledButton.icon(
+        key: const Key('admission-close-after-submit'),
+        onPressed: _closeSubmitted,
+        icon: const Icon(Icons.check_circle_outline),
+        label: const Text('Close and Return to Dashboard'),
+      ),
+    );
+    return Container(
     padding: EdgeInsets.fromLTRB(15, 11, 15, 12),
     decoration: BoxDecoration(color: _surface,
         border: Border(top: BorderSide(color: _line))),
@@ -1270,6 +1309,8 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
             label: Text('Next Step'))),
     ]),
   );
+
+  }
 
   Widget _footerBar() => Container(
     height: 39,
@@ -1382,9 +1423,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           borderRadius:BorderRadius.circular(12),
           color:_pale,
           border:Border.all(color:const Color(0xFFABDCD0))),
-        child:Column(
-          mainAxisAlignment:MainAxisAlignment.center,
-          children:[
+        child: _photoBytes == null ? Column(
+           mainAxisAlignment: MainAxisAlignment.center,
+           children: [
             Icon(_photoDocument?.status=='uploaded' ||
                  _photoDocument?.status=='verified'
               ? Icons.check_circle_outline
@@ -1403,11 +1444,22 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
                 : 'JPG / PNG / WebP\nmax 2 MiB',
               textAlign:TextAlign.center,
               style:TextStyle(fontSize:10,color:_muted)),
-          ],
-        ),
-      ),
-    ),
-  );
+           ],
+         ) : ClipRRect(
+           borderRadius: BorderRadius.circular(8),
+           child: Stack(fit: StackFit.expand, children: [
+             Image.memory(_photoBytes!, fit: BoxFit.cover,
+               gaplessPlayback: true, key: const Key('admission-photo-preview')),
+             Align(alignment: Alignment.bottomCenter,
+               child: ColoredBox(color: const Color(0xAA000000),
+                 child: Padding(padding: const EdgeInsets.all(5),
+                   child: Text('Tap to change photo', textAlign: TextAlign.center,
+                     style: const TextStyle(color: Colors.white, fontSize: 10))))),
+           ]),
+         ),
+       ),
+     ),
+   );
 
   Widget _studentFields() => LayoutBuilder(builder: (context, constraints) {
     final wide = constraints.maxWidth >= 660;
@@ -2142,7 +2194,14 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     );
   }
 
-  Widget _actions() => Row(children: [
+  Widget _actions() {
+    if (_submitted) return FilledButton.icon(
+      key: const Key('admission-close-after-submit'),
+      onPressed: _closeSubmitted,
+      icon: const Icon(Icons.check_circle_outline),
+      label: const Text('Close and Return to Dashboard'),
+    );
+    return Row(children: [
     Expanded(child: OutlinedButton.icon(
       onPressed: _step == 0 ? null : _previous,
       icon: Icon(Icons.arrow_back),
@@ -2163,5 +2222,6 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           label: Text(_submitted ? 'Submitted' : _submitting ? 'Submitting...' : 'Submit for Approval')),
     ),
   ]);
+  }
 
 }

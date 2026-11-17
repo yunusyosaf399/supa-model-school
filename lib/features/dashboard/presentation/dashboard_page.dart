@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../ui/school_brand.dart';
 import '../../auth/data/owner_auth_gateway.dart';
+import '../../owner/data/school_logo_service.dart';
 import '../data/dashboard_repository.dart';
 import 'dashboard_visuals.dart';
 
@@ -25,6 +26,7 @@ class DashboardPage extends StatefulWidget {
     this.owner,
     this.selectedCampusId,
     this.repository = const UnconfiguredDashboardRepository(),
+     this.logoService,
   });
 
   final VoidCallback onNewAdmission;
@@ -39,6 +41,7 @@ class DashboardPage extends StatefulWidget {
   final OwnerAccess? owner;
   final String? selectedCampusId;
   final DashboardRepository repository;
+  final SchoolLogoService? logoService;
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -186,7 +189,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, bounds) {
       final desktop = bounds.maxWidth >= 850;
-      final sidePadding = desktop ? 22.0 : 13.0;
+      final sidePadding = desktop ? 22.0 : 10.0;
       final double contentWidth = math.max(0.0, bounds.maxWidth - 2 * sidePadding);
       return Stack(children: [
         Positioned.fill(child: ColoredBox(
@@ -198,7 +201,7 @@ class _DashboardPageState extends State<DashboardPage> {
           child: ListView(
             key: const Key('dashboard-page'),
             padding: EdgeInsets.fromLTRB(
-              sidePadding, desktop ? 15 : 0, sidePadding, desktop ? 16 : 22),
+              sidePadding, desktop ? 15 : 5, sidePadding, desktop ? 16 : 16),
             children: [
               if (desktop) ...[
                 _desktopToolbar(),
@@ -566,18 +569,18 @@ class _DashboardPageState extends State<DashboardPage> {
     Stack(children: [
       Positioned.fill(child: DashboardWaveBackground(mobile: true)),
       Padding(
-        padding: const EdgeInsets.fromLTRB(7, 11, 7, 9),
+        padding: const EdgeInsets.fromLTRB(5, 7, 5, 6),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            const SchoolMark(size: 47),
+            SchoolMark(size: 40, logoService: widget.logoService),
             const SizedBox(width: 6),
             Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Supa Model School', maxLines: 1,
+                Text(widget.owner?.schoolName ?? 'Supa Model School', maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: _deep, fontSize: 17,
-                      fontWeight: FontWeight.w900, letterSpacing: -.35)),
+                  style: TextStyle(color: _deep, fontSize: 15,
+                       fontWeight: FontWeight.w900, letterSpacing: -.35)),
                 Text('School Management System', maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: _secondary, fontSize: 10)),
@@ -590,20 +593,20 @@ class _DashboardPageState extends State<DashboardPage> {
           const SizedBox(height: 6),
           Align(alignment: Alignment.centerRight,
               child: _campusSelector(mobile: true)),
-          const SizedBox(height: 9),
-          Container(
-            key: const Key('dashboard-mobile-greeting'),
+          const SizedBox(height: 5),
+           Container(
+             key: const Key('dashboard-mobile-greeting'),
             padding: const EdgeInsets.fromLTRB(11, 3, 5, 9),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Good morning,', style: TextStyle(
-                  fontSize: 27, fontWeight: FontWeight.w900,
+                  fontSize: 24, fontWeight: FontWeight.w900,
                   letterSpacing: -.7, color: _deep,
                 )),
                 const SizedBox(height: 3),
                 Text('Here is today’s summary.', style: TextStyle(
-                  fontSize: 16, color: _secondary,
+                  fontSize: 14, color: _secondary,
                 )),
                 const SizedBox(height: 8),
                 Container(width: 43, height: 3,

@@ -10,9 +10,41 @@ abstract class StudentDirectoryRepository {
   });
 }
 
-class SupabaseStudentDirectoryRepository implements StudentDirectoryRepository {
-  const SupabaseStudentDirectoryRepository(this.client);
+abstract class StudentProfileUpdateRepository {
+  Future<void> updateProfile({
+    required String schoolId,required String campusId,
+    required StudentSummary student,required String name,
+    required StudentStatus status,
+  });
+}
+
+class SupabaseStudentDirectoryRepository implements StudentDirectoryRepository, StudentProfileUpdateRepository {
+  const SupabaseStudentDirectoryRepository(this.client,
+    {this.rpcName = 'owner_student_directory'});
   final SupabaseClient client;
+  final String rpcName;
+
+  @override
+  Future<void> updateProfile({
+    required String schoolId,required String campusId,
+    required StudentSummary student,required String name,
+    required StudentStatus status,
+  }) async {
+    if (client.auth.currentSession == null) throw StateError('Sign in required');
+    if (!{'active','inactive'}.contains(status.name) ||
+        name.trim().length < 2 || name.trim().length > 200) {
+      throw const FormatException('Enter a valid student name and status');
+    }
+    final response = await client.rpc('owner_update_student_profile',params:{
+      'p_school':schoolId,'p_campus':campusId,
+      'p_student':student.id,'p_expected_revision':student.revision,
+      'p_full_name':name.trim(),'p_active_status':status.name,
+    });
+    if (response is! Map || response['student_id'] != student.id ||
+        response['revision'] != student.revision + 1) {
+      throw StateError('Student change not confirmed; refresh before retrying');
+    }
+  }
 
   @override
   Future<StudentDirectoryProjection> load({
@@ -26,7 +58,7 @@ class SupabaseStudentDirectoryRepository implements StudentDirectoryRepository {
     final records = <StudentSummary>[];
     var offset = 0;
     while (true) {
-      final response = await client.rpc('owner_student_directory', params: {
+      final response = await client.rpc(rpcName, params: {
         'p_school_id': schoolId,
         'p_campus_id': campusId,
         'p_limit': pageSize,
@@ -59,6 +91,7 @@ class SupabaseStudentDirectoryRepository implements StudentDirectoryRepository {
           sectionName: row['section_name'].toString(),
           academicYear: row['academic_year'].toString(),
           status: status,
+          revision: (row['revision'] as num?)?.toInt() ?? 1,
         ));
       }
       offset += raw.length;
@@ -72,4 +105,21 @@ class SupabaseStudentDirectoryRepository implements StudentDirectoryRepository {
       records: List.unmodifiable(records),
     );
   }
+}
+
+
+/// Read-only Principal/staff projection. Separate secure RPC enforces
+/// individual students.read action plus assigned campus on every request.
+class SupabaseStaffStudentDirectoryRepository
+    implements StudentDirectoryRepository {
+  const SupabaseStaffStudentDirectoryRepository(this.client);
+  final SupabaseClient client;
+
+  @override
+  Future<StudentDirectoryProjection> load({
+    required String schoolId,
+    required String campusId,
+  }) => SupabaseStudentDirectoryRepository(
+      client, rpcName: 'sms_staff_student_directory',
+    ).load(schoolId: schoolId, campusId: campusId);
 }
