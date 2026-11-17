@@ -1,0 +1,10 @@
+domain,scope,design_status,live_deployment,baseline_table_count,next_action
+DB01,"School foundation; campuses; roles; academic structure",BASELINE_DEPLOYED,YES,"12+auxiliary","Complete role/catalog and RLS follow-up tests"
+DB02,"Students; admission; guardians; documents; enrollment",BASELINE_DEPLOYED,YES,13,"Complete document services and acceptance tests"
+DB03,"Fees; discounts; billing; receipt; credit",SQL_DRAFT_REVIEW,NO,18,"Run isolated PostgreSQL tests and design posting RPC/DB06 integration"
+DB04,"Attendance; school calendar; teacher duties; student/staff marks and corrections",SQL_DRAFT_REVIEW,NO,11,"Run isolated SQL/RLS tests; complete teacher role authorization and trusted submit/correction operations"
+DB05,"Employees; multi-campus/teaching assignments; leave; payroll; advances/repayments",SQL_DRAFT_REVIEW,NO,20,"Run local SQL and RLS tests; authorize payroll posting; connect DB06 accounts and DB08 approvals"
+DB06,"Chart of accounts; double entry; cash/bank; expenses; transfers; capital; closing; bank reconciliation",SQL_DRAFT_REVIEW,NO,20,"Local SQL and RLS tests; implement authorized posting and DB08 approval; DB07 inventory/COGS and DB09 sync integration"
+DB07,"Campus inventory and procurement; canteen; uniform production/sales; transport routes and fleet",SQL_DRAFT_REVIEW,NO,37,"Run isolated SQL/RLS tests; protect concurrent stock; extend DB06 for sales and COGS; validate drivers/routes and DB08 approvals"
+DB08,"Expanded roles/permissions; approvals/decisions; audit; document templates; notifications",SQL_DRAFT_REVIEW,NO,18,"Run isolated SQL/RLS and permissions tests, implement trusted approval operations and review permission grants"
+DB09,"Windows campus offline sync; operation receipts; commit-ordered cloud changes; conflicts; encrypted backup/restore; reporting",SQL_DRAFT_REVIEW,PARTIAL_DASHBOARD_ONLY,18,"Reconcile D04-T03/T04 drafts; run local SQL/RLS concurrency, offline encryption/restore; review migrations"
