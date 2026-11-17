@@ -949,9 +949,10 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         label: Text(_savingDraft ? 'Saving...' : 'Save Draft')),
       SizedBox(width: 10),
       FilledButton.icon(
-        onPressed: null,
+        key: const Key('admission-submit-for-approval'),
+        onPressed: _canSubmit ? _submitForApproval : null,
         icon: Icon(Icons.send_outlined),
-        label: Text('Submit for Approval')),
+        label: Text(_submitted ? 'Submitted' : _submitting ? 'Submitting...' : 'Submit for Approval')),
       SizedBox(width: 10),
       OutlinedButton.icon(
         onPressed: _confirmExit,
@@ -1136,7 +1137,8 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         SizedBox(height: 8),
         Text(_savedDraft == null
           ? 'No confirmed draft saved. Uploads and verification are pending.'
-          : 'Saved draft ${_savedDraft!.id}; revision ${_savedDraft!.revision}. Not submitted.',
+          : _submitted ? 'Application submitted to Principal; waiting for approval.'
+            : 'Saved draft ${_savedDraft!.id}; revision ${_savedDraft!.revision}. Not submitted.',
           style: TextStyle(fontSize: 12)),
       ])),
   ]);
@@ -1155,9 +1157,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       Expanded(child: _step == AdmissionStep.review
         ? FilledButton.icon(
             key: Key('wizard-submit-disabled'),
-            onPressed: null,
-            icon: Icon(Icons.lock_outline),
-            label: Text('Submit unavailable'))
+            onPressed: _canSubmit ? _submitForApproval : null,
+            icon: Icon(Icons.send_outlined),
+            label: Text(_submitted ? 'Submitted' : _submitting ? 'Submitting...' : 'Submit for Approval'))
         : FilledButton.icon(
             key: Key('wizard-next'),
             onPressed: _next,
@@ -1963,8 +1965,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           SizedBox(width: 12),
           Expanded(child: Text(
             _savedDraft == null
-            ? 'Save Draft stores the core applicant, guardian, and academic fields in Supabase. Optional notes, fee preferences, and document deadlines are not saved yet. Submission and Principal approval remain disabled.'
-            : 'Confirmed draft saved in Supabase. This is NOT a submitted or approved admission. Additional notes, fee preferences, and documents are not saved yet.',
+            ? 'Save a complete draft first. Submission requires validated student, guardian and academic data plus certificate status.'
+            : _submitted ? 'Submitted to Principal. No student is enrolled before the assigned Principal approves.'
+              : 'Draft saved. Forward to Principal with verified certificates or a conditional deadline and reason. Some optional UI fields are not yet saved.',
             style: TextStyle(fontSize: 12))),
         ]),
       ),
@@ -2021,9 +2024,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           label: Text('Next Step'))
       : FilledButton.icon(
           key: Key('wizard-submit-disabled'),
-          onPressed: null,
-          icon: Icon(Icons.lock_outline),
-          label: Text('Submit unavailable')),
+          onPressed: _canSubmit ? _submitForApproval : null,
+          icon: Icon(Icons.send_outlined),
+          label: Text(_submitted ? 'Submitted' : _submitting ? 'Submitting...' : 'Submit for Approval')),
     ),
   ]);
 
