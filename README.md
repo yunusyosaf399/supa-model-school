@@ -2,7 +2,7 @@
 
 Private development repository for the Supa Model School Windows and Android Flutter app and its Supabase backend.
 
-**Status:** Architecture and schema authoring in progress. **Not production ready.** No school-domain database schema has been deployed.
+**Status:** DB01–DB10 school-domain backend and test fixtures deployed to Supabase. Flutter is under active development; **not production ready**.
 
 - Online backend: Supabase project `uebzvfzpbqqttbqyxxos` (`ap-south-1`).
 - Desktop: assigned-campus SQLite/Drift offline + authenticated two-way sync.
@@ -41,6 +41,33 @@ flutter devices
 flutter run -d windows
 ```
 
+**Live UI login on a local debug build (17 Nov 2026):** A normal debug
+`flutter run -d windows` or Android Studio Debug launch connects to the
+configured Supa Model School test project automatically using a **public
+publishable key**. No Supabase secret, service-role key or password is stored
+in the repository. Sign in using your existing verified school **Owner**
+email/password. The School/Campus field on the login page is informational:
+the authorized school and campuses are loaded after sign-in.
+
+The connected test database currently contains 32 students, five admissions
+and a configured academic year. Use the authenticated Students and Admissions
+modules to verify real Supabase reads; **Preview Dashboard** does not sign in
+and will not display your real test data.
+
+For a different project or a release build, supply explicit overrides:
+
+```powershell
+flutter run -d windows `
+  --dart-define=SUPABASE_URL=https://YOUR_PROJECT.supabase.co `
+  --dart-define=SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLIC_PUBLISHABLE_KEY
+```
+
+If login fails, check that the user is confirmed in Supabase Auth and has
+an active `owner` role, active profile and active school. The local
+debug connection does not bypass your password or database permissions.
+For a release/profile build, debug defaults are intentionally absent.
+
+
 **Do not skip `build_runner`.** The Drift source contains
 `part 'campus_cache_database.g.dart';` and its generated Dart file is not
 checked in. Generate it before using `flutter analyze`, `flutter test` or
@@ -65,16 +92,11 @@ connected device or running emulator. Follow `flutter doctor -v` findings.
 
 ### Safety and maturity
 
-- Admission wizard and student directory show **fictional preview data only**,
-  and submission/upload is disabled.
-- Supabase SQL under `supabase/drafts/` is **review-only**; no live schema has
-  been deployed or migrated. The Edge Function is not deployed.
-- Drift offline database/outbox code is **not wired to the UI**. It needs
-  verified campus/device authorization, encryption, generated code and runtime
-  tests before storing any real student/guardian information.
-- Flutter code generation, analyzer, widget tests, Windows/Android launch,
-  PostgreSQL SQL execution and device sync are **not verified yet**.
-- No GitHub Actions workflows were run or requested for these merges.
-
-Start by running the commands above and share any failures; test results will
-be recorded in `planning/STATUS.md` after verification.
+- The database uses RLS and authenticated Owner/campus-scoped APIs.
+  The live test database contains fictional student and admissions data.
+- Admissions draft save, resume and certificate uploads are implemented,
+  but Principal routing and real-device end-to-end tests are not complete.
+- Offline Drift/outbox synchronization is not yet connected for production use.
+- Run `flutter analyze --no-fatal-infos --no-fatal-warnings` and the
+  focused widget regressions before treating local changes as validated.
+- Do not include a service-role/secret key in Flutter or commit passwords.
