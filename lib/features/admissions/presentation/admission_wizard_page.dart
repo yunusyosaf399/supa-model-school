@@ -206,9 +206,11 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       if (records.any((d) => d.kind == 'photo' &&
           (d.status == 'uploaded' || d.status == 'verified'))) {
         try {
-          photo = await service.loadPhotoPreview(id);
+          photo = service is AdmissionPhotoPreviewService
+            ? await service.loadPhotoPreview(id) : null;
         } catch (_) {
-          photo = service.photoPreviewBytes(id);
+          photo = service is AdmissionPhotoPreviewService
+            ? service.photoPreviewBytes(id) : null;
         }
       }
       if (!mounted || request != _documentRequest) return;
@@ -286,7 +288,8 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         document:photo);
       if(!mounted)return;
       if(uploaded) {
-         setState(() => _photoBytes = service.photoPreviewBytes(application));
+         setState(() => _photoBytes = service is AdmissionPhotoPreviewService
+           ? service.photoPreviewBytes(application) : null);
          ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content:Text('Student photo uploaded privately.')));
       }
