@@ -5,7 +5,7 @@ Updated 17 November 2026. Supa Model School project `uebzvfzpbqqttbqyxxos`.
 ## Implemented
 1. Owner signs in through Supabase Auth; a confirmed, active Owner role is required.
 2. Owner opens Admissions, which shows live applications across Draft, Submitted, Returned, Approved and Rejected states with search and status filters. Only Draft/Returned can be resumed.
-3. Owner creates a draft with student name, DOB, campus, year, class, section, primary guardian name and phone. Save Draft persists core fields, a revision, audit events, and required certificate placeholders.
+3. Owner creates a draft with student name, DOB, campus, year, class, section, primary guardian name and phone, plus demographics, contacts and informational preferences. Save Draft v2 persists those fields, a revision, audit events and required certificate placeholders.
 4. In Documents, owner chooses a PDF/JPG/PNG/WebP up to 10 MiB. Bytes go to the private `sms-admission-documents` bucket under UUID-based paths. Upload history is registered. A successful upload changes status to **uploaded**, not verified.
 5. Owner forwards to the assigned Principal. Unverified/missing applicable required certificates require a reason and deadline no later than two calendar months in the school's local timezone.
 6. Only a different authenticated, confirmed, active Principal assigned to that campus can inspect the current private certificate using a 60-second signed link, verify/reject an uploaded version, and approve/return/reject a submitted admission.
@@ -39,7 +39,7 @@ For current school test fixtures, school UUID `aaa87efd-ba04-43e1-9fe6-7ad8d6cac
 ## Current limits — do not treat as production-ready
 - Supabase operations and Flutter widgets are database-tested and CI-tested. Actual signed-in Windows/Android HTTP upload, external PDF/image viewer, Principal sign-in and final approval have **not** been performed on your devices yet.
 - Incoming file signatures are checked on the Flutter client, not independently scanned for malware or verified from actual Storage bytes on the server. Human review is mandatory.
-- Application form fields beyond the DB02 draft core (e.g. gender, nationality, extra notes, discount and transport selections) are **not persisted by the current draft contract**; fee posting is a separate future module.
+- The full Admission Wizard form is saved through the Owner-only DB10 v2 API, including demographics, notes, contact details and transport/fee preferences. These preferences are **not** actual fee payments, discounts or transport assignments; those are separate future modules. Details not modeled in the final student table remain attached to the admission application, pending student-profile modeling.
 - A device restart can lose pending upload registration, leaving an orphan object to reconcile.
 - Offline encrypted admission cache and sync are not implemented.
 - Real Principal invitation/provisioning is an administrator-controlled operation; no public/self-grant invitation exists in Flutter.
