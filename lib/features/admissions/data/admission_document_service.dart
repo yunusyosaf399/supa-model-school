@@ -157,7 +157,7 @@ class SupabaseAdmissionDocumentService implements AdmissionDocumentService {
       await _register(document, earlier);
       return true;
     }
-    final selection = await FilePicker.platform.pickFiles(
+    final selection = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
       withData: true,
