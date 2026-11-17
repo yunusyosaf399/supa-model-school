@@ -17,12 +17,14 @@ class OwnerAccess {
     this.activeYearId,
     this.activeYearStartsOn,
     this.activeYearEndsOn,
+    this.logoStoragePath,
   });
 
   final String userId;
   final String displayName;
   final String schoolId;
   final String schoolName;
+  final String? logoStoragePath;
   final String currencyCode;
   final String timezoneName;
   final int schoolRevision;
@@ -179,7 +181,7 @@ class SupabaseOwnerAuthGateway implements OwnerAuthGateway {
     final schoolId = roles.single['school_id'] as String;
     final school = await client
         .from('schools')
-        .select('id,name,status,currency_code,timezone_name,revision')
+        .select('id,name,status,currency_code,timezone_name,logo_storage_path,revision')
         .eq('id', schoolId)
         .maybeSingle();
     if (school == null || school['status'] != 'active') {
@@ -217,6 +219,7 @@ class SupabaseOwnerAuthGateway implements OwnerAuthGateway {
       displayName: profile['display_name'] as String,
       schoolId: schoolId,
       schoolName: school['name'] as String,
+       logoStoragePath: school['logo_storage_path'] as String?,
       currencyCode: school['currency_code'] as String,
       timezoneName: school['timezone_name'] as String,
       schoolRevision: (school['revision'] as num).toInt(),
