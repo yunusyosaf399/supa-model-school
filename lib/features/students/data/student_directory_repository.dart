@@ -8,11 +8,38 @@ abstract class StudentDirectoryRepository {
     required String schoolId,
     required String campusId,
   });
+  Future<void> updateProfile({
+    required String schoolId,required String campusId,
+    required StudentSummary student,required String name,
+    required StudentStatus status,
+  }) async => throw UnsupportedError('Student editing is not configured');
 }
 
 class SupabaseStudentDirectoryRepository implements StudentDirectoryRepository {
   const SupabaseStudentDirectoryRepository(this.client);
   final SupabaseClient client;
+
+  @override
+  Future<void> updateProfile({
+    required String schoolId,required String campusId,
+    required StudentSummary student,required String name,
+    required StudentStatus status,
+  }) async {
+    if (client.auth.currentSession == null) throw StateError('Sign in required');
+    if (!{'active','inactive'}.contains(status.name) ||
+        name.trim().length < 2 || name.trim().length > 200) {
+      throw const FormatException('Enter a valid student name and status');
+    }
+    final response = await client.rpc('owner_update_student_profile',params:{
+      'p_school':schoolId,'p_campus':campusId,
+      'p_student':student.id,'p_expected_revision':student.revision,
+      'p_full_name':name.trim(),'p_active_status':status.name,
+    });
+    if (response is! Map || response['student_id'] != student.id ||
+        response['revision'] != student.revision + 1) {
+      throw StateError('Student change not confirmed; refresh before retrying');
+    }
+  }
 
   @override
   Future<StudentDirectoryProjection> load({
@@ -59,6 +86,7 @@ class SupabaseStudentDirectoryRepository implements StudentDirectoryRepository {
           sectionName: row['section_name'].toString(),
           academicYear: row['academic_year'].toString(),
           status: status,
+          revision: (row['revision'] as num?)?.toInt() ?? 1,
         ));
       }
       offset += raw.length;
