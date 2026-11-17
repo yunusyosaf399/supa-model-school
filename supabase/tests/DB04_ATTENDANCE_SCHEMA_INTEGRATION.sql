@@ -170,9 +170,9 @@ BEGIN
       (school_id,campus_id,academic_year_id,class_id,attendance_date,
        session_kind,register_id,enrollment_id,student_id,mark_status,marked_by)
       VALUES(v_school,v_campus_b,v_year,v_class,'2026-04-06',
-        'first_period',v_register,v_enrollment_a,v_student_a,'present',v_actor);
+        'first_period',v_register,v_enrollment_b,v_student_b,'present',v_actor);
     RAISE EXCEPTION 'CROSS CAMPUS mark accepted';
-  EXCEPTION WHEN foreign_key_violation THEN NULL;
+  EXCEPTION WHEN foreign_key_violation OR SQLSTATE '23514' THEN NULL;
   END;
   -- When campus policy enables after-break, a SECOND register is allowed.
   -- Its marks must not double-count pupils in daily first-period totals.
