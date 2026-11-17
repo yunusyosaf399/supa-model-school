@@ -1351,28 +1351,44 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     ]);
 
   Widget _photoPlaceholder() => Tooltip(
-    message: 'Photo uploads require the private admission upload service.',
-    child: Container(
-      key: Key('admission-photo-placeholder'),
-      width: 140, height: 158,
-      padding: EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: _pale,
-        border: Border.all(color: Color(0xFFABDCD0),
-          style: BorderStyle.solid)),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.cloud_upload_outlined, size: 35, color: _teal),
-          SizedBox(height: 8),
-          Text('Photo Upload', style: TextStyle(
-            fontWeight: FontWeight.w800, color: _teal, fontSize: 12)),
-          SizedBox(height: 4),
-          Text('Coming soon\nJPG, PNG • max 2 MB',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 10, color: _muted)),
-        ],
+    message: _savedDraft == null
+      ? 'Save Draft first to upload the student photo'
+      : 'Private photo upload (JPG, PNG, WebP, 2 MiB maximum)',
+    child: InkWell(
+      key:const Key('admission-photo-upload'),
+      borderRadius:BorderRadius.circular(12),
+      onTap:_uploadingDocumentId==null && !_submitted
+        ? _uploadPhoto : null,
+      child:Container(
+        width:140,height:158,
+        padding:const EdgeInsets.all(10),
+        decoration:BoxDecoration(
+          borderRadius:BorderRadius.circular(12),
+          color:_pale,
+          border:Border.all(color:const Color(0xFFABDCD0))),
+        child:Column(
+          mainAxisAlignment:MainAxisAlignment.center,
+          children:[
+            Icon(_photoDocument?.status=='uploaded' ||
+                 _photoDocument?.status=='verified'
+              ? Icons.check_circle_outline
+              : Icons.add_a_photo_outlined,size:35,color:_teal),
+            const SizedBox(height:8),
+            Text(_photoDocument?.status=='uploaded' ||
+                 _photoDocument?.status=='verified'
+              ? 'Photo Uploaded' : 'Upload Photo',
+              textAlign:TextAlign.center,
+              style:TextStyle(fontWeight:FontWeight.w800,
+                color:_teal,fontSize:12)),
+            const SizedBox(height:4),
+            Text(_savedDraft==null ? 'Save Draft first'
+              : _uploadingDocumentId=='photo'
+                ? 'Uploading...'
+                : 'JPG / PNG / WebP\nmax 2 MiB',
+              textAlign:TextAlign.center,
+              style:TextStyle(fontSize:10,color:_muted)),
+          ],
+        ),
       ),
     ),
   );
@@ -1775,8 +1791,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       SizedBox(height: 7),
       Text(_savedDraft == null
         ? 'Save the admission draft before uploading certificates.'
-        : 'Private uploads are recorded as Uploaded, not Verified. '
-          'Principal approval remains unavailable.',
+        : 'Uploaded certificates are supplied. The Principal verifies '
+          'them before approving the student. A deadline is needed only '
+          'when a required certificate is missing or rejected.',
         style: TextStyle(fontSize: 12, color: _muted)),
       SizedBox(height: 14),
       if (_documentLoading)
@@ -1790,7 +1807,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         ),
       if (_savedDraft != null && _serverDocuments.isNotEmpty)
         for (final doc in _serverDocuments)
-          if (doc.applicable)
+          if (doc.applicable && doc.kind != 'photo')
             Card.outlined(
               key: Key('admission-document-' + doc.kind),
               child: ListTile(
@@ -1829,15 +1846,18 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
             'PDF/JPG/PNG/WebP up to 10 MiB. No document is verified automatically.'),
         )),
       SizedBox(height: 16),
+      if (_requiresDocumentDeadline || _serverDocuments.isEmpty)
       Text('Conditional Document Submission',
         style: TextStyle(color: _teal, fontSize: 15,
           fontWeight: FontWeight.w900)),
       SizedBox(height: 6),
-      Text('Outstanding certificates can be assigned a deadline up to '
-        'two calendar months. This deadline selection is not yet stored '
-        'by the draft-saving API.',
+      if (_requiresDocumentDeadline || _serverDocuments.isEmpty)
+      Text('Only missing or rejected certificates need a deadline of up '
+        'to two months and a reason. Uploaded certificates do not.',
         style: TextStyle(fontSize: 12, color: _muted)),
+      if (_requiresDocumentDeadline || _serverDocuments.isEmpty)
       SizedBox(height: 13),
+      if (_requiresDocumentDeadline || _serverDocuments.isEmpty)
       OutlinedButton.icon(
         key: Key('document-deadline'),
         onPressed: _chooseDocumentDeadline,
@@ -1845,7 +1865,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         label: Text('Submission Deadline *: ' +
           _dateLabel(_draft.missingDocumentsDueOn)),
       ),
+      if (_requiresDocumentDeadline || _serverDocuments.isEmpty)
       SizedBox(height: 13),
+      if (_requiresDocumentDeadline || _serverDocuments.isEmpty)
       _styledField(
         key: Key('conditional-reason'),
         label: 'Reason for Outstanding Documents', isRequired: true,
@@ -1854,8 +1876,10 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         maxLines: 3,
         onChanged: (v) => _draft.conditionalReason = v),
       SizedBox(height: 12),
-      Text('Deadline saving, verification and Principal review '
-        'require separate authorized workflow tests.',
+      Text(_requiresDocumentDeadline
+        ? 'The Principal can review the application conditionally.'
+        : 'No document deadline is needed once all required certificates '
+          'are uploaded. Principal review remains mandatory.',
         style: TextStyle(fontSize: 11, color: _muted)),
     ],
   );
@@ -2028,11 +2052,18 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           _sectionChoices[_draft.sectionId] ?? 'Unassigned'),
       ]),
       _reviewSection('Documents', Icons.description_outlined, [
-        for (final name in _draft.requiredDocumentNames)
-          _summaryRow(name, 'Not uploaded / unverified'),
-        _summaryRow('Conditional Deadline',
-          _dateLabel(_draft.missingDocumentsDueOn)),
-        _summaryRow('Reason', _draft.conditionalReason),
+        for (final doc in _serverDocuments)
+          if (doc.required && doc.applicable)
+            _summaryRow(doc.kind=='birth_certificate'
+              ? 'Birth certificate' : 'School leaving / transfer certificate',
+              doc.status.toUpperCase()),
+        if (_photoDocument != null)
+          _summaryRow('Student photo',_photoDocument!.status.toUpperCase()),
+        if (_requiresDocumentDeadline) ...[
+          _summaryRow('Conditional Deadline',
+            _dateLabel(_draft.missingDocumentsDueOn)),
+          _summaryRow('Reason', _draft.conditionalReason),
+        ],
       ]),
       _reviewSection('Fee Preferences', Icons.savings_outlined, [
         _summaryRow('Admission Fee', _draft.admissionFeeStatus),
@@ -2054,7 +2085,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
             _savedDraft == null
             ? 'Save a complete draft first. Submission requires validated student, guardian and academic data plus certificate status.'
             : _submitted ? 'Submitted to Principal. No student is enrolled before the assigned Principal approves.'
-              : 'Draft saved. Forward to Principal with verified certificates or a conditional deadline and reason. All current form fields are saved in this draft; fee/discount/transport choices are preferences, not financial postings.',
+              : 'Draft saved. Forward to Principal with uploaded certificates, or a conditional deadline only for missing/rejected certificates. All current form fields are saved in this draft; fee/discount/transport choices are preferences, not financial postings.',
             style: TextStyle(fontSize: 12))),
         ]),
       ),
