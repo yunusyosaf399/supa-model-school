@@ -729,7 +729,7 @@ class _DashboardPageState extends State<DashboardPage> {
   );
 
   Widget _metricPill(String value, Color fg) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
     decoration: BoxDecoration(
       color: fg.withValues(alpha: .11),
       borderRadius: BorderRadius.circular(18),
