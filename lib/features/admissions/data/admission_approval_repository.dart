@@ -106,12 +106,12 @@ class SupabaseAdmissionApprovalRepository implements AdmissionApprovalRepository
       'p_conditional_reason': request.conditionalReason,
     });
     if (data is! Map || data['status'] != 'submitted' ||
-        data['student_id'] != null || data['approval_required'] != true) {
+        data['student_id'] != null || data['approval_required'] == false) {
       throw StateError('Server did not confirm queued Principal review');
     }
     return AdmissionSubmitResult(
       applicationId: data['application_id'] as String,
-      documentState: data['document_state'] as String,
+      documentState: data['document_state'] as String? ?? 'unconfirmed',
       principalRequired: true,
     );
   }
