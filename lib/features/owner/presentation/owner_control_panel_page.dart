@@ -145,9 +145,10 @@ class _OwnerControlPanelPageState extends State<OwnerControlPanelPage> {
                   Text('Users & Access Control',
                     style:Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height:8),
-                  const Text('Invite Principals, teachers and other staff. '
-                    'Assign a campus, review invitations and activate or '
-                    'deactivate roles. User passwords remain private.'),
+                  const Text('Create Principals, teachers and other staff with a '
+                    'school-assigned initial password. Assign a campus and '
+                    'activate or deactivate their roles. Staff can change '
+                    'their passwords after login.'),
                   const SizedBox(height:12),
                   FilledButton.icon(
                     key:const Key('owner-open-user-management'),
