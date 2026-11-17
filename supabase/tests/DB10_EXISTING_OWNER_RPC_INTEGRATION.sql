@@ -71,7 +71,7 @@ begin
 
   v_result := public.owner_complete_initial_setup(
     v_school.id,v_campus.id,v_school.name,v_campus.name,
-    v_school.currency_code,v_school.timezone_name,
+    'PKR','Asia/Karachi',
     'TEST-2026-2027',date '2026-04-01',date '2027-03-31',
     v_school.revision,v_campus.revision
   );
@@ -87,7 +87,7 @@ begin
   begin
     perform public.owner_complete_initial_setup(
       v_school.id,v_campus.id,v_school.name,v_campus.name,
-      v_school.currency_code,v_school.timezone_name,
+      'PKR','Asia/Karachi',
       'TEST-2026-2027',date '2026-04-01',date '2027-03-31',
       v_school.revision,v_campus.revision
     );
