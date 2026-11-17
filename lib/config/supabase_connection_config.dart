@@ -24,7 +24,7 @@ abstract final class SupabaseConnectionConfig {
   static void validate() {
     if (projectUrl.isEmpty && publishableKey.isEmpty) return;
     final uri = Uri.tryParse(projectUrl);
-    if (uri?.scheme != 'https' || uri?.host.isEmpty ||
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty ||
         publishableKey.isEmpty ||
         !(publishableKey.startsWith('sb_publishable_') ||
           publishableKey.startsWith('eyJ'))) {
