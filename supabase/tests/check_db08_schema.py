@@ -20,7 +20,7 @@ assert sql.count("user_roles_role_check")>=2
 for x in ("'teacher'","'driver'","'store_keeper'","'transport_manager'",
           "'vice_principal'","'parent'","'hr'"):
     assert x in sql,x
-assert "UNIQUE (request_id,step_no)" in sql
+assert "UNIQUE(request_id,step_no)" in sql
 assert "Self approval prohibited" in sql
 assert "Approval request identity or revision invalid" in sql
 assert "FOREIGN KEY(expense_request_id,school_id,campus_id)" in sql
