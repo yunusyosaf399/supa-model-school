@@ -118,10 +118,17 @@ begin
    f.application_id,v_revision,gen_random_uuid(),'approve',null);
  if v_result->>'status'<>'approved' or v_result->>'student_id' is null then
    raise exception 'Principal approval failed: %',v_result;end if;
- if not exists(select 1 from public.student_documents
-  where id=f.photo_id and student_id=(v_result->>'student_id')::uuid
-  and is_required=false) then
-   raise exception 'Optional student photo metadata not linked';end if;
+
 end $principal_approve$;
 reset role;
+do $check_photo$
+declare f db13_case%rowtype;
+begin
+ select * into strict f from db13_case;
+ if not exists(select 1 from public.student_documents d
+  join public.admission_applications a on a.id=d.application_id
+  where d.id=f.photo_id and d.student_id=a.student_id
+   and d.is_required=false and a.admission_status='approved')
+ then raise exception 'Optional photo was not linked to enrolled student';end if;
+end $check_photo$;
 rollback;
