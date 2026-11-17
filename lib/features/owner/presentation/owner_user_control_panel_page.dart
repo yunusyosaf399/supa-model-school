@@ -320,7 +320,7 @@ class _OwnerUserControlPanelPageState extends State<OwnerUserControlPanelPage> {
                     DropdownMenuItem(value:campus.id,
                       child:Text(campus.name)),
                 ],
-                onChanged:_inviting?null:(campus){
+                onChanged:_creating?null:(campus){
                   if(campus!=null)setState(()=>_campusId=campus);
                 }),
               const SizedBox(height:12),
