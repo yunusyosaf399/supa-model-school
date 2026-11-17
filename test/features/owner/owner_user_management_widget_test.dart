@@ -14,8 +14,8 @@ const owner=OwnerAccess(
 
 class FakeStaff implements OwnerUserManagementRepository {
   bool fail=false;
-  int invited=0,changes=0,lists=0;
-  OwnerUserInvitation? last;
+  int created=0,changes=0,lists=0;
+  OwnerUserCreation? last;
   bool active=true;
   @override
   Future<List<OwnerStaffAccount>> listUsers(String schoolId) async {
@@ -36,10 +36,10 @@ class FakeStaff implements OwnerUserManagementRepository {
     ];
   }
   @override
-  Future<void> inviteUser(OwnerUserInvitation invitation) async {
+  Future<void> createUser(OwnerUserCreation account) async {
     if(fail)throw StateError('Failed invite');
-    last=invitation;
-    invited++;
+    last=account;
+    created++;
   }
   @override
   Future<void> setRoleActive(String id,bool next) async {
@@ -60,24 +60,29 @@ Future<void> showPage(WidgetTester tester,FakeStaff repo) async {
 }
 
 void main(){
-  testWidgets('Owner can create verified role assignment invitation',
+  testWidgets('Owner can create verified role assignment account',
     (tester) async {
     final repo=FakeStaff();
     await showPage(tester,repo);
     expect(find.text('TEST Principal'),findsOneWidget);
-    expect(find.textContaining('Invitation pending'),findsOneWidget);
+    expect(find.textContaining('Email not verified'),findsOneWidget);
     await tester.enterText(find.byKey(const Key('staff-name')),'New Teacher');
     await tester.enterText(find.byKey(const Key('staff-email')),
       'teacher@example.test');
-    await tester.tap(find.byKey(const Key('staff-send-invite')));
+    await tester.enterText(find.byKey(const Key('staff-password')),
+      'TestCreatePassword123!');
+    await tester.enterText(find.byKey(const Key('staff-confirm-password')),
+      'TestCreatePassword123!');
+    await tester.tap(find.byKey(const Key('staff-create-account')));
     await tester.pumpAndSettle();
-    expect(repo.invited,0);
-    await tester.tap(find.byKey(const Key('confirm-staff-invite')));
+    expect(repo.created,0);
+    await tester.tap(find.byKey(const Key('confirm-staff-create')));
     await tester.pumpAndSettle();
-    expect(repo.invited,1);
+    expect(repo.created,1);
     expect(repo.last?.role,'teacher');
     expect(repo.last?.campusId,'campus-1');
     expect(repo.last?.email,'teacher@example.test');
+    expect(repo.last?.password,'TestCreatePassword123!');
   });
 
   testWidgets('Owner can deactivate Principal without deleting history',
