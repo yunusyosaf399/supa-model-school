@@ -7,6 +7,10 @@ import 'package:supa_model_school/features/auth/data/owner_auth_gateway.dart';
 class FakeDrafts implements AdmissionDraftRepository {
   int calls = 0;
   @override
+  Future<List<AdmissionDraftRecord>> listDrafts({
+    required String schoolId, required String campusId,
+  }) async => const [];
+  @override
   Future<SavedAdmissionDraft> saveDraft(AdmissionDraftSaveRequest request) async {
     calls++;
     return const SavedAdmissionDraft(id: 'fake-draft-id', revision: 1);

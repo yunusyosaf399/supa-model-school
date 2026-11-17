@@ -33,3 +33,5 @@ jobs:
         run: flutter test test/features/students/student_directory_live_widget_test.dart
       - name: Admissions draft widget regression
         run: flutter test test/features/admissions/admission_live_save_widget_test.dart
+      - name: Admissions worklist widget regression
+        run: flutter test test/features/admissions/admission_worklist_widget_test.dart

@@ -19,6 +19,7 @@ class AdmissionWizardPage extends StatefulWidget {
     this.owner,
     this.academicRepository,
     this.admissionRepository,
+    this.initialRecord,
     this.initialStep = AdmissionStep.student,
     this.selectedCampusId,
     this.onOpenSearch,
@@ -34,6 +35,7 @@ class AdmissionWizardPage extends StatefulWidget {
   final OwnerAccess? owner;
   final AcademicStructureRepository? academicRepository;
   final AdmissionDraftRepository? admissionRepository;
+  final AdmissionDraftRecord? initialRecord;
   final String? selectedCampusId;
   final VoidCallback? onOpenSearch;
   final ValueChanged<String>? onCampusChanged;
@@ -180,9 +182,42 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   void initState() {
     super.initState();
     _step = widget.initialStep.index;
-    // The active year ID is verified from DB01. The user chooses a campus,
-    // and only its scoped class/section records will then be queried.
-    if (_academicReady) {
+    // Restore only the DB02 persisted fields, never UI-only unsaved metadata.
+    final existing = widget.initialRecord;
+    if (existing != null && widget.owner != null) {
+      if (existing.academicYearId != widget.owner!.activeYearId ||
+          !widget.owner!.campuses.any((c) => c.id == existing.campusId)) {
+        _error = 'This saved draft is not editable in the active year/campus.';
+        return;
+      }
+      _savedDraft = SavedAdmissionDraft(
+        id: existing.id, revision: existing.revision);
+      _draft.studentName = existing.name;
+      _draft.dateOfBirth = existing.dateOfBirth;
+      _draft.previousSchool = existing.previousSchool;
+      _draft.campusId = existing.campusId;
+      _draft.academicYearId = existing.academicYearId;
+      _draft.classId = existing.classId;
+      _draft.sectionId = existing.sectionId;
+      _draft.guardians.clear();
+      for (final entry in existing.guardians) {
+        _draft.guardians.add(GuardianDraft(
+          localId: _nextGuardianId++,
+          fullName: entry['full_name']?.toString() ?? '',
+          relationship: entry['relationship']?.toString() ?? 'guardian',
+          phone: entry['phone']?.toString() ?? '',
+          isPrimary: entry['is_primary'] == true,
+          isLegalGuardian: entry['is_legal_guardian'] == true,
+        ));
+      }
+      if (_draft.guardians.isEmpty) {
+        _draft.guardians.add(GuardianDraft(
+          localId: _nextGuardianId++, isPrimary: true));
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadClasses(existing.campusId);
+      });
+    } else if (_academicReady) {
       _draft.academicYearId = widget.owner!.activeYearId;
       if (widget.selectedCampusId != null &&
           _campusChoices.containsKey(widget.selectedCampusId)) {
