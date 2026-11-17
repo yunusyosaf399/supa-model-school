@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'features/auth/data/owner_auth_gateway.dart';
 
 import 'features/admissions/presentation/admission_wizard_page.dart';
+import 'features/admissions/data/admission_draft_repository.dart';
 import 'features/academics/data/academic_structure_repository.dart';
 import 'features/academics/presentation/academic_structure_page.dart';
 import 'features/auth/presentation/login_page.dart';
@@ -25,6 +26,7 @@ Future<void> main() async {
       const UnconfiguredAcademicStructureRepository();
   DashboardRepository dashboardRepo = const UnconfiguredDashboardRepository();
   StudentDirectoryRepository? studentRepo;
+  AdmissionDraftRepository? admissionRepo;
   if (url.isNotEmpty && key.isNotEmpty) {
     await Supabase.initialize(
       url: url,
@@ -40,12 +42,14 @@ Future<void> main() async {
     academicRepo = SupabaseAcademicStructureRepository(Supabase.instance.client);
     dashboardRepo = SupabaseDashboardRepository(Supabase.instance.client);
     studentRepo = SupabaseStudentDirectoryRepository(Supabase.instance.client);
+    admissionRepo = SupabaseAdmissionDraftRepository(Supabase.instance.client);
   }
   runApp(SupaModelSchoolApp(
     authGateway: gateway,
     academicRepository: academicRepo,
     dashboardRepository: dashboardRepo,
     studentDirectoryRepository: studentRepo,
+    admissionRepository: admissionRepo,
   ));
 }
 
@@ -58,12 +62,14 @@ class SupaModelSchoolApp extends StatefulWidget {
     this.academicRepository,
     this.dashboardRepository,
     this.studentDirectoryRepository,
+    this.admissionRepository,
   });
   final bool startInPreview;
   final OwnerAuthGateway? authGateway;
   final AcademicStructureRepository? academicRepository;
   final DashboardRepository? dashboardRepository;
   final StudentDirectoryRepository? studentDirectoryRepository;
+  final AdmissionDraftRepository? admissionRepository;
 
   @override
   State<SupaModelSchoolApp> createState() => _SupaModelSchoolAppState();
@@ -147,6 +153,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   dashboardRepository: widget.dashboardRepository ??
                       const UnconfiguredDashboardRepository(),
                   studentDirectoryRepository: widget.studentDirectoryRepository,
+                  admissionRepository: widget.admissionRepository,
                   themeMode: themeMode,
                   onThemeChanged: (mode) => setState(() => themeMode = mode),
                   onExit: _exitShell,
@@ -181,12 +188,14 @@ class _SchoolShell extends StatefulWidget {
     required this.academicRepository,
     required this.dashboardRepository,
     this.studentDirectoryRepository,
+    this.admissionRepository,
     this.owner,
   });
   final OwnerAccess? owner;
   final AcademicStructureRepository academicRepository;
   final DashboardRepository dashboardRepository;
   final StudentDirectoryRepository? studentDirectoryRepository;
+  final AdmissionDraftRepository? admissionRepository;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
   final VoidCallback onExit;
@@ -241,6 +250,8 @@ class _SchoolShellState extends State<_SchoolShell> {
         owner: widget.owner,
         academicRepository:
             widget.owner == null ? null : widget.academicRepository,
+        admissionRepository:
+            widget.owner == null ? null : widget.admissionRepository,
         selectedCampusId: activeCampusId,
         onOpenSearch: _showGlobalSearch,
         onCampusChanged: (campusId) =>
