@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import '../data/admission_draft_repository.dart';
 import '../data/admission_document_service.dart';
+import '../data/admission_approval_repository.dart';
 
 import '../../academics/data/academic_structure_repository.dart';
 import '../../auth/data/owner_auth_gateway.dart';
@@ -21,6 +22,7 @@ class AdmissionWizardPage extends StatefulWidget {
     this.academicRepository,
     this.admissionRepository,
     this.documentService,
+    this.approvalRepository,
     this.initialRecord,
     this.initialStep = AdmissionStep.student,
     this.selectedCampusId,
@@ -38,6 +40,7 @@ class AdmissionWizardPage extends StatefulWidget {
   final AcademicStructureRepository? academicRepository;
   final AdmissionDraftRepository? admissionRepository;
   final AdmissionDocumentService? documentService;
+  final AdmissionApprovalRepository? approvalRepository;
   final AdmissionDraftRecord? initialRecord;
   final String? selectedCampusId;
   final VoidCallback? onOpenSearch;
@@ -66,6 +69,94 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   String? _uploadingDocumentId;
   List<AdmissionDocumentRecord> _serverDocuments = const [];
   int _documentRequest = 0;
+  bool _submitting = false;
+  bool _submitted = false;
+  AdmissionSubmitRequest? _pendingSubmission;
+
+  bool get _canSubmit =>
+    !_submitted && !_submitting && !_savingDraft &&
+    _uploadingDocumentId == null && !_documentLoading &&
+    widget.owner?.setupComplete == true &&
+    widget.approvalRepository != null && _savedDraft != null &&
+    _serverDocuments.isNotEmpty && _documentError == null;
+
+  Future<void> _submitForApproval() async {
+    if (!_canSubmit) return;
+    if (_pendingSubmission == null) {
+      for (final required in <AdmissionStep>[
+        AdmissionStep.student, AdmissionStep.guardians, AdmissionStep.academic
+      ]) {
+        final issue = _draft.validateStep(required);
+        if (issue != null) {
+          setState(() => _error = issue);
+          return;
+        }
+      }
+      if (_draft.academicYearId != widget.owner!.activeYearId ||
+          !_campusChoices.containsKey(_draft.campusId) ||
+          !_classChoices.containsKey(_draft.classId)) {
+        setState(() => _error = 'Choose an authorized campus, year and class.');
+        return;
+      }
+      final missing = _serverDocuments.any((document) =>
+        document.required && document.applicable &&
+        document.status != 'verified');
+      if (missing) {
+        final issue = _draft.validateStep(AdmissionStep.documents);
+        if (issue != null) {
+          setState(() => _error = issue);
+          return;
+        }
+      }
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Forward to Principal?'),
+          content: Text(missing
+            ? 'Some required documents are missing or unverified. '
+              'Forward with the selected deadline and reason? '
+              'No student record is created until Principal approval.'
+            : 'Forward this application to the Principal? '
+              'No student record is created until approval.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext,false),
+              child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext,true),
+              child: const Text('Forward for Approval')),
+          ],
+        ),
+      );
+      if (!mounted || confirmed != true) return;
+      _pendingSubmission = AdmissionSubmitRequest(
+        applicationId: _savedDraft!.id,
+        expectedRevision: _savedDraft!.revision,
+        operationId: SupabaseAdmissionApprovalRepository.operationUuid(),
+        conditionalDue: missing ? _draft.missingDocumentsDueOn : null,
+        conditionalReason: missing ? _draft.conditionalReason.trim() : null,
+      );
+    }
+    setState(() { _submitting = true; _error = null; });
+    try {
+      final result = await widget.approvalRepository!.submit(_pendingSubmission!);
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _submitted = true;
+        _pendingSubmission = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Application ${result.applicationId} submitted. '
+          'The Principal must approve before a student is enrolled.'),
+      ));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = 'Submission was not confirmed. Retry to repeat the '
+          'same operation without making a duplicate application.';
+      });
+    }
+  }
 
   Future<void> _loadDocuments() async {
     final id = _savedDraft?.id;
@@ -125,7 +216,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   }
 
   bool get _canSaveDraft =>
-      !_savingDraft && widget.owner?.setupComplete == true &&
+      !_submitting && !_submitted && !_savingDraft && widget.owner?.setupComplete == true &&
       widget.admissionRepository != null;
 
   String _operationUuid() {
