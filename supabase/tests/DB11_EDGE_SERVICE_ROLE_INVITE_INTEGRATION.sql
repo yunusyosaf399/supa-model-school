@@ -22,9 +22,7 @@ begin
 end $prepare$;
 set local role authenticated;
 do $denied$
-declare v db11_edge_test%rowtype;
 begin
- select * into strict v from db11_edge_test;
  if has_function_privilege('authenticated',
    'public.server_register_invited_user(uuid,uuid,uuid,uuid,text,text,text)',
    'EXECUTE') then raise exception 'Auth users can invoke service bridge';end if;
