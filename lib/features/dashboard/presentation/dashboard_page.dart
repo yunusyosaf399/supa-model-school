@@ -427,23 +427,34 @@ class _DashboardPageState extends State<DashboardPage> {
     ]),
   );
 
-  Widget _accountButton({bool desktop = false}) => PopupMenuButton<String>(
-    tooltip: 'Account',
-    onSelected: (value) {
-      if (value != 'exit') return;
-      // Allow PopupMenuRoute to finish dismissing before unmounting the
-      // dashboard after logout; otherwise Flutter may access a dead context.
-      Future<void>.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) widget.onExit?.call();
-      });
-    },
-    itemBuilder: (context) => [
-      PopupMenuItem<String>(
-        value: 'exit',
-        child: Text(widget.owner == null ? 'Exit demo' : 'Sign out'),
-      ),
-    ],
-    child: Row(mainAxisSize: MainAxisSize.min, children: [
+  Widget _accountButton({bool desktop = false}) => Tooltip(
+    message: 'Account',
+    child: InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: () async {
+        // An anchored PopupMenuRoute can access a disposed dashboard
+        // after sign-out; a dialog does not hold an anchored position builder.
+        final signOut = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Account'),
+            content: Text(widget.owner == null
+              ? 'Exit the preview dashboard?' : 'Sign out of your school account?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: Text(widget.owner == null ? 'Exit demo' : 'Sign out'),
+              ),
+            ],
+          ),
+        );
+        if (signOut == true && mounted) widget.onExit?.call();
+      },
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
       CircleAvatar(
         radius: desktop ? 21 : 18,
         backgroundColor: const Color(0xFFB8E5DF),
@@ -470,6 +481,7 @@ class _DashboardPageState extends State<DashboardPage> {
         Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: _text),
       ],
     ]),
+    ),
   );
 
   Widget _desktopTitleAndActions() => Row(
