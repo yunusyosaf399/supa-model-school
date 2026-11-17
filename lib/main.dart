@@ -21,6 +21,7 @@ import 'features/dashboard/presentation/dashboard_visuals.dart';
 import 'features/dashboard/data/dashboard_repository.dart';
 import 'features/owner/presentation/owner_control_panel_page.dart';
 import 'features/owner/data/owner_user_management_repository.dart';
+import 'features/owner/data/school_logo_service.dart';
 import 'features/students/presentation/student_directory_page.dart';
 import 'features/students/data/student_directory_repository.dart';
 import 'ui/school_brand.dart';
@@ -42,6 +43,7 @@ Future<void> main() async {
   AdmissionDocumentService? documentService;
   AdmissionApprovalRepository? approvalRepo;
   OwnerUserManagementRepository? ownerUsersRepo;
+  SchoolLogoService? logoService;
   PrincipalAuthGateway principalAuth = const UnconfiguredPrincipalAuthGateway();
   StaffAuthGateway staffAuth = const UnconfiguredStaffAuthGateway();
   AccountPasswordGateway? staffPasswordGateway;
@@ -64,6 +66,7 @@ Future<void> main() async {
     documentService = SupabaseAdmissionDocumentService(Supabase.instance.client);
     approvalRepo = SupabaseAdmissionApprovalRepository(Supabase.instance.client);
     ownerUsersRepo = SupabaseOwnerUserManagementRepository(Supabase.instance.client);
+    logoService = SchoolLogoService(Supabase.instance.client);
     principalAuth = SupabasePrincipalAuthGateway(Supabase.instance.client);
     staffAuth = SupabaseStaffAuthGateway(Supabase.instance.client);
     staffPasswordGateway = SupabaseAccountPasswordGateway(Supabase.instance.client);
@@ -77,6 +80,7 @@ Future<void> main() async {
     admissionDocumentService: documentService,
     admissionApprovalRepository: approvalRepo,
     ownerUserManagementRepository: ownerUsersRepo,
+    schoolLogoService: logoService,
     principalAuthGateway: principalAuth,
     staffAuthGateway: staffAuth,
     accountPasswordGateway: staffPasswordGateway,
@@ -96,6 +100,7 @@ class SupaModelSchoolApp extends StatefulWidget {
     this.admissionDocumentService,
     this.admissionApprovalRepository,
     this.ownerUserManagementRepository,
+    this.schoolLogoService,
     this.principalAuthGateway,
     this.staffAuthGateway,
     this.accountPasswordGateway,
@@ -109,6 +114,7 @@ class SupaModelSchoolApp extends StatefulWidget {
   final AdmissionDocumentService? admissionDocumentService;
   final AdmissionApprovalRepository? admissionApprovalRepository;
   final OwnerUserManagementRepository? ownerUserManagementRepository;
+  final SchoolLogoService? schoolLogoService;
   final PrincipalAuthGateway? principalAuthGateway;
   final StaffAuthGateway? staffAuthGateway;
   final AccountPasswordGateway? accountPasswordGateway;
@@ -262,7 +268,8 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   admissionDocumentService: widget.admissionDocumentService,
                   admissionApprovalRepository: widget.admissionApprovalRepository,
                   ownerUserManagementRepository: widget.ownerUserManagementRepository,
-                  themeMode: themeMode,
+                   schoolLogoService: widget.schoolLogoService,
+                   themeMode: themeMode,
                   onThemeChanged: (mode) => setState(() => themeMode = mode),
                   onExit: _exitShell,
                   onChangePassword: _gateway.changePassword,
@@ -300,6 +307,7 @@ class _SchoolShell extends StatefulWidget {
     this.admissionDocumentService,
     this.admissionApprovalRepository,
     this.ownerUserManagementRepository,
+    this.schoolLogoService,
     this.owner,
   });
   final OwnerAccess? owner;
@@ -310,6 +318,7 @@ class _SchoolShell extends StatefulWidget {
   final AdmissionDocumentService? admissionDocumentService;
   final AdmissionApprovalRepository? admissionApprovalRepository;
   final OwnerUserManagementRepository? ownerUserManagementRepository;
+  final SchoolLogoService? schoolLogoService;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
   final VoidCallback onExit;
@@ -332,7 +341,10 @@ class _SchoolShellState extends State<_SchoolShell> {
     // The first verified Owner lands in setup until the real configuration
     // is saved. The debug dashboard preview remains separate.
     if (widget.owner != null && !widget.owner!.setupComplete) {
-      selected = 10; // Owner Control Panel / Settings.
+       selected = 10; // Owner Control Panel / Settings.
+    }
+    if (widget.owner != null) {
+      widget.schoolLogoService?.load(widget.owner!.logoStoragePath);
     }
   }
 
@@ -370,8 +382,9 @@ class _SchoolShellState extends State<_SchoolShell> {
         documentService:
             widget.owner == null ? null : widget.admissionDocumentService,
         approvalRepository:
-            widget.owner == null ? null : widget.admissionApprovalRepository,
-        selectedCampusId: activeCampusId,
+             widget.owner == null ? null : widget.admissionApprovalRepository,
+         logoService: widget.schoolLogoService,
+         selectedCampusId: activeCampusId,
         onOpenSearch: _showGlobalSearch,
         onCampusChanged: (campusId) =>
             setState(() => activeCampusId = campusId),
@@ -395,7 +408,8 @@ class _SchoolShellState extends State<_SchoolShell> {
         admissionRepository: widget.admissionRepository,
         documentService: widget.admissionDocumentService,
         approvalRepository: widget.admissionApprovalRepository,
-        selectedCampusId: record.campusId,
+         logoService: widget.schoolLogoService,
+         selectedCampusId: record.campusId,
         initialRecord: record,
         onOpenSearch: _showGlobalSearch,
         onCampusChanged: (campusId) =>
@@ -480,7 +494,8 @@ class _SchoolShellState extends State<_SchoolShell> {
         onCampusChanged: (campusId) =>
             setState(() => activeCampusId = campusId),
         repository: widget.dashboardRepository,
-      );
+         logoService: widget.schoolLogoService,
+       );
     }
     if (selected == 2 && widget.owner != null &&
         widget.admissionRepository != null) {
@@ -512,7 +527,8 @@ class _SchoolShellState extends State<_SchoolShell> {
         },
         onOpenAcademicStructure: () => setState(() => selected = 11),
         userManagementRepository: widget.ownerUserManagementRepository,
-      );
+         logoService: widget.schoolLogoService,
+       );
     }
     if (selected == 11 && widget.owner != null) {
       return AcademicStructurePage(
