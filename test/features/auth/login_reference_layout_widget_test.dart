@@ -28,7 +28,7 @@ void main() {
     expect(find.byKey(const Key('login-email')), findsOneWidget);
     expect(find.byKey(const Key('login-password')), findsOneWidget);
     expect(find.byKey(const Key('login-sign-in')), findsOneWidget);
-    expect(find.text('Select School / Campus'), findsOneWidget);
+    expect(find.text('Campus selected securely after sign-in'), findsOneWidget);
   });
 
   testWidgets('Windows landscape uses the desktop art and right-side card',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'features/auth/data/owner_auth_gateway.dart';
+import 'config/supabase_connection_config.dart';
 
 import 'features/admissions/presentation/admission_wizard_page.dart';
 import 'features/admissions/presentation/admission_draft_list_page.dart';
@@ -20,9 +21,11 @@ import 'ui/school_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Only a public/publishable client key may be supplied to Flutter.
-  const url = String.fromEnvironment('SUPABASE_URL');
-  const key = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
+  // Debug launches connect to the existing test project automatically.
+  // Release builds require explicit --dart-define public credentials.
+  SupabaseConnectionConfig.validate();
+  const url = SupabaseConnectionConfig.projectUrl;
+  const key = SupabaseConnectionConfig.publishableKey;
   OwnerAuthGateway gateway = const UnconfiguredOwnerAuthGateway();
   AcademicStructureRepository academicRepo =
       const UnconfiguredAcademicStructureRepository();

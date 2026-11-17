@@ -35,6 +35,8 @@ jobs:
           echo 'PUBSPEC_LOCK_END'
       - name: Dart analyzer
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Supabase debug connection and Owner login regression
+        run: flutter test test/features/auth/supabase_connection_widget_test.dart test/features/auth/owner_auth_widget_test.dart test/features/auth/login_reference_layout_widget_test.dart
       - name: Student directory widget regression
         run: flutter test test/features/students/student_directory_live_widget_test.dart
       - name: Admissions draft widget regression

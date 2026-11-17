@@ -55,12 +55,26 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _working = true);
     try {
       await widget.onSignIn(_email.text.trim(), _password.text);
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
+      final details = !widget.authConfigured
+          ? 'Supabase Auth is not configured in this build.'
+          : error is FormatException
+              ? 'Enter a valid Owner email and password.'
+              : error.toString().contains('Invalid login credentials')
+                  ? 'Email or password is incorrect.'
+                  : error.toString().contains('No unique authorized Owner membership')
+                      ? 'This account has no active Owner role.'
+                      : error.toString().contains('Account is not active')
+                          ? 'This Owner account is inactive.'
+                          : error.toString().contains('SocketException') ||
+                              error.toString().contains('ClientException')
+                              ? 'Cannot reach Supabase. Check internet access.'
+                              : 'Sign-in failed: verify Owner access and Supabase connectivity.';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(widget.authConfigured
-            ? 'Sign-in failed, or this account lacks active Owner access.'
-            : 'Supabase Auth is not configured in this build.'),
+        duration: const Duration(seconds: 7),
+        content: Text(details.startsWith('Sign-in failed') ? details
+            : 'Sign-in failed: $details'),
       ));
     } finally {
       if (mounted) setState(() => _working = false);
@@ -246,16 +260,17 @@ class _LoginPageState extends State<LoginPage> {
               _fieldLabel('School / Campus', Icons.account_balance_outlined,
                   onCard, mobile),
               const SizedBox(height: 5),
-              DropdownButtonFormField<String>(
+              InputDecorator(
                 key: const Key('login-campus'),
-                isExpanded: true,
-                initialValue: null,
-                hint: const Text('Select School / Campus'),
-                disabledHint: const Text('Select School / Campus'),
-                items: const [],
-                onChanged: null,
-                icon: Icon(Icons.keyboard_arrow_down_rounded, color: muted),
                 decoration: _inputDecoration(dark),
+                child: Row(children: [
+                  Icon(Icons.verified_user_outlined, color: muted, size: 18),
+                  const SizedBox(width: 9),
+                  Expanded(child: Text(
+                    'Campus selected securely after sign-in',
+                    style: TextStyle(color: muted, fontSize: 13),
+                  )),
+                ]),
               ),
               SizedBox(height: space),
               _fieldLabel('Email or Username', Icons.person_rounded,
@@ -409,8 +424,13 @@ class _LoginPageState extends State<LoginPage> {
                       const Icon(Icons.verified_user_outlined,
                           color: SchoolPalette.teal, size: 17),
                       const SizedBox(width: 6),
-                      Text('Secure access for authorized staff only',
-                          style: TextStyle(color: muted, fontSize: 11)),
+                      Flexible(child: Text(
+                        'Secure access for authorized staff only',
+                        maxLines: 2,
+                        softWrap: true,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: muted, fontSize: 11),
+                      )),
                     ],
                   ),
                 ),
