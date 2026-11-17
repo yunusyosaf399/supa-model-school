@@ -138,7 +138,7 @@ begin
    if v_existing.document_id<>p_document_id
       or v_existing.reviewed_by<>v_actor
       or v_existing.decision <>
-           case p_decision when 'verify' then 'verified' else 'rejected' end
+           (case p_decision when 'verify' then 'verified' else 'rejected' end)
    then
      raise exception 'Review operation ID already used' using errcode='23505';
    end if;
