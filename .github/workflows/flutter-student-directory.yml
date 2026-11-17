@@ -1,0 +1,33 @@
+name: Flutter student directory validation
+on:
+  pull_request:
+    paths:
+      - 'lib/**'
+      - 'test/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/flutter-student-directory.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  flutter-students:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.7'
+          channel: stable
+          cache: true
+      - name: Fetch dependencies
+        run: flutter pub get
+      - name: Generate Drift code
+        run: dart run build_runner build --delete-conflicting-outputs
+      - name: Dart analyzer
+        run: flutter analyze
+      - name: Student directory widget regression
+        run: flutter test test/features/students/student_directory_live_widget_test.dart
