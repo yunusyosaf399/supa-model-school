@@ -7,7 +7,7 @@ DB04 attendance: school_calendar_days, attendance_policies, attendance_duties, a
 DB05 payroll: employee_departments, employee_positions, employees, employee_assignments, employee_teaching_assignments, payroll_components, salary_structures, salary_structure_lines, employee_leave_requests, employee_leave_days, payroll_periods, payroll_entries, payroll_entry_lines, payroll_cost_allocations, payroll_adjustments, salary_advances, advance_repayments, salary_payments, salary_payment_reversals, payroll_operation_receipts.
 DB06 money: ledger_accounts, financial_accounts, expense_categories, expense_requests, expenses, account_transfers, capital_transactions, account_opening_entries, accounting_periods, ledger_journals, ledger_lines, ledger_reversals, ledger_source_links, cash_closings, cash_closing_counts, cash_closing_adjustments, bank_statement_lines, bank_reconciliations, bank_reconciliation_matches, financial_operation_receipts.
 DB07 business: inventory_categories, inventory_items, inventory_locations, inventory_suppliers, inventory_purchase_orders, inventory_purchase_lines, inventory_goods_receipts, inventory_receipt_lines, inventory_lots, inventory_transfers, inventory_transfer_lines, inventory_counts, inventory_count_lines, canteen_products, canteen_prices, canteen_sales, canteen_sale_lines, uniform_products, uniform_recipes, uniform_recipe_lines, uniform_production_batches, uniform_material_issues, uniform_production_outputs, uniform_sales, uniform_sale_lines, transport_vehicles, transport_routes, transport_route_stops, transport_student_assignments, transport_driver_assignments, transport_trip_logs, transport_maintenance_events, transport_expense_links, inventory_stock_movements, inventory_movement_sources, retail_sale_reversals, db07_operation_receipts.
-DB08 controls: approval_policies, approval_requests, approval_decisions, correction_requests, audit_events, document_templates, user_shortcuts.
+DB08 controls: db08_roles, db08_permissions, db08_role_grants, db08_user_overrides, db08_role_audit, db08_approval_policies, db08_approval_steps, db08_workflow_subjects, db08_approval_requests, db08_approval_sources, db08_approval_delegations, db08_approval_decisions, db08_audit_events, db08_document_templates, db08_notification_messages, db08_notification_events, db08_user_shortcuts, db08_operation_receipts.
 DB09 sync: processed_operations, cloud_change_log, sync_conflicts, device_sync_status, backup_manifests and client-local sync_outbox/sync_state.
 
 **Integrity:** UUID primary keys; school/campus FK containment; document and academic history; exact money in minor units or NUMERIC on cloud; unique scheduled-charge source keys, unique receipt operation IDs, unique enrollment per active academic year. Cash and bank internal transfers are not revenue.
@@ -75,3 +75,11 @@ by deferred triggers. See `docs/36_DB07_BUSINESS_TRANSPORT_DESIGN.md`.
 **2 full core domains remain to design (DB08–DB09); 7 are still undeployed
 (DB03–DB09).** DB06 journal kinds must be extended for inventory/COGS.
 No Flutter code or new live SQL in this schema-design session.
+
+## DB08 roles, approvals and audit — SQL design only (2026-11-17)
+18 deny-by-default RLS tables with school role/permission catalog, pending
+and time-limited grants, approval requests/typed source FKs, versioned
+multi-step approval, immutable reviews and role audit, notification/template
+and shortcut records. No approval API, cross-domain posting or role RLS
+policies yet. See `docs/37_DB08_APPROVALS_PERMISSIONS_DESIGN.md`.
+**1 domain remains to design (DB09); 7 undeployed (DB03–DB09).**

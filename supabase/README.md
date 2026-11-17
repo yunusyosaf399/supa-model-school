@@ -113,3 +113,14 @@ No Flutter code or live Supabase schema changes in this workstream.
 DB07 inventory, POS sales and COGS journal kinds before reviewed migrations.
 No Flutter files or hosted Supabase SQL changes; **2 full domains remain
 to design (DB08–DB09); 7 remain undeployed (DB03–DB09).**
+
+## DB08 expanded roles, approvals and audit — SQL design NOT deployed
+- `drafts/DB08_APPROVALS_PERMISSIONS_AUDIT_SCHEMA.sql`: 18 deny-by-default
+  RLS tables and expanded DB01 role whitelist, campus permission grants,
+  versioned approval policies/steps, typed request sources, delegated
+  immutable decisions, audit, document templates, notifications and receipts.
+- `tests/DB08_APPROVALS_INTEGRATION.sql`: fictional local rollback test.
+- `tests/check_db08_schema.py`: static source guard, not PostgreSQL execution.
+- `drafts/DB08_APPROVALS_RUNBOOK.md`: permission/approval acceptance gates.
+- `../docs/37_DB08_APPROVALS_PERMISSIONS_DESIGN.md`: design contract.
+**1 domain remains to design (DB09); 7 domains undeployed (DB03–DB09).**
