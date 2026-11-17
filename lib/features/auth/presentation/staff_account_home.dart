@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../auth/data/staff_auth_gateway.dart';
 import '../../auth/data/staff_permission_gateway.dart';
+import '../../students/data/student_directory_repository.dart';
+import '../../students/presentation/student_directory_page.dart';
 import '../../auth/data/account_password_gateway.dart';
 import '../../auth/presentation/account_password_page.dart';
 
@@ -11,11 +13,13 @@ class StaffAccountHome extends StatelessWidget {
     super.key,required this.staff,required this.onSignOut,
     required this.passwordGateway,
     this.permissionGateway,
+    this.studentRepository,
   });
   final SchoolStaffAccess staff;
   final Future<void> Function() onSignOut;
   final AccountPasswordGateway passwordGateway;
   final StaffPermissionGateway? permissionGateway;
+  final StudentDirectoryRepository? studentRepository;
 
   @override
   Widget build(BuildContext context)=>Scaffold(
@@ -72,6 +76,24 @@ class StaffAccountHome extends StatelessWidget {
                     if (sections.isNotEmpty) Wrap(spacing: 6, children: [
                       for (final section in sections) Chip(label: Text(section)),
                     ]),
+                    if (snapshot.data!.contains('students.read') &&
+                        studentRepository != null)
+                      TextButton.icon(
+                        key: const Key('staff-open-students'),
+                        onPressed: () => Navigator.push(context,
+                          MaterialPageRoute<void>(builder: (_) => Scaffold(
+                            appBar: AppBar(title: const Text('Students')),
+                            body: StudentDirectoryPage(
+                              onNewAdmission: () {},
+                              allowNewAdmission: false,
+                              staffSchoolId: staff.schoolId,
+                              staffCampusId: staff.campusId,
+                              repository: studentRepository,
+                            ),
+                          ))),
+                        icon: const Icon(Icons.groups_outlined),
+                        label: const Text('View Students'),
+                      ),
                     const Text('Sections still in development do not yet '
                       'provide operational screens.'),
                   ],
