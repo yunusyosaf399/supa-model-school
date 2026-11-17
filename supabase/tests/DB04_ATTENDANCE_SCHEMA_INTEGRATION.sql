@@ -235,12 +235,23 @@ BEGIN
      effective_revision_after,decided_by,operation_id)
     VALUES(v_school,v_campus_a,v_request,v_mark,'approved','present',
       2,v_actor,'b0000000-0000-4000-8000-000000000003');
+  -- Use an independent request so the proposed-status FK, not the
+  -- one-decision-per-request UNIQUE constraint, is the rejection reason.
   BEGIN
+    INSERT INTO public.attendance_correction_requests
+      (id,school_id,campus_id,mark_id,proposed_status,
+       expected_effective_revision,reason,requested_by,operation_id)
+      VALUES('80000000-0000-4000-8000-000000000009',
+        v_school,v_campus_a,v_mark,'present',2,
+        'Fictional mismatch test must not be approved',v_actor,
+        'b0000000-0000-4000-8000-000000000008');
     INSERT INTO public.attendance_correction_decisions
       (school_id,campus_id,request_id,mark_id,decision,approved_status,
        effective_revision_after,decided_by,operation_id)
-      VALUES(v_school,v_campus_a,v_request,v_mark,'approved','absent',
-        3,v_actor,'b0000000-0000-4000-8000-000000000004');
+      VALUES(v_school,v_campus_a,
+        '80000000-0000-4000-8000-000000000009',
+        v_mark,'approved','absent',3,v_actor,
+        'b0000000-0000-4000-8000-000000000004');
     RAISE EXCEPTION 'Approved status different from requested status accepted';
   EXCEPTION WHEN foreign_key_violation THEN NULL;
   END;
