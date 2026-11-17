@@ -25,3 +25,21 @@ On [draft PR #8](https://github.com/yunusyosaf399/supa-model-school/pull/8), ver
 
 ## D04-T04 — server-side commit-ordered admission change feed (source-only)
 [Stacked draft PR #13](https://github.com/yunusyosaf399/supa-model-school/pull/13) implements a private, campus-scoped admission change log with transactional ordering using a global `pg_advisory_xact_lock` before allocating identity sequences, immutable history, upsert/delete tombstones, guarded admission revisions and a latest-state bootstrap. The authenticated `offline-pull` Edge endpoint returns bounded pages and `after_cursor`/`change_seq` as decimal strings, filtering by verified current role and registered campus device proof. The SQL fixture covers campus isolation, pagination, rollback gaps, revocation and immutability; separate-session concurrency testing remains unexecuted. Existing `local_replica_metadata.last_applied_cursor` is ONLY a placeholder. Atomic SQLite event application, conflict handling, secure device key storage and actual network syncing remain D04-T05; no live schema or Edge deployment has occurred. See `supabase/functions/offline-pull/README.md` and `supabase/drafts/DB04_CHANGE_FEED_RUNBOOK.md` on stacked branch.
+
+## DB09 complete domain SQL source design (2026-11-17; NOT DEPLOYED)
+- `supabase/drafts/DB09_SYNC_BACKUP_REPORTING_SCHEMA.sql` defines
+  assigned-campus device permission/revocation; operation receipt UUID +
+  SHA256, a school row-locked commit-ordered change clock/feed, tombstones,
+  local-apply cursor reports, conflict and restore audit, backup manifests
+  and campus-filtered reporting projections.
+- Existing unmerged offline-ingest/change-feed PRs #12/#13 are a separate
+  earlier implementation. Before migration decide one **authoritative**
+  receipt and cloud feed schema, adapt their Edge endpoints, and remove
+  duplicates. The new schema does not activate any ingest/pull endpoints.
+- A cursor is persisted in SQLite in the SAME transaction as its feed page;
+  only afterward should the desktop ACK to server. Device authorization
+  and user's active campus role are verified on every upload and pull.
+- Windows auto-sync on connectivity and manual Sync Now; Android online-only.
+- Offline pending approval NEVER authorizes payment, school transfer,
+  payroll or final cash closing. See `docs/38_DB09_SYNC_BACKUP_REPORTING_DESIGN.md`.
+**0 core domain designs remain; 7 domains awaiting testing/deployment.**
