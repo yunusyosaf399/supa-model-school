@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../../auth/data/owner_auth_gateway.dart';
 import '../data/owner_user_management_repository.dart';
 
-/// Owner-only user administration. No password fields or client-side
-/// privileged Supabase Auth endpoints are ever used.
+/// Owner-only user administration. Passwords are transient form inputs and
+/// are never saved in school tables, logs or on-device persistent storage.
 class OwnerUserControlPanelPage extends StatefulWidget {
   const OwnerUserControlPanelPage({
     super.key,required this.owner,required this.repository,
@@ -38,11 +38,14 @@ class _OwnerUserControlPanelPageState extends State<OwnerUserControlPanelPage> {
   final _form=GlobalKey<FormState>();
   final _name=TextEditingController();
   final _email=TextEditingController();
+  final _password=TextEditingController();
+  final _confirmPassword=TextEditingController();
   final _search=TextEditingController();
   late String _campusId;
   String _role='teacher';
   bool _loading=false;
-  bool _inviting=false;
+  bool _creating=false;
+  bool _showPassword=false;
   String? _changing;
   String? _error;
   List<OwnerStaffAccount> _staff=const [];
@@ -75,6 +78,7 @@ class _OwnerUserControlPanelPageState extends State<OwnerUserControlPanelPage> {
   void dispose(){
     _requestId++;
     _name.dispose();_email.dispose();_search.dispose();
+    _password.dispose();_confirmPassword.dispose();
     super.dispose();
   }
 
@@ -101,49 +105,51 @@ class _OwnerUserControlPanelPageState extends State<OwnerUserControlPanelPage> {
     }
   }
 
-  Future<void> _invite() async {
-    if(_inviting||_changing!=null||!_form.currentState!.validate())return;
+  Future<void> _createAccount() async {
+    if(_creating||_changing!=null||!_form.currentState!.validate())return;
     final campus=widget.owner.campuses.firstWhere((c)=>c.id==_campusId);
     final confirmed=await showDialog<bool>(context:context,
       builder:(dialogContext)=>AlertDialog(
-        title:const Text('Invite staff member?'),
-        content:Text('Send an invitation to ${_email.text.trim()} as '
-          '${roles[_role]} at ${campus.name}? The user will set their own '
-          'password through Supabase Auth. No password is created here.'),
+        title:const Text('Create staff login?'),
+        content:Text('Create a login for ${_email.text.trim()} as '
+          '${roles[_role]} at ${campus.name}? The initial password you '
+          'entered becomes active immediately. Give it privately to the user.'),
         actions:[
           TextButton(
             onPressed:()=>Navigator.pop(dialogContext,false),
             child:const Text('Cancel')),
           FilledButton(
-            key:const Key('confirm-staff-invite'),
+            key:const Key('confirm-staff-create'),
             onPressed:()=>Navigator.pop(dialogContext,true),
-            child:const Text('Send invitation')),
+            child:const Text('Create account')),
         ],
       ));
     if(confirmed!=true||!mounted)return;
     setState((){
-      _inviting=true;
+      _creating=true;
       _error=null;
     });
     try{
-      await widget.repository.inviteUser(OwnerUserInvitation(
+      await widget.repository.createUser(OwnerUserCreation(
         schoolId:widget.owner.schoolId,
         campusId:_campusId,role:_role,
-        email:_email.text.trim(),name:_name.text.trim()));
+        email:_email.text.trim(),name:_name.text.trim(),
+        password:_password.text));
       if(!mounted)return;
       _name.clear();
       _email.clear();
+      _password.clear();
+      _confirmPassword.clear();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content:Text('Invitation sent. The role becomes usable after '
-          'the invited email is confirmed and password is set.')));
+        content:Text('Staff login created. Give the initial password to '
+          'the user privately. They can change it in Account Settings.')));
       await _reload();
     }catch(_){
       if(!mounted)return;
-      setState(()=>_error='Invitation was not confirmed. The email may '
-        'already be in use, or Supabase email delivery is not configured. '
-        'Check existing users before retrying.');
+      setState(()=>_error='Account creation was not confirmed. Check the '
+        'staff list before retrying; the email may already be in use.');
     }finally{
-      if(mounted)setState(()=>_inviting=false);
+      if(mounted)setState(()=>_creating=false);
     }
   }
 
@@ -214,7 +220,7 @@ class _OwnerUserControlPanelPageState extends State<OwnerUserControlPanelPage> {
           )),
           IconButton(
             tooltip:'Refresh users',
-            onPressed:_loading||_inviting?null:_reload,
+            onPressed:_loading||_creating?null:_reload,
             icon:const Icon(Icons.refresh)),
         ]),
         const SizedBox(height:12),
@@ -222,11 +228,11 @@ class _OwnerUserControlPanelPageState extends State<OwnerUserControlPanelPage> {
           child:Form(key:_form,child:Column(
             crossAxisAlignment:CrossAxisAlignment.stretch,
             children:[
-              Text('Invite new user',style:theme.textTheme.titleLarge),
+              Text('Create user login',style:theme.textTheme.titleLarge),
               const SizedBox(height:6),
-              const Text('Send a secure invitation. The user chooses their '
-                'password from the invitation email. The Owner cannot view '
-                'or set employee passwords.'),
+              const Text('Assign an initial password now. No invitation email '
+                'is required. Share the password privately; the user can '
+                'change it after logging in.'),
               const SizedBox(height:14),
               TextFormField(
                 key:const Key('staff-name'),
@@ -250,6 +256,45 @@ class _OwnerUserControlPanelPageState extends State<OwnerUserControlPanelPage> {
                   return null;
                 }),
               const SizedBox(height:10),
+              TextFormField(
+                key:const Key('staff-password'),
+                controller:_password,
+                obscureText:!_showPassword,
+                enableSuggestions:false,
+                autocorrect:false,
+                decoration:InputDecoration(
+                  labelText:'Initial password',
+                  helperText:'12–128 characters; include letters and numbers',
+                  border:const OutlineInputBorder(),
+                  suffixIcon:IconButton(
+                    tooltip:_showPassword?'Hide passwords':'Show passwords',
+                    onPressed:()=>setState(()=>_showPassword=!_showPassword),
+                    icon:Icon(_showPassword
+                      ? Icons.visibility_off_outlined:Icons.visibility_outlined)),
+                ),
+                validator:(value){
+                  final password=value??'';
+                  if(password.length<12 || password.length>128 ||
+                     password!=password.trim() ||
+                     !RegExp(r'[A-Za-z]').hasMatch(password) ||
+                     !RegExp(r'[0-9]').hasMatch(password)) {
+                    return 'Use 12–128 characters with letters and numbers';
+                  }
+                  return null;
+                }),
+              const SizedBox(height:10),
+              TextFormField(
+                key:const Key('staff-confirm-password'),
+                controller:_confirmPassword,
+                obscureText:!_showPassword,
+                enableSuggestions:false,
+                autocorrect:false,
+                decoration:const InputDecoration(
+                  labelText:'Confirm initial password',
+                  border:OutlineInputBorder()),
+                validator:(value)=>value!=_password.text
+                  ? 'Passwords do not match':null),
+              const SizedBox(height:10),
               DropdownButtonFormField<String>(
                 key:const Key('staff-role'),
                 value:_role,
@@ -260,7 +305,7 @@ class _OwnerUserControlPanelPageState extends State<OwnerUserControlPanelPage> {
                   for(final r in roles.entries)
                     DropdownMenuItem(value:r.key,child:Text(r.value)),
                 ],
-                onChanged:_inviting?null:(role){
+                onChanged:_creating?null:(role){
                   if(role!=null)setState(()=>_role=role);
                 }),
               const SizedBox(height:10),
@@ -280,10 +325,10 @@ class _OwnerUserControlPanelPageState extends State<OwnerUserControlPanelPage> {
                 }),
               const SizedBox(height:12),
               FilledButton.icon(
-                key:const Key('staff-send-invite'),
-                onPressed:_inviting?null:_invite,
+                key:const Key('staff-create-account'),
+                onPressed:_creating?null:_createAccount,
                 icon:const Icon(Icons.person_add_alt_1_outlined),
-                label:Text(_inviting?'Sending invitation...':'Send invitation')),
+                label:Text(_creating?'Creating account...':'Create account')),
             ],
           )),
         )),
@@ -322,7 +367,7 @@ class _OwnerUserControlPanelPageState extends State<OwnerUserControlPanelPage> {
                   title:Text(user.name),
                   subtitle:Text('${user.email}\n'
                     '${roles[user.role]??user.role} • ${user.campusName}\n'
-                    '${user.emailConfirmed?'Email confirmed':'Invitation pending'} '
+                    '${user.emailConfirmed?'Email verified':'Email not verified'} '
                     '• ${user.active?'Active':'Inactive'}'),
                   isThreeLine:true,
                   trailing:user.role=='owner'||user.role=='super_admin'
