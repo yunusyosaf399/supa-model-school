@@ -366,11 +366,15 @@ BEGIN
  VALUES(s,a,y,cl,student_id,enrollment_id,route_a,stop_a,
   '2026-04-05',actor_id,'aaa00000-0000-4000-8000-000000000020');
  BEGIN
+  -- Temporarily end the valid A route within the negative-test subtransaction
+  -- so the one-open-route unique index does not mask the campus FK test.
+  UPDATE public.transport_student_assignments SET ends_on='2026-04-06'
+   WHERE student_id=student_id AND academic_year_id=y AND ends_on IS NULL;
   INSERT INTO public.transport_student_assignments(
    school_id,campus_id,academic_year_id,class_id,student_id,enrollment_id,
    route_id,stop_id,starts_on,approved_by,operation_id)
   VALUES(s,a,y,cl,student_id,enrollment_id,route_b,stop_b,
-   '2026-04-05',actor_id,'aaa00000-0000-4000-8000-000000000021');
+   '2026-04-07',actor_id,'aaa00000-0000-4000-8000-000000000021');
   RAISE EXCEPTION 'CROSS CAMPUS transport route accepted';
  EXCEPTION WHEN foreign_key_violation THEN NULL;
  END;
