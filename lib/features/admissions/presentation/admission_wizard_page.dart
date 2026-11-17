@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'dart:math';
 import '../data/admission_draft_repository.dart';
+import '../data/admission_document_service.dart';
 
 import '../../academics/data/academic_structure_repository.dart';
 import '../../auth/data/owner_auth_gateway.dart';
@@ -19,6 +20,7 @@ class AdmissionWizardPage extends StatefulWidget {
     this.owner,
     this.academicRepository,
     this.admissionRepository,
+    this.documentService,
     this.initialRecord,
     this.initialStep = AdmissionStep.student,
     this.selectedCampusId,
@@ -35,6 +37,7 @@ class AdmissionWizardPage extends StatefulWidget {
   final OwnerAccess? owner;
   final AcademicStructureRepository? academicRepository;
   final AdmissionDraftRepository? admissionRepository;
+  final AdmissionDocumentService? documentService;
   final AdmissionDraftRecord? initialRecord;
   final String? selectedCampusId;
   final VoidCallback? onOpenSearch;
@@ -58,6 +61,11 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   SavedAdmissionDraft? _savedDraft;
   AdmissionDraftSaveRequest? _pendingSave;
   bool _savingDraft = false;
+  bool _documentLoading = false;
+  String? _documentError;
+  String? _uploadingDocumentId;
+  List<AdmissionDocumentRecord> _serverDocuments = const [];
+  int _documentRequest = 0;
 
   bool get _canSaveDraft =>
       !_savingDraft && widget.owner?.setupComplete == true &&
