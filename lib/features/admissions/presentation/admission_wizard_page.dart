@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:math';
 import '../data/admission_draft_repository.dart';
 import '../data/admission_document_service.dart';
@@ -10,11 +11,8 @@ import '../../auth/data/owner_auth_gateway.dart';
 import '../models/admission_draft.dart';
 import '../../../ui/school_brand.dart';
 
-/// First-stage admissions UI for Windows and Android.
-///
-/// Only the academic selectors can load read-only, authorized DB01 records.
-/// The applicant form remains strictly in memory: no DB02 admission/identity
-/// writes, private document uploads, offline queue, or payment operations.
+/// Owner Admissions wizard: authenticated draft saving, private certificate/photo
+/// uploads and Principal-only submission. Fee posting remains separate.
 class AdmissionWizardPage extends StatefulWidget {
   const AdmissionWizardPage({
     super.key,
