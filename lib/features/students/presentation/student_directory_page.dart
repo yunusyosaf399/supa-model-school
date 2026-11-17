@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../models/student_directory.dart';
+import '../data/student_directory_repository.dart';
+import '../../auth/data/owner_auth_gateway.dart';
 
 /// Read-only student directory preview.
 ///
@@ -12,10 +14,16 @@ class StudentDirectoryPage extends StatefulWidget {
     super.key,
     required this.onNewAdmission,
     this.projection = StudentDirectoryDemo.projection,
+    this.owner,
+    this.selectedCampusId,
+    this.repository,
   });
 
   final VoidCallback onNewAdmission;
   final StudentDirectoryProjection projection;
+  final OwnerAccess? owner;
+  final String? selectedCampusId;
+  final StudentDirectoryRepository? repository;
 
   @override
   State<StudentDirectoryPage> createState() => _StudentDirectoryPageState();
@@ -26,6 +34,84 @@ class _StudentDirectoryPageState extends State<StudentDirectoryPage> {
   String _campusId = 'all';
   String _classId = 'all';
   String _status = 'all';
+  StudentDirectoryProjection _projection = StudentDirectoryDemo.projection;
+  bool _loading = false;
+  String? _error;
+  int _request = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _projection = widget.owner == null ? widget.projection : _empty();
+    if (widget.owner != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _refresh();
+      });
+    }
+  }
+
+  StudentDirectoryProjection _empty() => const StudentDirectoryProjection(
+    authorizedCampusIds: <String>{},
+    records: <StudentSummary>[],
+  );
+
+  @override
+  void didUpdateWidget(covariant StudentDirectoryPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.owner?.userId != widget.owner?.userId ||
+        oldWidget.selectedCampusId != widget.selectedCampusId ||
+        oldWidget.repository != widget.repository) {
+      ++_request;
+      _projection = widget.owner == null ? widget.projection : _empty();
+      _campusId = 'all';
+      _classId = 'all';
+      _status = 'all';
+      if (widget.owner != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _refresh();
+        });
+      }
+    }
+  }
+
+  Future<void> _refresh() async {
+    final owner = widget.owner;
+    if (owner == null) return;
+    final repo = widget.repository;
+    final campus = widget.selectedCampusId != null &&
+            owner.campuses.any((c) => c.id == widget.selectedCampusId)
+        ? widget.selectedCampusId
+        : (owner.campuses.isEmpty ? null : owner.campuses.first.id);
+    final request = ++_request;
+    setState(() {
+      _loading = true;
+      _error = null;
+      _projection = _empty();
+    });
+    if (repo == null || campus == null) {
+      if (mounted && request == _request) {
+        setState(() {
+          _loading = false;
+          _error = 'Student directory is not configured.';
+        });
+      }
+      return;
+    }
+    try {
+      final value = await repo.load(schoolId: owner.schoolId, campusId: campus);
+      if (!mounted || request != _request) return;
+      setState(() {
+        _projection = value;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted || request != _request) return;
+      setState(() {
+        _loading = false;
+        _error = 'Unable to load authorized students. Check network and permissions.';
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -56,15 +142,15 @@ class _StudentDirectoryPageState extends State<StudentDirectoryPage> {
     // global/unfiltered lookup by UUID.
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => StudentProfilePreviewPage(student: student),
+        builder: (_) => StudentProfilePreviewPage(student: student, isLive: widget.owner != null),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final authorized = widget.projection.authorizedRecords;
-    final visible = widget.projection.filter(_filters);
+    final authorized = _projection.authorizedRecords;
+    final visible = _projection.filter(_filters);
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= 850;
@@ -73,8 +159,14 @@ class _StudentDirectoryPageState extends State<StudentDirectoryPage> {
           padding: EdgeInsets.all(wide ? 24 : 12),
           children: [
             _heading(wide),
+            if (_loading) const LinearProgressIndicator(key: Key('student-loading')),
+            if (_error != null) ListTile(
+              leading: const Icon(Icons.error_outline),
+              title: Text(_error!),
+              trailing: TextButton(onPressed: _refresh, child: const Text('Retry')),
+            ),
             const SizedBox(height: 12),
-            Card(
+            if (widget.owner == null) Card(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
               child: const Padding(
                 padding: EdgeInsets.all(12),
@@ -100,7 +192,7 @@ class _StudentDirectoryPageState extends State<StudentDirectoryPage> {
               children: [
                 Expanded(
                   child: Text(
-                    '${visible.length} of ${authorized.length} sample students',
+                    '${visible.length} of ${authorized.length} students',
                     key: const Key('student-result-count'),
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
@@ -133,14 +225,14 @@ class _StudentDirectoryPageState extends State<StudentDirectoryPage> {
         Text('Student Directory',
             style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 4),
-        const Text('Campus-scoped list • synthetic preview records'),
+        Text(widget.owner == null ? 'Campus-scoped list • synthetic preview records' : 'Live campus-scoped school records'),
       ],
     );
     final addButton = FilledButton.icon(
       key: const Key('open-admission-wizard'),
       onPressed: widget.onNewAdmission,
       icon: const Icon(Icons.person_add_alt_1_outlined),
-      label: const Text('New admission (preview)'),
+      label: Text(widget.owner == null ? 'New admission (preview)' : 'New admission'),
     );
     if (!wide) {
       return Column(
@@ -158,8 +250,8 @@ class _StudentDirectoryPageState extends State<StudentDirectoryPage> {
   }
 
   Widget _filterPanel(bool wide) {
-    final campuses = widget.projection.campuses;
-    final classOptions = widget.projection.classesForCampus(
+    final campuses = _projection.campuses;
+    final classOptions = _projection.classesForCampus(
         _campusId == 'all' ? null : _campusId);
     final campusField = _dropdown(
       key: ValueKey('campus-field-$_campusId'),
@@ -280,7 +372,7 @@ class _StudentDirectoryPageState extends State<StudentDirectoryPage> {
             children: [
               Icon(Icons.search_off_outlined, size: 44),
               SizedBox(height: 12),
-              Text('No sample students match these filters.'),
+              Text('No students match these filters.'),
               SizedBox(height: 6),
               Text('Try clearing the search or selecting another class.'),
             ],
@@ -365,14 +457,15 @@ class _StudentDirectoryPageState extends State<StudentDirectoryPage> {
 /// A deliberately read-only profile shell. No guardians, finances, documents,
 /// history or sensitive PII are loaded or claimed from a real school.
 class StudentProfilePreviewPage extends StatelessWidget {
-  const StudentProfilePreviewPage({super.key, required this.student});
+  const StudentProfilePreviewPage({super.key, required this.student, this.isLive = false});
 
   final StudentSummary student;
+  final bool isLive;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Student Profile (preview)')),
+      appBar: AppBar(title: Text(isLive ? 'Student Summary' : 'Student Profile (preview)')),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 740),
@@ -383,11 +476,9 @@ class StudentProfilePreviewPage extends StatelessWidget {
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 child: const Padding(
                   padding: EdgeInsets.all(12),
-                  child: Text(
-                    'FICTIONAL PREVIEW — not a real pupil, not a saved record. '
-                    'Guardian documents, fee balance and attendance are '
-                    'unavailable until authorized backend integration.',
-                  ),
+                  child: Text(isLive
+                    ? 'Read-only student summary from Supabase. Detailed guardians, documents, fees and attendance are not yet connected.'
+                    : 'FICTIONAL PREVIEW — not a real pupil, not a saved record. Guardian documents, fee balance and attendance are unavailable until authorized backend integration.'),
                 ),
               ),
               const SizedBox(height: 12),
