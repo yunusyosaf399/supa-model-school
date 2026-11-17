@@ -7,6 +7,7 @@ import 'features/admissions/presentation/admission_wizard_page.dart';
 import 'features/admissions/presentation/admission_draft_list_page.dart';
 import 'features/admissions/data/admission_draft_repository.dart';
 import 'features/admissions/data/admission_document_service.dart';
+import 'features/admissions/data/admission_approval_repository.dart';
 import 'features/academics/data/academic_structure_repository.dart';
 import 'features/academics/presentation/academic_structure_page.dart';
 import 'features/auth/presentation/login_page.dart';
@@ -33,6 +34,7 @@ Future<void> main() async {
   StudentDirectoryRepository? studentRepo;
   AdmissionDraftRepository? admissionRepo;
   AdmissionDocumentService? documentService;
+  AdmissionApprovalRepository? approvalRepo;
   if (url.isNotEmpty && key.isNotEmpty) {
     await Supabase.initialize(
       url: url,
@@ -50,6 +52,7 @@ Future<void> main() async {
     studentRepo = SupabaseStudentDirectoryRepository(Supabase.instance.client);
     admissionRepo = SupabaseAdmissionDraftRepository(Supabase.instance.client);
     documentService = SupabaseAdmissionDocumentService(Supabase.instance.client);
+    approvalRepo = SupabaseAdmissionApprovalRepository(Supabase.instance.client);
   }
   runApp(SupaModelSchoolApp(
     authGateway: gateway,
@@ -58,6 +61,7 @@ Future<void> main() async {
     studentDirectoryRepository: studentRepo,
     admissionRepository: admissionRepo,
     admissionDocumentService: documentService,
+    admissionApprovalRepository: approvalRepo,
   ));
 }
 
@@ -72,6 +76,7 @@ class SupaModelSchoolApp extends StatefulWidget {
     this.studentDirectoryRepository,
     this.admissionRepository,
     this.admissionDocumentService,
+    this.admissionApprovalRepository,
   });
   final bool startInPreview;
   final OwnerAuthGateway? authGateway;
@@ -80,6 +85,7 @@ class SupaModelSchoolApp extends StatefulWidget {
   final StudentDirectoryRepository? studentDirectoryRepository;
   final AdmissionDraftRepository? admissionRepository;
   final AdmissionDocumentService? admissionDocumentService;
+  final AdmissionApprovalRepository? admissionApprovalRepository;
 
   @override
   State<SupaModelSchoolApp> createState() => _SupaModelSchoolAppState();
@@ -165,6 +171,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   studentDirectoryRepository: widget.studentDirectoryRepository,
                   admissionRepository: widget.admissionRepository,
                   admissionDocumentService: widget.admissionDocumentService,
+                  admissionApprovalRepository: widget.admissionApprovalRepository,
                   themeMode: themeMode,
                   onThemeChanged: (mode) => setState(() => themeMode = mode),
                   onExit: _exitShell,
@@ -201,6 +208,7 @@ class _SchoolShell extends StatefulWidget {
     this.studentDirectoryRepository,
     this.admissionRepository,
     this.admissionDocumentService,
+    this.admissionApprovalRepository,
     this.owner,
   });
   final OwnerAccess? owner;
@@ -209,6 +217,7 @@ class _SchoolShell extends StatefulWidget {
   final StudentDirectoryRepository? studentDirectoryRepository;
   final AdmissionDraftRepository? admissionRepository;
   final AdmissionDocumentService? admissionDocumentService;
+  final AdmissionApprovalRepository? admissionApprovalRepository;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
   final VoidCallback onExit;
@@ -268,6 +277,8 @@ class _SchoolShellState extends State<_SchoolShell> {
             widget.owner == null ? null : widget.admissionRepository,
         documentService:
             widget.owner == null ? null : widget.admissionDocumentService,
+        approvalRepository:
+            widget.owner == null ? null : widget.admissionApprovalRepository,
         selectedCampusId: activeCampusId,
         onOpenSearch: _showGlobalSearch,
         onCampusChanged: (campusId) =>
@@ -290,6 +301,8 @@ class _SchoolShellState extends State<_SchoolShell> {
         owner: owner,
         academicRepository: widget.academicRepository,
         admissionRepository: widget.admissionRepository,
+        documentService: widget.admissionDocumentService,
+        approvalRepository: widget.admissionApprovalRepository,
         selectedCampusId: record.campusId,
         initialRecord: record,
         onOpenSearch: _showGlobalSearch,
