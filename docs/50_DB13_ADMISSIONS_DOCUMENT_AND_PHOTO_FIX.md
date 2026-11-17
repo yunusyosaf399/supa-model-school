@@ -19,7 +19,7 @@ The Documents step and Review step now use actual Supabase document statuses ins
 ### 2. Submission confirmation and safe retries
 The old submission RPC returned an **incomplete response object** when retrying an already accepted operation UUID. That could leave the app showing “Submission was not confirmed” even though the operation was completed. The DB13 submission function now returns the full `approval_required` and `document_state` fields on identical-operation retries.
 
-The app displays the actual short server error for a rejected submission, rather than hiding it behind a generic retry message. An immutable operation UUID is still reused for uncertain requests, avoiding duplicate submissions.
+The wizard now **automatically saves the latest student, guardian and academic fields before forwarding**, using the returned revision. This fixes the case where the Owner saved an early incomplete draft to upload certificates, then filled the remaining details but forgot to Save Draft again. The app displays the actual short server error for a rejected submission, rather than hiding it behind a generic retry message. An immutable operation UUID is still reused for uncertain requests, avoiding duplicate submissions.
 
 ### 3. Student photo upload enabled
 The student photo panel is now a clickable upload control:
