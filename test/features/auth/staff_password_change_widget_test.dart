@@ -36,7 +36,7 @@ void main(){
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('staff-account-home')),findsOneWidget);
     expect(find.byKey(const Key('account-password-page')),findsOneWidget);
-    expect(find.text('Main Campus'),findsWidgets);
+    expect(find.text('Campus: Main Campus'),findsOneWidget);
     await tester.enterText(
       find.byKey(const Key('account-current-password')),'OldPass12345!');
     await tester.enterText(
