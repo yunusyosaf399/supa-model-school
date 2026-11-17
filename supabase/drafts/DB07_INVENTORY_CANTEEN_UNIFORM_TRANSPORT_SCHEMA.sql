@@ -381,6 +381,7 @@ CREATE TABLE public.uniform_recipes (
   REFERENCES public.uniform_products(id,school_id,campus_id) ON DELETE RESTRICT,
  CHECK (status<>'approved' OR approved_by IS NOT NULL),
  UNIQUE (uniform_product_id,version_no),
+ UNIQUE (id,school_id,campus_id),
  UNIQUE (id,school_id,campus_id,uniform_product_id)
 );
 CREATE UNIQUE INDEX one_approved_uniform_recipe_per_product
@@ -425,6 +426,7 @@ CREATE TABLE public.uniform_production_batches (
    OR (status<>'completed' AND finished_on IS NULL)),
  UNIQUE (campus_id,batch_code),
  UNIQUE (school_id,operation_id),
+ UNIQUE (id,school_id,campus_id),
  UNIQUE (id,school_id,campus_id,uniform_product_id)
 );
 
