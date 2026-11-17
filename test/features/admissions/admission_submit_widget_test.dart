@@ -26,9 +26,14 @@ class FakeAcademics implements AcademicStructureRepository {
 }
 
 class FakeDrafts implements AdmissionDraftRepository {
+  int saveCount=0;
+  AdmissionDraftSaveRequest? lastSave;
   @override
-  Future<SavedAdmissionDraft> saveDraft(AdmissionDraftSaveRequest request) =>
-    throw UnimplementedError();
+  Future<SavedAdmissionDraft> saveDraft(AdmissionDraftSaveRequest request) async {
+    saveCount++;
+    lastSave=request;
+    return const SavedAdmissionDraft(id:'application-1',revision:5);
+  }
   @override
   Future<List<AdmissionDraftRecord>> listDrafts({
     required String schoolId,required String campusId,
@@ -102,12 +107,13 @@ void main(){
    await tester.binding.setSurfaceSize(const Size(1550,950));
    addTearDown(()=>tester.binding.setSurfaceSize(null));
    final approval=FakeApproval();
+   final drafts=FakeDrafts();
    await tester.pumpWidget(MaterialApp(home:AdmissionWizardPage(
      owner:owner,
      initialStep:AdmissionStep.review,
      selectedCampusId:'campus-1',
      academicRepository:const FakeAcademics(),
-     admissionRepository:FakeDrafts(),
+     admissionRepository:drafts,
      documentService:FakeDocuments(),
      approvalRepository:approval,
      initialRecord:AdmissionDraftRecord(
@@ -133,7 +139,10 @@ void main(){
    await tester.pumpAndSettle();
    expect(approval.count,1);
    expect(approval.last?.applicationId,'application-1');
-   expect(approval.last?.expectedRevision,4);
+   expect(approval.last?.expectedRevision,5);
+   expect(drafts.saveCount,1);
+   expect(drafts.lastSave?.applicationId,'application-1');
+   expect(drafts.lastSave?.expectedRevision,4);
    expect(approval.last?.conditionalDue,isNull);
    expect(tester.widget<FilledButton>(submit).onPressed,isNull);
  });
@@ -142,11 +151,12 @@ void main(){
    await tester.binding.setSurfaceSize(const Size(1550,950));
    addTearDown(()=>tester.binding.setSurfaceSize(null));
    final approval=FakeApproval();
+   final drafts=FakeDrafts();
    await tester.pumpWidget(MaterialApp(home:AdmissionWizardPage(
      owner:owner, initialStep:AdmissionStep.review,
      selectedCampusId:'campus-1',
      academicRepository:const FakeAcademics(),
-     admissionRepository:FakeDrafts(),
+     admissionRepository:drafts,
      documentService:const FakeDocuments(status:'uploaded'),
      approvalRepository:approval,
      initialRecord:AdmissionDraftRecord(
@@ -169,6 +179,8 @@ void main(){
    await tester.tap(find.text('Forward for Approval'));
    await tester.pumpAndSettle();
    expect(approval.count,1);
+   expect(drafts.saveCount,1);
+   expect(approval.last?.expectedRevision,5);
    expect(approval.last?.conditionalDue,isNull);
    expect(approval.last?.conditionalReason,isNull);
  });
