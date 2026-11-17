@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'dart:math';
+import '../data/admission_draft_repository.dart';
 
 import '../../academics/data/academic_structure_repository.dart';
 import '../../auth/data/owner_auth_gateway.dart';
@@ -16,6 +18,7 @@ class AdmissionWizardPage extends StatefulWidget {
     super.key,
     this.owner,
     this.academicRepository,
+    this.admissionRepository,
     this.initialStep = AdmissionStep.student,
     this.selectedCampusId,
     this.onOpenSearch,
@@ -30,6 +33,7 @@ class AdmissionWizardPage extends StatefulWidget {
   /// Null means design preview; never substitute fictional academic IDs.
   final OwnerAccess? owner;
   final AcademicStructureRepository? academicRepository;
+  final AdmissionDraftRepository? admissionRepository;
   final String? selectedCampusId;
   final VoidCallback? onOpenSearch;
   final ValueChanged<String>? onCampusChanged;
@@ -49,6 +53,93 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   bool _academicLoading = false;
   String? _academicError;
   int _academicLoadVersion = 0;
+  SavedAdmissionDraft? _savedDraft;
+  AdmissionDraftSaveRequest? _pendingSave;
+  bool _savingDraft = false;
+
+  bool get _canSaveDraft =>
+      !_savingDraft && widget.owner?.setupComplete == true &&
+      widget.admissionRepository != null;
+
+  String _operationUuid() {
+    final rng = Random.secure();
+    final b = List<int>.generate(16, (_) => rng.nextInt(256));
+    b[6] = (b[6] & 15) | 64;
+    b[8] = (b[8] & 63) | 128;
+    final h = b.map((e) => e.toRadixString(16).padLeft(2, '0')).join();
+    return '${h.substring(0,8)}-${h.substring(8,12)}-'
+        '${h.substring(12,16)}-${h.substring(16,20)}-${h.substring(20)}';
+  }
+
+  Future<void> _saveDraft() async {
+    if (!_canSaveDraft) return;
+    final owner = widget.owner!;
+    if (_pendingSave == null) {
+      if (_draft.studentName.trim().length < 2 ||
+          _draft.campusId == null ||
+          _draft.academicYearId != owner.activeYearId ||
+          !owner.campuses.any((c) => c.id == _draft.campusId) ||
+          (_draft.classId != null && !_classChoices.containsKey(_draft.classId)) ||
+          (_draft.sectionId != null && !_sectionChoices.containsKey(_draft.sectionId))) {
+        setState(() => _error =
+            'Enter a student name and choose a valid campus, year and class.');
+        return;
+      }
+      final guardians = <Map<String, dynamic>>[
+        for (final guardian in _draft.guardians)
+          if (guardian.fullName.trim().isNotEmpty)
+            {
+              'full_name': guardian.fullName.trim(),
+              'relationship': guardian.relationship,
+              'phone': guardian.phone.trim(),
+              'is_primary': guardian.isPrimary,
+              'is_legal_guardian': guardian.isLegalGuardian,
+            }
+      ];
+      if (guardians.length > 8 ||
+          guardians.where((g) => g['is_primary'] == true).length > 1) {
+        setState(() => _error = 'Review guardian details before saving.');
+        return;
+      }
+      _pendingSave = AdmissionDraftSaveRequest(
+        schoolId: owner.schoolId,
+        campusId: _draft.campusId!,
+        academicYearId: _draft.academicYearId!,
+        operationId: _operationUuid(),
+        applicantName: _draft.studentName.trim(),
+        dateOfBirth: _draft.dateOfBirth,
+        previousSchool: _draft.previousSchool,
+        classId: _draft.classId,
+        sectionId: _draft.sectionId,
+        guardians: guardians,
+        applicationId: _savedDraft?.id,
+        expectedRevision: _savedDraft?.revision,
+      );
+    }
+    // Network-uncertain retries use the SAME immutable request and UUID.
+    setState(() { _savingDraft = true; _error = null; });
+    try {
+      final result = await widget.admissionRepository!.saveDraft(_pendingSave!);
+      if (!mounted) return;
+      setState(() {
+        _savedDraft = result;
+        _pendingSave = null;
+        _savingDraft = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Draft saved in Supabase (revision ${result.revision}). '
+            'Not submitted or approved.'),
+      ));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _savingDraft = false;
+        _error = 'Save not confirmed. Retry to repeat the same operation '
+            'without creating a duplicate draft.';
+      });
+    }
+  }
+
 
   bool get _academicReady =>
       widget.owner?.setupComplete == true &&
