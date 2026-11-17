@@ -33,7 +33,7 @@ select set_config('request.jwt.claim.sub',
 set local role authenticated;
 do $owner$
 declare f db13_case%rowtype;v_class uuid;v_section uuid;v_year uuid;
- v_saved jsonb;v_photo jsonb;v_submitted jsonb;v_retry jsonb;v_op uuid:=gen_random_uuid();
+ v_saved jsonb;v_photo jsonb;v_op uuid:=gen_random_uuid();
 begin
  select * into strict f from db13_case;
  select id into strict v_year from public.academic_years
@@ -54,59 +54,76 @@ begin
  update db13_case set application_id=(v_saved->>'application_id')::uuid,
   revision=(v_saved->>'revision')::bigint,operation_id=v_op,
   photo_id=(v_photo->>'id')::uuid;
- -- Simulate already uploaded certificates inside rollback only; no Storage
- -- objects are written by this test. Real files are registered by Storage API.
- update public.student_documents set document_status='uploaded',
-  storage_path='rollback-only-test-file-'||id::text,revision=revision+1
- where application_id=(v_saved->>'application_id')::uuid
-  and document_kind in ('birth_certificate','transfer_certificate');
+end $owner$;
+reset role;
+-- Simulated Storage upload status: database admin, rollback only.
+update public.student_documents set document_status='uploaded',
+ storage_path='rollback-only-file-'||id::text,revision=revision+1
+where application_id=(select application_id from db13_case)
+ and document_kind in ('birth_certificate','transfer_certificate');
+select set_config('request.jwt.claim.sub',
+ (select owner_id::text from db13_case),true);
+set local role authenticated;
+do $submit$
+declare f db13_case%rowtype;v_submitted jsonb;v_retry jsonb;
+begin
+ select * into strict f from db13_case;
  v_submitted:=public.owner_submit_admission(
-  (v_saved->>'application_id')::uuid,
-  (v_saved->>'revision')::bigint,v_op,null,null);
+  f.application_id,f.revision,f.operation_id,null,null);
  if v_submitted->>'status'<>'submitted'
    or v_submitted->>'document_state'<>'pending_verification'
    or v_submitted->>'approval_required'<>'true' then
-   raise exception 'Uploaded documents still required deadline: %',v_submitted;
+   raise exception 'Uploaded certificates should not require deadline: %',v_submitted;
  end if;
  v_retry:=public.owner_submit_admission(
-  (v_saved->>'application_id')::uuid,
-  (v_saved->>'revision')::bigint,v_op,null,null);
+  f.application_id,f.revision,f.operation_id,null,null);
  if v_retry->>'status'<>'submitted'
-   or v_retry->>'approval_required'<>'true'
-   or v_retry->>'document_state'<>'pending_verification' then
-   raise exception 'Same-operation retry was not idempotent: %',v_retry;
+    or v_retry->>'document_state'<>'pending_verification'
+    or v_retry->>'approval_required'<>'true' then
+    raise exception 'Repeated submission lost confirmation: %',v_retry;
  end if;
-end $owner$;
+end $submit$;
 reset role;
 
 select set_config('request.jwt.claim.sub',
  (select principal_id::text from db13_case limit 1),true);
 set local role authenticated;
-do $principal$
-declare f db13_case%rowtype;v_result jsonb;v_revision bigint;
+do $principal_check$
+declare f db13_case%rowtype;v_revision bigint;
 begin
  select * into strict f from db13_case;
- select revision into strict v_revision
- from public.admission_applications where id=f.application_id;
+ select revision into strict v_revision from public.admission_applications
+  where id=f.application_id;
  begin
   perform public.principal_review_admission(
-   f.application_id,v_revision,gen_random_uuid(),'approve',null);
-  raise exception 'Unverified uploaded documents were approved';
+    f.application_id,v_revision,gen_random_uuid(),'approve',null);
+  raise exception 'Principal approved unverified required certificates';
  exception when check_violation then null;end;
- update public.student_documents
- set document_status='verified',verified_by=f.principal_id,
+end $principal_check$;
+reset role;
+update public.student_documents set
+ document_status='verified',
+ verified_by=(select principal_id from db13_case),
  verified_at=now(),revision=revision+1
- where application_id=f.application_id and is_required and is_applicable;
+where application_id=(select application_id from db13_case)
+ and is_required and is_applicable;
+select set_config('request.jwt.claim.sub',
+ (select principal_id::text from db13_case),true);
+set local role authenticated;
+do $principal_approve$
+declare f db13_case%rowtype;v_revision bigint;v_result jsonb;
+begin
+ select * into strict f from db13_case;
+ select revision into strict v_revision from public.admission_applications
+  where id=f.application_id;
  v_result:=public.principal_review_admission(
-  f.application_id,v_revision,gen_random_uuid(),'approve',null);
+   f.application_id,v_revision,gen_random_uuid(),'approve',null);
  if v_result->>'status'<>'approved' or v_result->>'student_id' is null then
-  raise exception 'Principal could not approve after verification: %',v_result;
- end if;
+   raise exception 'Principal approval failed: %',v_result;end if;
  if not exists(select 1 from public.student_documents
-    where id=f.photo_id and student_id=(v_result->>'student_id')::uuid
-      and not is_required) then
-   raise exception 'Optional photo record was not linked to student';
- end if;
-end $principal$;
+  where id=f.photo_id and student_id=(v_result->>'student_id')::uuid
+  and is_required=false) then
+   raise exception 'Optional student photo metadata not linked';end if;
+end $principal_approve$;
 reset role;
 rollback;
