@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'features/auth/data/owner_auth_gateway.dart';
 import 'features/auth/data/principal_auth_gateway.dart';
+import 'features/auth/data/staff_auth_gateway.dart';
+import 'features/auth/data/account_password_gateway.dart';
+import 'features/auth/presentation/staff_account_home.dart';
 import 'features/admissions/presentation/principal_admissions_home.dart';
 import 'config/supabase_connection_config.dart';
 
@@ -40,6 +43,8 @@ Future<void> main() async {
   AdmissionApprovalRepository? approvalRepo;
   OwnerUserManagementRepository? ownerUsersRepo;
   PrincipalAuthGateway principalAuth = const UnconfiguredPrincipalAuthGateway();
+  StaffAuthGateway staffAuth = const UnconfiguredStaffAuthGateway();
+  AccountPasswordGateway? staffPasswordGateway;
   if (url.isNotEmpty && key.isNotEmpty) {
     await Supabase.initialize(
       url: url,
@@ -60,6 +65,8 @@ Future<void> main() async {
     approvalRepo = SupabaseAdmissionApprovalRepository(Supabase.instance.client);
     ownerUsersRepo = SupabaseOwnerUserManagementRepository(Supabase.instance.client);
     principalAuth = SupabasePrincipalAuthGateway(Supabase.instance.client);
+    staffAuth = SupabaseStaffAuthGateway(Supabase.instance.client);
+    staffPasswordGateway = SupabaseAccountPasswordGateway(Supabase.instance.client);
   }
   runApp(SupaModelSchoolApp(
     authGateway: gateway,
@@ -71,6 +78,8 @@ Future<void> main() async {
     admissionApprovalRepository: approvalRepo,
     ownerUserManagementRepository: ownerUsersRepo,
     principalAuthGateway: principalAuth,
+    staffAuthGateway: staffAuth,
+    accountPasswordGateway: staffPasswordGateway,
   ));
 }
 
@@ -88,6 +97,8 @@ class SupaModelSchoolApp extends StatefulWidget {
     this.admissionApprovalRepository,
     this.ownerUserManagementRepository,
     this.principalAuthGateway,
+    this.staffAuthGateway,
+    this.accountPasswordGateway,
   });
   final bool startInPreview;
   final OwnerAuthGateway? authGateway;
@@ -99,6 +110,8 @@ class SupaModelSchoolApp extends StatefulWidget {
   final AdmissionApprovalRepository? admissionApprovalRepository;
   final OwnerUserManagementRepository? ownerUserManagementRepository;
   final PrincipalAuthGateway? principalAuthGateway;
+  final StaffAuthGateway? staffAuthGateway;
+  final AccountPasswordGateway? accountPasswordGateway;
 
   @override
   State<SupaModelSchoolApp> createState() => _SupaModelSchoolAppState();
@@ -109,6 +122,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
   bool? _preview;
   OwnerAccess? _authorized;
   PrincipalAccess? _principal;
+  SchoolStaffAccess? _staff;
   bool _restoring = false;
 
   OwnerAuthGateway get _gateway =>
@@ -117,10 +131,14 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
   PrincipalAuthGateway get _principalGateway =>
       widget.principalAuthGateway ?? const UnconfiguredPrincipalAuthGateway();
 
+  StaffAuthGateway get _staffGateway =>
+      widget.staffAuthGateway ?? const UnconfiguredStaffAuthGateway();
+
   @override
   void initState() {
     super.initState();
-    if ((_gateway.configured || _principalGateway.configured) &&
+    if ((_gateway.configured || _principalGateway.configured ||
+         _staffGateway.configured) &&
         !widget.startInPreview) {
       _restoring = true;
       _restoreOwnerSession();
@@ -132,16 +150,21 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
     // without an Owner role; it must not destroy an authorized Principal.
     PrincipalAccess? principal;
     OwnerAccess? authorized;
+    SchoolStaffAccess? staff;
     try {
       principal = await _principalGateway.restore();
-      if (principal == null) authorized = await _gateway.restore();
+      if (principal == null) staff = await _staffGateway.restore();
+      if (principal == null && staff == null) {
+        authorized = await _gateway.restore();
+      }
     } catch (_) {
-      // Fail closed to login when no authorized school session exists.
+      // Fail closed when no active verified membership exists.
     }
     if (!mounted) return;
     setState(() {
       _authorized = authorized;
       _principal = principal;
+      _staff = staff;
       _restoring = false;
     });
   }
@@ -149,22 +172,28 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
   Future<void> _signIn(String email, String password) async {
     OwnerAccess? authorized;
     PrincipalAccess? principal;
+    SchoolStaffAccess? staff;
     try {
       authorized = await _gateway.signIn(email, password);
     } catch (error) {
-      // A verified Principal is not an Owner. Try the Principal RPC only
-      // when the Owner role is specifically absent, not after bad credentials
-      // or network/authorization failures of another kind.
-      if (!_principalGateway.configured ||
-          !error.toString().contains('No unique authorized Owner membership')) {
+      // Retry only after confirmed authentication with no Owner role,
+      // never after bad credentials or a failed network request.
+      if (!error.toString().contains('No unique authorized Owner membership')) {
         rethrow;
       }
-      principal = await _principalGateway.signIn(email, password);
+      try {
+        if (!_principalGateway.configured) throw StateError('No Principal gateway');
+        principal = await _principalGateway.signIn(email, password);
+      } catch (_) {
+        if (!_staffGateway.configured) rethrow;
+        staff = await _staffGateway.signIn(email, password);
+      }
     }
     if (!mounted) return;
     setState(() {
       _authorized = authorized;
       _principal = principal;
+      _staff = staff;
       _preview = false;
     });
   }
@@ -180,6 +209,8 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
   Future<void> _exitShell() async {
     if (_principal != null) {
       await _principalGateway.signOut();
+    } else if (_staff != null) {
+      await _staffGateway.signOut();
     } else if (_authorized != null) {
       await _gateway.signOut();
     }
@@ -187,6 +218,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
     setState(() {
       _authorized = null;
       _principal = null;
+      _staff = null;
       _preview = false;
     });
   }
@@ -207,6 +239,14 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   key: ValueKey('principal-${_principal!.userId}'),
                   principal: _principal!,
                   repository: widget.admissionApprovalRepository!,
+                  onSignOut: _exitShell,
+                  passwordGateway: widget.accountPasswordGateway,
+                )
+              : _staff != null && widget.accountPasswordGateway != null
+              ? StaffAccountHome(
+                  key: ValueKey('staff-${_staff!.userId}'),
+                  staff: _staff!,
+                  passwordGateway: widget.accountPasswordGateway!,
                   onSignOut: _exitShell,
                 )
               : (_authorized != null || preview)
