@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import '../data/admission_draft_repository.dart';
 import '../data/admission_document_service.dart';
+import '../data/admission_approval_repository.dart';
 
 import '../../academics/data/academic_structure_repository.dart';
 import '../../auth/data/owner_auth_gateway.dart';
@@ -21,6 +22,7 @@ class AdmissionWizardPage extends StatefulWidget {
     this.academicRepository,
     this.admissionRepository,
     this.documentService,
+    this.approvalRepository,
     this.initialRecord,
     this.initialStep = AdmissionStep.student,
     this.selectedCampusId,
@@ -38,6 +40,7 @@ class AdmissionWizardPage extends StatefulWidget {
   final AcademicStructureRepository? academicRepository;
   final AdmissionDraftRepository? admissionRepository;
   final AdmissionDocumentService? documentService;
+  final AdmissionApprovalRepository? approvalRepository;
   final AdmissionDraftRecord? initialRecord;
   final String? selectedCampusId;
   final VoidCallback? onOpenSearch;
@@ -66,6 +69,94 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   String? _uploadingDocumentId;
   List<AdmissionDocumentRecord> _serverDocuments = const [];
   int _documentRequest = 0;
+  bool _submitting = false;
+  bool _submitted = false;
+  AdmissionSubmitRequest? _pendingSubmission;
+
+  bool get _canSubmit =>
+    !_submitted && !_submitting && !_savingDraft &&
+    _uploadingDocumentId == null && !_documentLoading &&
+    widget.owner?.setupComplete == true &&
+    widget.approvalRepository != null && _savedDraft != null &&
+    _serverDocuments.isNotEmpty && _documentError == null;
+
+  Future<void> _submitForApproval() async {
+    if (!_canSubmit) return;
+    if (_pendingSubmission == null) {
+      for (final required in <AdmissionStep>[
+        AdmissionStep.student, AdmissionStep.guardians, AdmissionStep.academic
+      ]) {
+        final issue = _draft.validateStep(required);
+        if (issue != null) {
+          setState(() => _error = issue);
+          return;
+        }
+      }
+      if (_draft.academicYearId != widget.owner!.activeYearId ||
+          !_campusChoices.containsKey(_draft.campusId) ||
+          !_classChoices.containsKey(_draft.classId)) {
+        setState(() => _error = 'Choose an authorized campus, year and class.');
+        return;
+      }
+      final missing = _serverDocuments.any((document) =>
+        document.required && document.applicable &&
+        document.status != 'verified');
+      if (missing) {
+        final issue = _draft.validateStep(AdmissionStep.documents);
+        if (issue != null) {
+          setState(() => _error = issue);
+          return;
+        }
+      }
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Forward to Principal?'),
+          content: Text(missing
+            ? 'Some required documents are missing or unverified. '
+              'Forward with the selected deadline and reason? '
+              'No student record is created until Principal approval.'
+            : 'Forward this application to the Principal? '
+              'No student record is created until approval.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext,false),
+              child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext,true),
+              child: const Text('Forward for Approval')),
+          ],
+        ),
+      );
+      if (!mounted || confirmed != true) return;
+      _pendingSubmission = AdmissionSubmitRequest(
+        applicationId: _savedDraft!.id,
+        expectedRevision: _savedDraft!.revision,
+        operationId: SupabaseAdmissionApprovalRepository.operationUuid(),
+        conditionalDue: missing ? _draft.missingDocumentsDueOn : null,
+        conditionalReason: missing ? _draft.conditionalReason.trim() : null,
+      );
+    }
+    setState(() { _submitting = true; _error = null; });
+    try {
+      final result = await widget.approvalRepository!.submit(_pendingSubmission!);
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _submitted = true;
+        _pendingSubmission = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Application ${result.applicationId} submitted. '
+          'The Principal must approve before a student is enrolled.'),
+      ));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = 'Submission was not confirmed. Retry to repeat the '
+          'same operation without making a duplicate application.';
+      });
+    }
+  }
 
   Future<void> _loadDocuments() async {
     final id = _savedDraft?.id;
@@ -125,7 +216,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   }
 
   bool get _canSaveDraft =>
-      !_savingDraft && widget.owner?.setupComplete == true &&
+      !_submitting && !_submitted && !_savingDraft && widget.owner?.setupComplete == true &&
       widget.admissionRepository != null;
 
   String _operationUuid() {
@@ -176,6 +267,23 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         applicantName: _draft.studentName.trim(),
         dateOfBirth: _draft.dateOfBirth,
         previousSchool: _draft.previousSchool,
+        extraDetails: {
+          'gender': _draft.gender,
+          'nationality': _draft.nationality.trim(),
+          'religion': _draft.religion.trim(),
+          'primary_language': _draft.primaryLanguage.trim(),
+          'notes': _draft.notes.trim(),
+          'birth_certificate_number': _draft.birthCertificateNumber.trim(),
+          'identity_number': _draft.identityNumber.trim(),
+          'address': _draft.address.trim(),
+          'city': _draft.city.trim(),
+          'emergency_contact': _draft.emergencyContact.trim(),
+          'admission_fee_status': _draft.admissionFeeStatus,
+          'uses_transport': _draft.usesTransport,
+          'transport_notes': _draft.transportNotes.trim(),
+          'requests_discount': _draft.requestsDiscount,
+          'discount_notes': _draft.discountNotes.trim(),
+        },
         classId: _draft.classId,
         sectionId: _draft.sectionId,
         guardians: guardians,
@@ -261,6 +369,24 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
       _draft.studentName = existing.name;
       _draft.dateOfBirth = existing.dateOfBirth;
       _draft.previousSchool = existing.previousSchool;
+      final details = existing.extraDetails;
+      _draft.gender = details['gender'] as String? ?? 'unspecified';
+      _draft.nationality = details['nationality'] as String? ?? '';
+      _draft.religion = details['religion'] as String? ?? '';
+      _draft.primaryLanguage = details['primary_language'] as String? ?? '';
+      _draft.notes = details['notes'] as String? ?? '';
+      _draft.birthCertificateNumber =
+          details['birth_certificate_number'] as String? ?? '';
+      _draft.identityNumber = details['identity_number'] as String? ?? '';
+      _draft.address = details['address'] as String? ?? '';
+      _draft.city = details['city'] as String? ?? '';
+      _draft.emergencyContact = details['emergency_contact'] as String? ?? '';
+      _draft.admissionFeeStatus =
+          details['admission_fee_status'] as String? ?? 'not_recorded';
+      _draft.usesTransport = details['uses_transport'] == true;
+      _draft.transportNotes = details['transport_notes'] as String? ?? '';
+      _draft.requestsDiscount = details['requests_discount'] == true;
+      _draft.discountNotes = details['discount_notes'] as String? ?? '';
       _draft.campusId = existing.campusId;
       _draft.academicYearId = existing.academicYearId;
       _draft.classId = existing.classId;
@@ -799,7 +925,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(flex: 7, child: Column(children: [
             _mainStepPanel(),
-            if (_step == AdmissionStep.student) ...[
+            if (_step == AdmissionStep.student.index) ...[
               SizedBox(height: 12),
               _contactPanel(),
             ],
@@ -809,7 +935,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         ])
       else ...[
         _mainStepPanel(),
-        if (_step == AdmissionStep.student) ...[
+        if (_step == AdmissionStep.student.index) ...[
           SizedBox(height: 13),
           _contactPanel(),
         ],
@@ -858,9 +984,10 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         label: Text(_savingDraft ? 'Saving...' : 'Save Draft')),
       SizedBox(width: 10),
       FilledButton.icon(
-        onPressed: null,
+        key: const Key('admission-submit-for-approval'),
+        onPressed: _canSubmit ? _submitForApproval : null,
         icon: Icon(Icons.send_outlined),
-        label: Text('Submit for Approval')),
+        label: Text(_submitted ? 'Submitted' : _submitting ? 'Submitting...' : 'Submit for Approval')),
       SizedBox(width: 10),
       OutlinedButton.icon(
         onPressed: _confirmExit,
@@ -1045,7 +1172,8 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         SizedBox(height: 8),
         Text(_savedDraft == null
           ? 'No confirmed draft saved. Uploads and verification are pending.'
-          : 'Saved draft ${_savedDraft!.id}; revision ${_savedDraft!.revision}. Not submitted.',
+          : _submitted ? 'Application submitted to Principal; waiting for approval.'
+            : 'Saved draft ${_savedDraft!.id}; revision ${_savedDraft!.revision}. Not submitted.',
           style: TextStyle(fontSize: 12)),
       ])),
   ]);
@@ -1061,12 +1189,12 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         icon: Icon(Icons.save_outlined),
         label: Text(_savingDraft ? 'Saving...' : 'Save Draft'))),
       SizedBox(width: 11),
-      Expanded(child: _step == AdmissionStep.review
+      Expanded(child: _step == AdmissionStep.review.index
         ? FilledButton.icon(
             key: Key('wizard-submit-disabled'),
-            onPressed: null,
-            icon: Icon(Icons.lock_outline),
-            label: Text('Submit unavailable'))
+            onPressed: _canSubmit ? _submitForApproval : null,
+            icon: Icon(Icons.send_outlined),
+            label: Text(_submitted ? 'Submitted' : _submitting ? 'Submitting...' : 'Submit for Approval'))
         : FilledButton.icon(
             key: Key('wizard-next'),
             onPressed: _next,
@@ -1872,8 +2000,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           SizedBox(width: 12),
           Expanded(child: Text(
             _savedDraft == null
-            ? 'Save Draft stores the core applicant, guardian, and academic fields in Supabase. Optional notes, fee preferences, and document deadlines are not saved yet. Submission and Principal approval remain disabled.'
-            : 'Confirmed draft saved in Supabase. This is NOT a submitted or approved admission. Additional notes, fee preferences, and documents are not saved yet.',
+            ? 'Save a complete draft first. Submission requires validated student, guardian and academic data plus certificate status.'
+            : _submitted ? 'Submitted to Principal. No student is enrolled before the assigned Principal approves.'
+              : 'Draft saved. Forward to Principal with verified certificates or a conditional deadline and reason. All current form fields are saved in this draft; fee/discount/transport choices are preferences, not financial postings.',
             style: TextStyle(fontSize: 12))),
         ]),
       ),
@@ -1930,9 +2059,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           label: Text('Next Step'))
       : FilledButton.icon(
           key: Key('wizard-submit-disabled'),
-          onPressed: null,
-          icon: Icon(Icons.lock_outline),
-          label: Text('Submit unavailable')),
+          onPressed: _canSubmit ? _submitForApproval : null,
+          icon: Icon(Icons.send_outlined),
+          label: Text(_submitted ? 'Submitted' : _submitting ? 'Submitting...' : 'Submit for Approval')),
     ),
   ]);
 

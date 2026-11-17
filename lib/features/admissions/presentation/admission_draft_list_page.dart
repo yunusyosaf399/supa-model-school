@@ -25,6 +25,8 @@ class _AdmissionDraftListPageState extends State<AdmissionDraftListPage> {
   String? _error;
   bool _loading = false;
   int _generation = 0;
+  String _statusFilter = 'all';
+  String _search = '';
   String get _campusId =>
       widget.owner.campuses.any((c) => c.id == widget.selectedCampusId)
         ? widget.selectedCampusId!
@@ -70,7 +72,7 @@ class _AdmissionDraftListPageState extends State<AdmissionDraftListPage> {
       if (!mounted || request != _generation) return;
       setState(() {
         _loading = false;
-        _error = 'Unable to load authorized admission drafts. Check connection and permissions.';
+        _error = 'Unable to load authorized admissions. Check connection and permissions.';
       });
     }
   }
@@ -79,6 +81,13 @@ class _AdmissionDraftListPageState extends State<AdmissionDraftListPage> {
   Widget build(BuildContext context) {
     final campus = widget.owner.campuses
         .firstWhere((c) => c.id == _campusId);
+    final visible = _records.where((entry) {
+      final matchesFilter = _statusFilter == 'all' || entry.status == _statusFilter;
+      final matchesSearch = _search.isEmpty ||
+          entry.name.toLowerCase().contains(_search) ||
+          entry.id.toLowerCase().contains(_search);
+      return matchesFilter && matchesSearch;
+    }).toList(growable: false);
     return ListView(
       key: const Key('live-admission-worklist'),
       padding: const EdgeInsets.all(20),
@@ -87,7 +96,7 @@ class _AdmissionDraftListPageState extends State<AdmissionDraftListPage> {
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Admissions', style: Theme.of(context).textTheme.headlineSmall),
-              Text('${campus.name} • Saved applications', style:
+              Text('${campus.name} • Live admission register', style:
                   Theme.of(context).textTheme.bodyMedium),
             ])),
           IconButton(onPressed: _loading ? null : _reload,
@@ -101,9 +110,43 @@ class _AdmissionDraftListPageState extends State<AdmissionDraftListPage> {
         const SizedBox(height: 12),
         const Card(child: Padding(
           padding: EdgeInsets.all(12),
-          child: Text('Live drafts only. Missing certificates are not verified. '
-            'Submitting to Principal and final admission are not enabled yet.'),
+          child: Text('Draft → certificate upload → Principal review → '
+            'approved student enrollment. Conditional admissions retain '
+            'outstanding-document deadlines.'),
         )),
+        const SizedBox(height: 12),
+        TextField(
+          key: const Key('admissions-search'),
+          decoration: const InputDecoration(
+            labelText: 'Search admissions',
+            hintText: 'Student name or application ID',
+            prefixIcon: Icon(Icons.search),
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+          onChanged: (value) => setState(() => _search = value.toLowerCase().trim()),
+        ),
+        const SizedBox(height: 10),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(children: [
+            for (final filter in const <(String, String)>[
+              ('all','All'), ('draft','Drafts'),
+              ('submitted','Pending Principal'),
+              ('returned','Returned'), ('approved','Approved'),
+              ('rejected','Rejected'),
+            ]) ...[
+              ChoiceChip(
+                key: Key('admissions-filter-${filter.$1}'),
+                selected: _statusFilter == filter.$1,
+                label: Text(filter.$2),
+                onSelected: (_) => setState(() => _statusFilter = filter.$1),
+              ),
+              const SizedBox(width: 7),
+            ],
+          ]),
+        ),
+        const SizedBox(height: 8),
         if (_loading) const LinearProgressIndicator(
             key: Key('admission-worklist-loading')),
         if (_error != null) Card(child: ListTile(
@@ -114,23 +157,45 @@ class _AdmissionDraftListPageState extends State<AdmissionDraftListPage> {
         )),
         if (!_loading && _error == null) ...[
           Padding(padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text('${_records.length} saved applications',
+            child: Text('${visible.length} of ${_records.length} admissions',
               key: const Key('admission-worklist-count'),
               style: Theme.of(context).textTheme.titleMedium)),
-          if (_records.isEmpty)
-            const Card(child: ListTile(title: Text('No saved drafts for this campus')))
+          if (visible.isEmpty)
+            const Card(child: ListTile(title: Text('No applications match this view')))
           else
-            for (final entry in _records)
+            for (final entry in visible)
               Card.outlined(child: ListTile(
                 title: Text(entry.name),
-                subtitle: Text('${entry.status.toUpperCase()} • Revision ${entry.revision} • '
-                  '${entry.documents.where((d) => d['required'] == true &&
-                     d['applicable'] == true &&
-                     d['status'] != 'verified').length} outstanding documents'),
-                trailing: TextButton(
-                  key: Key('resume-admission-${entry.id}'),
-                  onPressed: () => widget.onOpenDraft(entry),
-                  child: const Text('Resume')),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${entry.status.toUpperCase()} • Revision ${entry.revision} • '
+                      '${entry.documents.where((d) => d['required'] == true &&
+                         d['applicable'] == true &&
+                         d['status'] != 'verified').length} outstanding documents'),
+                    if (entry.status == 'submitted')
+                      const Text('Awaiting assigned Principal decision'),
+                    if (entry.status == 'approved')
+                      const Text('Approved — enrolled student record created'),
+                    if (entry.conditionalDue != null)
+                      Text('Certificate deadline: ${entry.conditionalDue}'),
+                    if (entry.returnedReason != null)
+                      Text('Returned: ${entry.returnedReason}'),
+                  ],
+                ),
+                trailing: entry.canResume
+                  ? TextButton(
+                      key: Key('resume-admission-${entry.id}'),
+                      onPressed: () => widget.onOpenDraft(entry),
+                      child: const Text('Resume'))
+                  : Icon(
+                      entry.status == 'approved'
+                        ? Icons.verified_outlined
+                        : entry.status == 'submitted'
+                          ? Icons.hourglass_top
+                          : Icons.block,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
               )),
         ],
       ],

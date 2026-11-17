@@ -20,6 +20,8 @@ dependencies:
   supabase_flutter: 2.18.3
   # Native Windows/Android document chooser; exact version pinned.
   file_picker: 11.0.3
+  # Open expiring private certificate preview links for authorized Principals.
+  url_launcher: 6.3.2
 
 dev_dependencies:
   flutter_test:

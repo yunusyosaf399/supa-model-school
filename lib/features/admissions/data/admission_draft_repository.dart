@@ -14,6 +14,7 @@ class AdmissionDraftSaveRequest {
     this.expectedRevision,
     this.dateOfBirth,
     this.previousSchool = '',
+    this.extraDetails = const {},
     this.classId,
     this.sectionId,
   });
@@ -27,6 +28,7 @@ class AdmissionDraftSaveRequest {
   final int? expectedRevision;
   final DateTime? dateOfBirth;
   final String previousSchool;
+  final Map<String,dynamic> extraDetails;
   final String? classId;
   final String? sectionId;
   final List<Map<String, dynamic>> guardians;
@@ -44,12 +46,19 @@ class AdmissionDraftRecord {
     required this.campusId, required this.academicYearId,
     required this.status, required this.guardians, required this.documents,
     this.dateOfBirth, this.previousSchool = '', this.classId, this.sectionId,
+    this.approvalState, this.documentsState, this.studentId,
+    this.conditionalDue, this.conditionalReason, this.returnedReason,
+    this.extraDetails = const {},
   });
   final String id, name, campusId, academicYearId, status;
   final int revision;
   final DateTime? dateOfBirth;
   final String previousSchool;
   final String? classId, sectionId;
+  final String? approvalState, documentsState, studentId;
+  final String? conditionalDue, conditionalReason, returnedReason;
+  bool get canResume => status == 'draft' || status == 'returned';
+  final Map<String,dynamic> extraDetails;
   final List<Map<String, dynamic>> guardians, documents;
 
   factory AdmissionDraftRecord.fromJson(Map<String, dynamic> value) {
@@ -60,7 +69,7 @@ class AdmissionDraftRecord {
         Map<String, dynamic>.from(item as Map)));
     }
     final status = value['status'] as String?;
-    if (status != 'draft' && status != 'returned') {
+    if (!const {'draft','submitted','approved','returned','rejected'}.contains(status)) {
       throw StateError('Unexpected admission state');
     }
     return AdmissionDraftRecord(
@@ -74,6 +83,15 @@ class AdmissionDraftRecord {
       previousSchool: value['previous_school'] as String? ?? '',
       classId: value['class_id'] as String?,
       sectionId: value['section_id'] as String?,
+      studentId: value['student_id'] as String?,
+      approvalState: value['approval_state'] as String?,
+      documentsState: value['documents_state'] as String?,
+      conditionalDue: value['conditional_due'] as String?,
+      conditionalReason: value['conditional_reason'] as String?,
+      returnedReason: value['returned_reason'] as String?,
+      extraDetails: value['extra_details'] is Map
+        ? Map<String,dynamic>.from(value['extra_details'] as Map)
+        : const {},
       guardians: array('guardians'),
       documents: array('documents'),
     );
@@ -147,7 +165,7 @@ class SupabaseAdmissionDraftRepository implements AdmissionDraftRepository {
         (await client.auth.getUser()).user == null) {
       throw StateError('Sign in before saving an admission draft');
     }
-    final response = await client.rpc('owner_save_admission_draft', params: {
+    final response = await client.rpc('owner_save_admission_draft_v2', params: {
       'p_school_id': request.schoolId,
       'p_campus_id': request.campusId,
       'p_academic_year_id': request.academicYearId,
@@ -160,6 +178,7 @@ class SupabaseAdmissionDraftRepository implements AdmissionDraftRepository {
       'p_class_id': request.classId,
       'p_section_id': request.sectionId,
       'p_guardians': request.guardians,
+      'p_details': request.extraDetails,
     });
     if (response is! Map ||
         response['status'] != 'draft' ||
