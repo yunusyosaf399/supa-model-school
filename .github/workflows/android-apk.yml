@@ -60,6 +60,14 @@ jobs:
             --dart-define="SUPABASE_URL=$SUPABASE_URL" \
             --dart-define="SUPABASE_PUBLISHABLE_KEY=$SUPABASE_PUBLISHABLE_KEY"
 
+      - name: Verify release APK internet permission
+        run: |
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          AAPT=$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name aapt | sort -V | tail -n 1)
+          test -x "$AAPT"
+          "$AAPT" dump permissions "$APK" | tee /tmp/release-apk-permissions.txt
+          grep -q "android.permission.INTERNET" /tmp/release-apk-permissions.txt
+
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
