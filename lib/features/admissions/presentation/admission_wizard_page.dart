@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:math';
+import 'dart:typed_data';
 import '../data/admission_draft_repository.dart';
 import '../data/admission_document_service.dart';
 import '../data/admission_approval_repository.dart';
@@ -69,6 +70,7 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
   String? _documentError;
   String? _uploadingDocumentId;
   List<AdmissionDocumentRecord> _serverDocuments = const [];
+  Uint8List? _photoBytes;
   int _documentRequest = 0;
   bool _submitting = false;
   bool _submitted = false;
@@ -198,9 +200,19 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
     setState(() { _documentLoading = true; _documentError = null; });
     try {
       final records = await service.listDocuments(id);
+      Uint8List? photo;
+      if (records.any((d) => d.kind == 'photo' &&
+          (d.status == 'uploaded' || d.status == 'verified'))) {
+        try {
+          photo = await service.loadPhotoPreview(id);
+        } catch (_) {
+          photo = service.photoPreviewBytes(id);
+        }
+      }
       if (!mounted || request != _documentRequest) return;
       setState(() {
         _serverDocuments = records;
+        _photoBytes = photo;
         _documentLoading = false;
       });
     } catch (_) {
@@ -272,7 +284,8 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
         document:photo);
       if(!mounted)return;
       if(uploaded) {
-        ScaffoldMessenger.of(context).showSnackBar(
+         setState(() => _photoBytes = service.photoPreviewBytes(application));
+         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content:Text('Student photo uploaded privately.')));
       }
       await _loadDocuments();
@@ -1405,9 +1418,9 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
           borderRadius:BorderRadius.circular(12),
           color:_pale,
           border:Border.all(color:const Color(0xFFABDCD0))),
-        child:Column(
-          mainAxisAlignment:MainAxisAlignment.center,
-          children:[
+        child: _photoBytes == null ? Column(
+           mainAxisAlignment: MainAxisAlignment.center,
+           children: [
             Icon(_photoDocument?.status=='uploaded' ||
                  _photoDocument?.status=='verified'
               ? Icons.check_circle_outline
@@ -1426,11 +1439,22 @@ class _AdmissionWizardPageState extends State<AdmissionWizardPage> {
                 : 'JPG / PNG / WebP\nmax 2 MiB',
               textAlign:TextAlign.center,
               style:TextStyle(fontSize:10,color:_muted)),
-          ],
-        ),
-      ),
-    ),
-  );
+           ],
+         ) : ClipRRect(
+           borderRadius: BorderRadius.circular(8),
+           child: Stack(fit: StackFit.expand, children: [
+             Image.memory(_photoBytes!, fit: BoxFit.cover,
+               gaplessPlayback: true, key: const Key('admission-photo-preview')),
+             Align(alignment: Alignment.bottomCenter,
+               child: ColoredBox(color: const Color(0xAA000000),
+                 child: Padding(padding: const EdgeInsets.all(5),
+                   child: Text('Tap to change photo', textAlign: TextAlign.center,
+                     style: const TextStyle(color: Colors.white, fontSize: 10))))),
+           ]),
+         ),
+       ),
+     ),
+   );
 
   Widget _studentFields() => LayoutBuilder(builder: (context, constraints) {
     final wide = constraints.maxWidth >= 660;
