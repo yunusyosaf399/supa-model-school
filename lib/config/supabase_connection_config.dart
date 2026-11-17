@@ -18,10 +18,6 @@ abstract final class SupabaseConnectionConfig {
       : '',
   );
 
-  static const usingLocalDebugDefaults = kDebugMode &&
-    !bool.hasEnvironment('SUPABASE_URL') &&
-    !bool.hasEnvironment('SUPABASE_PUBLISHABLE_KEY');
-
   static bool get isConfigured =>
     projectUrl.trim().isNotEmpty && publishableKey.trim().isNotEmpty;
 
