@@ -430,7 +430,12 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _accountButton({bool desktop = false}) => PopupMenuButton<String>(
     tooltip: 'Account',
     onSelected: (value) {
-      if (value == 'exit') widget.onExit?.call();
+      if (value != 'exit') return;
+      // Allow PopupMenuRoute to finish dismissing before unmounting the
+      // dashboard after logout; otherwise Flutter may access a dead context.
+      Future<void>.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) widget.onExit?.call();
+      });
     },
     itemBuilder: (context) => [
       PopupMenuItem<String>(
