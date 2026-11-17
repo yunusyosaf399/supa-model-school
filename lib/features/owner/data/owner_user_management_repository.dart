@@ -27,18 +27,19 @@ class OwnerStaffAccount {
   }
 }
 
-class OwnerUserInvitation {
-  const OwnerUserInvitation({
+class OwnerUserCreation {
+  const OwnerUserCreation({
     required this.schoolId,required this.campusId,
     required this.role,required this.email,required this.name,
+    required this.password,
   });
-  final String schoolId,campusId,role,email,name;
+  final String schoolId,campusId,role,email,name,password;
 }
 
 abstract class OwnerUserManagementRepository {
   const OwnerUserManagementRepository();
   Future<List<OwnerStaffAccount>> listUsers(String schoolId);
-  Future<void> inviteUser(OwnerUserInvitation invitation);
+  Future<void> createUser(OwnerUserCreation invitation);
   Future<void> setRoleActive(String roleId,bool active);
 }
 
@@ -68,24 +69,28 @@ class SupabaseOwnerUserManagementRepository
   }
 
   @override
-  Future<void> inviteUser(OwnerUserInvitation invitation) async {
+  Future<void> createUser(OwnerUserCreation invitation) async {
     await _requireUser();
     final email=invitation.email.trim().toLowerCase();
     final name=invitation.name.trim();
     if(name.length<2 || name.length>120 ||
-       email.length>254 || !email.contains('@')) {
-      throw const FormatException('Enter a valid name and email');
+       email.length>254 || !email.contains('@') ||
+       invitation.password.length < 12 || invitation.password.length > 128 ||
+       !RegExp(r'[A-Za-z]').hasMatch(invitation.password) ||
+       !RegExp(r'[0-9]').hasMatch(invitation.password)) {
+      throw const FormatException('Enter a valid name, email and strong password');
     }
-    final result=await client.functions.invoke('owner-invite-user',body:{
+    final result=await client.functions.invoke('owner-create-user',body:{
       'school_id':invitation.schoolId,
       'campus_id':invitation.campusId,
       'role':invitation.role,
       'email':email,
       'name':name,
+      'password':invitation.password,
     });
     final body=result.data;
-    if(result.status!=201 || body is! Map || body['status']!='invited') {
-      throw StateError('Invitation or role assignment was not confirmed');
+    if(result.status!=201 || body is! Map || body['status']!='created') {
+      throw StateError('Staff account creation was not confirmed');
     }
   }
 

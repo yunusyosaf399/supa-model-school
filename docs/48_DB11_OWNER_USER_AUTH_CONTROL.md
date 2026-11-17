@@ -1,3 +1,5 @@
+**Superseded by DB12 (17 November 2026).** The email invitation flow described below is disabled. The Owner now sets an initial password directly; see [DB12 Owner Direct Credentials](49_DB12_OWNER_DIRECT_CREDENTIALS.md).
+
 # DB11 — Owner User Control Panel (Supabase Auth)
 
 The live school Owner can now manage school users from **Owner Settings → Manage Users & Roles** without changing the left navigation. Invitations are **email-based**: the Owner never sees or sets staff passwords.

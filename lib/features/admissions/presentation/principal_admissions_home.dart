@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../auth/data/principal_auth_gateway.dart';
 import '../data/admission_approval_repository.dart';
 import 'principal_approval_page.dart';
+import '../../auth/data/account_password_gateway.dart';
+import '../../auth/presentation/account_password_page.dart';
 
 /// Separate Principal workspace. Owner navigation is never reused.
 /// Every list and mutation is rechecked by Supabase against the current JWT.
@@ -9,10 +11,12 @@ class PrincipalAdmissionsHome extends StatefulWidget {
   const PrincipalAdmissionsHome({
     super.key,required this.principal,required this.repository,
     required this.onSignOut,
+    this.passwordGateway,
   });
   final PrincipalAccess principal;
   final AdmissionApprovalRepository repository;
   final Future<void> Function() onSignOut;
+  final AccountPasswordGateway? passwordGateway;
 
   @override
   State<PrincipalAdmissionsHome> createState()=>_PrincipalAdmissionsHomeState();
@@ -20,6 +24,7 @@ class PrincipalAdmissionsHome extends StatefulWidget {
 
 class _PrincipalAdmissionsHomeState extends State<PrincipalAdmissionsHome> {
   late String _campusId;
+  bool _showPassword=false;
 
   @override
   void initState(){
@@ -40,6 +45,14 @@ class _PrincipalAdmissionsHomeState extends State<PrincipalAdmissionsHome> {
             style:Theme.of(context).textTheme.bodySmall),
         ]),
         actions:[
+          if(widget.passwordGateway!=null)
+            IconButton(
+              key:const Key('principal-account-password'),
+              tooltip:_showPassword?'Back to Admissions':'Change Password',
+              icon:Icon(_showPassword
+                ? Icons.fact_check_outlined:Icons.manage_accounts_outlined),
+              onPressed:()=>setState(()=>_showPassword=!_showPassword),
+            ),
           if(campuses.length>1)
             DropdownButton<String>(
               key:const Key('principal-campus-selector'),
@@ -82,12 +95,17 @@ class _PrincipalAdmissionsHomeState extends State<PrincipalAdmissionsHome> {
           ),
         ],
       ),
-      body:PrincipalApprovalPage(
-        key:ValueKey('principal-queue-$_campusId'),
-        schoolId:widget.principal.schoolId,
-        campusId:_campusId,
-        repository:widget.repository,
-      ),
+      body:_showPassword && widget.passwordGateway!=null
+        ? AccountPasswordPage(
+            gateway:widget.passwordGateway!,
+            onPasswordChanged:widget.onSignOut,
+          )
+        : PrincipalApprovalPage(
+            key:ValueKey('principal-queue-$_campusId'),
+            schoolId:widget.principal.schoolId,
+            campusId:_campusId,
+            repository:widget.repository,
+          ),
     );
   }
 }
