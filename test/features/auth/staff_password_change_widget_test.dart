@@ -65,6 +65,7 @@ void main(){
       find.byKey(const Key('account-new-password')),'BrandNewPass12345!');
     await tester.enterText(
       find.byKey(const Key('account-confirm-password')),'DifferentPass123!');
+    await tester.ensureVisible(find.byKey(const Key('account-change-password')));
     await tester.tap(find.byKey(const Key('account-change-password')));
     await tester.pumpAndSettle();
     expect(passwords.count,0);
