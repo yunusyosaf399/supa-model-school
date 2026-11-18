@@ -132,7 +132,9 @@ class _FeeMonthlyPageState extends State<FeeMonthlyPage> {
     }
     final request = ++_request;
     final month = _month, campusId = _campusId;
-    setState(() { _busy = true; _error = null; _ledger = null; });
+    // Keep the last confirmed ledger visible during refresh; only a scope
+    // change is allowed to clear it. Avoid temporarily hiding payment actions.
+    setState(() { _busy = true; _error = null; });
     try {
       final data = await widget.repository.load(
         schoolId: widget.owner.schoolId, campusId: campusId,
@@ -156,6 +158,7 @@ class _FeeMonthlyPageState extends State<FeeMonthlyPage> {
       _pendingGenerationOp = null;
       _pendingGenerationScope = null;
       _notice = null;
+      _ledger = null;
     });
     _load();
   }
@@ -631,18 +634,18 @@ class _FeeMonthlyPageState extends State<FeeMonthlyPage> {
           Wrap(spacing: 6, runSpacing: 4, children: [
             OutlinedButton(
               key: Key('fee-statement-' + student.id),
-              onPressed: () => _statement(student),
+              onPressed: _busy ? null : () => _statement(student),
               child: const Text('Statement')),
             if (student.outstandingMinor > 0)
               FilledButton.icon(
                 key: Key('fee-collect-' + student.id),
-                onPressed: () => _collect(student),
+                onPressed: _busy ? null : () => _collect(student),
                 icon: const Icon(Icons.payments_outlined, size: 18),
                 label: const Text('Collect Fee')),
             if (student.active)
               TextButton(
                 key: Key('fee-scholarship-' + student.id),
-                onPressed: () => _grantDiscount(student),
+                onPressed: _busy ? null : () => _grantDiscount(student),
                 child: const Text('Scholarship')),
           ]),
         ]),
