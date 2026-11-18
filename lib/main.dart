@@ -29,6 +29,9 @@ import 'features/fees/data/fee_setup_repository.dart';
 import 'features/fees/presentation/fee_setup_page.dart';
 import 'features/fees/data/fee_monthly_repository.dart';
 import 'features/fees/presentation/fee_finance_page.dart';
+import 'features/operations/data/owner_operations_repository.dart';
+import 'features/operations/presentation/owner_staff_directory_page.dart';
+import 'features/operations/presentation/owner_transport_directory_page.dart';
 import 'ui/school_brand.dart';
 import 'ui/school_theme.dart';
 
@@ -47,6 +50,7 @@ Future<void> main() async {
   StudentDirectoryRepository? studentRepo;
   FeeSetupRepository? feeSetupRepo;
   FeeMonthlyRepository? feeMonthlyRepo;
+  OwnerOperationsRepository? operationsRepo;
   StudentDirectoryRepository? staffStudentRepo;
   AdmissionDraftRepository? admissionRepo;
   AdmissionDocumentService? documentService;
@@ -75,6 +79,7 @@ Future<void> main() async {
     studentRepo = SupabaseStudentDirectoryRepository(Supabase.instance.client);
     feeSetupRepo = SupabaseFeeSetupRepository(Supabase.instance.client);
     feeMonthlyRepo = SupabaseFeeMonthlyRepository(Supabase.instance.client);
+    operationsRepo = SupabaseOwnerOperationsRepository(Supabase.instance.client);
     staffStudentRepo = SupabaseStaffStudentDirectoryRepository(Supabase.instance.client);
     admissionRepo = SupabaseAdmissionDraftRepository(Supabase.instance.client);
     documentService = SupabaseAdmissionDocumentService(Supabase.instance.client);
@@ -94,6 +99,7 @@ Future<void> main() async {
     studentDirectoryRepository: studentRepo,
     feeSetupRepository: feeSetupRepo,
     feeMonthlyRepository: feeMonthlyRepo,
+    operationsRepository: operationsRepo,
     staffStudentDirectoryRepository: staffStudentRepo,
     admissionRepository: admissionRepo,
     admissionDocumentService: documentService,
@@ -119,6 +125,7 @@ class SupaModelSchoolApp extends StatefulWidget {
     this.studentDirectoryRepository,
     this.feeSetupRepository,
     this.feeMonthlyRepository,
+    this.operationsRepository,
     this.staffStudentDirectoryRepository,
     this.admissionRepository,
     this.admissionDocumentService,
@@ -138,6 +145,7 @@ class SupaModelSchoolApp extends StatefulWidget {
   final StudentDirectoryRepository? studentDirectoryRepository;
   final FeeSetupRepository? feeSetupRepository;
   final FeeMonthlyRepository? feeMonthlyRepository;
+  final OwnerOperationsRepository? operationsRepository;
   final StudentDirectoryRepository? staffStudentDirectoryRepository;
   final AdmissionDraftRepository? admissionRepository;
   final AdmissionDocumentService? admissionDocumentService;
@@ -302,6 +310,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   studentDirectoryRepository: widget.studentDirectoryRepository,
                   feeSetupRepository: widget.feeSetupRepository,
                   feeMonthlyRepository: widget.feeMonthlyRepository,
+                  operationsRepository: widget.operationsRepository,
                   admissionRepository: widget.admissionRepository,
                   admissionDocumentService: widget.admissionDocumentService,
                   admissionApprovalRepository: widget.admissionApprovalRepository,
@@ -343,6 +352,7 @@ class _SchoolShell extends StatefulWidget {
     this.studentDirectoryRepository,
     this.feeSetupRepository,
     this.feeMonthlyRepository,
+    this.operationsRepository,
     this.admissionRepository,
     this.admissionDocumentService,
     this.admissionApprovalRepository,
@@ -356,6 +366,7 @@ class _SchoolShell extends StatefulWidget {
   final StudentDirectoryRepository? studentDirectoryRepository;
   final FeeSetupRepository? feeSetupRepository;
   final FeeMonthlyRepository? feeMonthlyRepository;
+  final OwnerOperationsRepository? operationsRepository;
   final AdmissionDraftRepository? admissionRepository;
   final AdmissionDocumentService? admissionDocumentService;
   final AdmissionApprovalRepository? admissionApprovalRepository;
@@ -393,7 +404,7 @@ class _SchoolShellState extends State<_SchoolShell> {
   static const modules = <String>[
     'Dashboard', 'Students', 'Admissions', 'Fees', 'Attendance',
     'Employees', 'Payroll', 'Expenses', 'Reports', 'Sync Center', 'Settings',
-    'Academic Setup',
+    'Academic Setup', 'Transport',
   ];
 
   static const icons = <IconData>[
@@ -409,6 +420,7 @@ class _SchoolShellState extends State<_SchoolShell> {
     Icons.sync,
     Icons.settings_outlined,
     Icons.school_outlined,
+    Icons.directions_bus_outlined,
   ];
 
   Future<void> _newAdmission() async {
@@ -566,6 +578,24 @@ class _SchoolShellState extends State<_SchoolShell> {
         owner: widget.owner!,
         setupRepository: widget.feeSetupRepository!,
         monthlyRepository: widget.feeMonthlyRepository!,
+        selectedCampusId: activeCampusId,
+      );
+    }
+    if (selected == 5 && widget.owner != null &&
+        widget.operationsRepository != null) {
+      return OwnerStaffDirectoryPage(
+        key: ValueKey('owner-staff-$activeCampusId'),
+        owner: widget.owner!,
+        repository: widget.operationsRepository!,
+        selectedCampusId: activeCampusId,
+      );
+    }
+    if (selected == 12 && widget.owner != null &&
+        widget.operationsRepository != null) {
+      return OwnerTransportDirectoryPage(
+        key: ValueKey('owner-transport-$activeCampusId'),
+        owner: widget.owner!,
+        repository: widget.operationsRepository!,
         selectedCampusId: activeCampusId,
       );
     }
