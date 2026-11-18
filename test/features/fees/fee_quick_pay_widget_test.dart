@@ -25,7 +25,7 @@ const student = FeePaymentStudent(
   ],
 );
 
-FeePaymentWorkspace workspace({bool collect = true}) => FeePaymentWorkspace(
+FeePaymentWorkspace fixtureWorkspace({bool collect = true}) => FeePaymentWorkspace(
   schoolId: 'school-1', campusId: 'campus-1',
   yearId: 'year-1', yearLabel: '2026-2027',
   currency: 'PKR', canCollect: collect,
@@ -64,7 +64,7 @@ class FakeFeePaymentRepo implements FeePaymentRepository {
   }
 
   FeePaymentWorkspace workspaceFixture() =>
-    workspace(collect: collectAllowed);
+    fixtureWorkspace(collect: collectAllowed);
 
   @override
   Future<QuickPayReceipt> collect({
