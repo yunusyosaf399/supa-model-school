@@ -39,6 +39,7 @@ Future<void> main() async {
   AcademicStructureRepository academicRepo =
       const UnconfiguredAcademicStructureRepository();
   DashboardRepository dashboardRepo = const UnconfiguredDashboardRepository();
+  DashboardRepository? principalDashboardRepo;
   StudentDirectoryRepository? studentRepo;
   StudentDirectoryRepository? staffStudentRepo;
   AdmissionDraftRepository? admissionRepo;
@@ -64,6 +65,7 @@ Future<void> main() async {
     gateway = SupabaseOwnerAuthGateway(Supabase.instance.client);
     academicRepo = SupabaseAcademicStructureRepository(Supabase.instance.client);
     dashboardRepo = SupabaseDashboardRepository(Supabase.instance.client);
+    principalDashboardRepo = SupabasePrincipalDashboardRepository(Supabase.instance.client);
     studentRepo = SupabaseStudentDirectoryRepository(Supabase.instance.client);
     staffStudentRepo = SupabaseStaffStudentDirectoryRepository(Supabase.instance.client);
     admissionRepo = SupabaseAdmissionDraftRepository(Supabase.instance.client);
@@ -80,6 +82,7 @@ Future<void> main() async {
     authGateway: gateway,
     academicRepository: academicRepo,
     dashboardRepository: dashboardRepo,
+    principalDashboardRepository: principalDashboardRepo,
     studentDirectoryRepository: studentRepo,
     staffStudentDirectoryRepository: staffStudentRepo,
     admissionRepository: admissionRepo,
@@ -102,6 +105,7 @@ class SupaModelSchoolApp extends StatefulWidget {
     this.authGateway,
     this.academicRepository,
     this.dashboardRepository,
+    this.principalDashboardRepository,
     this.studentDirectoryRepository,
     this.staffStudentDirectoryRepository,
     this.admissionRepository,
@@ -118,6 +122,7 @@ class SupaModelSchoolApp extends StatefulWidget {
   final OwnerAuthGateway? authGateway;
   final AcademicStructureRepository? academicRepository;
   final DashboardRepository? dashboardRepository;
+  final DashboardRepository? principalDashboardRepository;
   final StudentDirectoryRepository? studentDirectoryRepository;
   final StudentDirectoryRepository? staffStudentDirectoryRepository;
   final AdmissionDraftRepository? admissionRepository;
@@ -256,6 +261,8 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   key: ValueKey('principal-${_principal!.userId}'),
                   principal: _principal!,
                   repository: widget.admissionApprovalRepository!,
+                  dashboardRepository: widget.principalDashboardRepository,
+                  logoService: widget.schoolLogoService,
                   permissionGateway: widget.staffPermissionGateway,
                   studentRepository: widget.staffStudentDirectoryRepository,
                   onSignOut: _exitShell,
