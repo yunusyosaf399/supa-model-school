@@ -12,6 +12,7 @@ import '../../exams/data/exam_repository.dart';
 import '../../fees/data/fee_payment_repository.dart';
 import '../../fees/data/fee_billing_repository.dart';
 import '../../fees/data/fee_cashbook_repository.dart';
+import '../../fees/data/expense_repository.dart';
 import '../../auth/data/account_password_gateway.dart';
 import '../../auth/presentation/account_password_page.dart';
 
@@ -29,6 +30,7 @@ class PrincipalAdmissionsHome extends StatefulWidget {
     this.feePaymentRepository,
     this.feeBillingRepository,
     this.feeCashbookRepository,
+    this.expenseRepository,
     this.logoService,
   });
   final PrincipalAccess principal;
@@ -42,6 +44,7 @@ class PrincipalAdmissionsHome extends StatefulWidget {
   final FeePaymentRepository? feePaymentRepository;
   final FeeBillingRepository? feeBillingRepository;
   final FeeCashbookRepository? feeCashbookRepository;
+  final ExpenseRepository? expenseRepository;
   final SchoolLogoService? logoService;
 
   @override
@@ -171,6 +174,7 @@ class _PrincipalAdmissionsHomeState extends State<PrincipalAdmissionsHome> {
         feePaymentRepository: widget.feePaymentRepository,
         feeBillingRepository: widget.feeBillingRepository,
         feeCashbookRepository: widget.feeCashbookRepository,
+        expenseRepository: widget.expenseRepository,
         logoService: widget.logoService,
         passwordGateway: widget.passwordGateway,
         onSignOut: widget.onSignOut,

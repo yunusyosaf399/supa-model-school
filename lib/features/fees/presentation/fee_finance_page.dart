@@ -8,6 +8,8 @@ import '../data/fee_payment_repository.dart';
 import '../data/fee_billing_repository.dart';
 import '../data/fee_cashbook_repository.dart';
 import '../data/school_cashflow_repository.dart';
+import '../data/expense_repository.dart';
+import 'expense_management_page.dart';
 import 'school_cashflow_page.dart';
 import 'fee_cashbook_page.dart';
 import 'fee_collection_page.dart';
@@ -21,6 +23,7 @@ class FeeFinancePage extends StatelessWidget {
     required this.setupRepository, required this.monthlyRepository,
     this.selectedCampusId, this.paymentRepository, this.billingRepository,
     this.cashbookRepository, this.schoolCashflowRepository,
+    this.expenseRepository,
   });
 
   final OwnerAccess owner;
@@ -30,14 +33,16 @@ class FeeFinancePage extends StatelessWidget {
   final FeeBillingRepository? billingRepository;
   final FeeCashbookRepository? cashbookRepository;
   final SchoolCashflowRepository? schoolCashflowRepository;
+  final ExpenseRepository? expenseRepository;
   final String? selectedCampusId;
 
   @override
   Widget build(BuildContext context) => DefaultTabController(
-    length: paymentRepository == null ? 2 :
+    length: (paymentRepository == null ? 2 :
       (cashbookRepository != null && owner.activeYearId != null &&
         owner.campuses.isNotEmpty
-          ? (schoolCashflowRepository != null ? 5 : 4) : 3),
+          ? (schoolCashflowRepository != null ? 5 : 4) : 3)) +
+        (expenseRepository != null && owner.campuses.isNotEmpty ? 1 : 0),
     child: Column(children: [
       Material(
         color: Theme.of(context).colorScheme.surface,
@@ -60,6 +65,9 @@ class FeeFinancePage extends StatelessWidget {
                 owner.activeYearId != null && owner.campuses.isNotEmpty)
               const Tab(icon: Icon(Icons.account_balance_outlined),
                 text: 'School Cash Movement'),
+            if (expenseRepository != null && owner.campuses.isNotEmpty)
+              const Tab(icon: Icon(Icons.request_quote_outlined),
+                text: 'Expenses & Approvals'),
           ],
         ),
       ),
@@ -105,6 +113,13 @@ class FeeFinancePage extends StatelessWidget {
             yearId: owner.activeYearId!,
             initialCampusId: owner.campuses.any((c)=>c.id==selectedCampusId)
               ? selectedCampusId : owner.campuses.first.id,
+          ),
+        if (expenseRepository != null && owner.campuses.isNotEmpty)
+          ExpenseManagementPage(
+            repository: expenseRepository!,
+            schoolId: owner.schoolId,
+            campusId: owner.campuses.any((c)=>c.id==selectedCampusId)
+              ? selectedCampusId! : owner.campuses.first.id,
           ),
       ])),
     ]),
