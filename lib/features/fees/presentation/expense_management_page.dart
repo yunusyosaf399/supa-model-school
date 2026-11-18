@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../data/expense_repository.dart';
+import '../data/expense_evidence_repository.dart';
 import '../data/fee_monthly_repository.dart';
 import '../data/fee_setup_repository.dart';
 import 'expense_pay_page.dart';
+import 'expense_evidence_page.dart';
 
 class ExpenseManagementPage extends StatefulWidget {
   const ExpenseManagementPage({super.key,required this.repository,
-    required this.schoolId,required this.campusId});
+    required this.schoolId,required this.campusId,this.evidenceRepository});
   final ExpenseRepository repository;
+  final ExpenseEvidenceRepository? evidenceRepository;
   final String schoolId,campusId;
   @override State<ExpenseManagementPage> createState()=>_ExpenseManagementPageState();
 }
@@ -219,6 +222,17 @@ class _ExpenseManagementPageState extends State<ExpenseManagementPage>{
       await load();
     }
   }
+  Future<void> viewEvidence(ExpenseWorkspace w,ExpenseRequest r)async{
+    final service=widget.evidenceRepository ??
+      (widget.repository is SupabaseExpenseRepository
+        ? SupabaseExpenseEvidenceRepository(
+            (widget.repository as SupabaseExpenseRepository).client)
+        : null);
+    if(service==null)return;
+    await Navigator.push<void>(context,MaterialPageRoute(
+      builder:(_)=>ExpenseEvidencePage(
+        repository:service,workspace:w,request:r)));
+  }
   String money(int amount,String currency)=>currency+' '+FeeMoney.showMinor(amount);
 
   @override Widget build(BuildContext context){
@@ -392,6 +406,13 @@ class _ExpenseManagementPageState extends State<ExpenseManagementPage>{
                       title:Text('Payment '+money(p.amountMinor,w.currency)),
                       subtitle:Text(p.paidOn+
                         (p.reference==null?'':' • '+p.reference!))),
+                  if(widget.evidenceRepository!=null||
+                    widget.repository is SupabaseExpenseRepository)
+                    OutlinedButton.icon(
+                      key:Key('expense-evidence-${r.id}'),
+                      onPressed:writing?null:()=>viewEvidence(w,r),
+                      icon:const Icon(Icons.attach_file),
+                      label:const Text('Receipts & Invoices')),
                   if(r.status=='pending'&&w.isOwner)Wrap(spacing:8,children:[
                     FilledButton(key:Key('expense-approve-'+r.id),
                       onPressed:writing?null:()=>review(r,'approved'),

@@ -53,6 +53,8 @@ jobs:
         run: flutter test test/features/fees/school_cashflow_widget_test.dart
       - name: Owner expense setup request approval and partial payment regression
         run: flutter test test/features/fees/expense_management_widget_test.dart
+      - name: Private expense invoice receipt and Owner evidence verification regression
+        run: flutter test test/features/fees/expense_evidence_widget_test.dart
       - name: Staff and transport Owner read-only integration regression
         run: flutter test test/features/operations/owner_staff_transport_widget_test.dart
       - name: Owner teacher setup and live attendance regression
