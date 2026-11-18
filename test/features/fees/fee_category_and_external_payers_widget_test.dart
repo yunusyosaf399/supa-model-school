@@ -33,6 +33,8 @@ OtherPeopleLedger exampleExternal({bool collect=true})=>OtherPeopleLedger(
       contact:'000123',charges:[otherCharge],receipts:[]),
   ]);
 class FakeBilling implements FeeBillingRepository{
+  FakeBilling({this.allowCollect=true});
+  final bool allowCollect;
   int generated=0,charged=0,collected=0,created=0;
   int? lastOverride;
   String? lastScope,lastTarget,lastCategory;
@@ -51,7 +53,7 @@ class FakeBilling implements FeeBillingRepository{
   }
   @override
   Future<OtherPeopleLedger> otherPeople({required String schoolId,
-    required String campusId,required String yearId})async=>exampleExternal();
+    required String campusId,required String yearId})async=>exampleExternal(collect:allowCollect);
   @override
   Future<String> createPerson({required String schoolId,
     required String campusId,required String name,String? contact,
@@ -102,7 +104,8 @@ void main(){
     await tester.enterText(
       find.byKey(const Key('fee-generate-custom-value')),'300.00');
     await tester.scrollUntilVisible(
-      find.byKey(const Key('fee-generate-process')),170);
+      find.byKey(const Key('fee-generate-process')),170,
+      scrollable:find.byType(Scrollable).first);
     await tester.tap(find.byKey(const Key('fee-generate-process')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('fee-generate-confirm')));
@@ -154,7 +157,8 @@ void main(){
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('fee-other-alloc-charge-1')),findsOneWidget);
     await tester.scrollUntilVisible(
-      find.byKey(const Key('fee-other-pay-process')),180);
+      find.byKey(const Key('fee-other-pay-process')),180,
+      scrollable:find.byType(Scrollable).first);
     await tester.tap(find.byKey(const Key('fee-other-pay-process')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('fee-other-confirm-collect')));
@@ -171,11 +175,15 @@ void main(){
     addTearDown(()=>tester.binding.setSurfaceSize(null));
     // The RPC controls canCollect. Read-only staff may inspect ledger
     // but must not see payment actions.
-    final repo=FakeBilling();
+    final repo=FakeBilling(allowCollect:false);
     await tester.pumpWidget(MaterialApp(home:FeeOtherPeoplePage(
       repository:repo,schoolId:'school',campusId:'campus',
       yearId:'2026-year')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('fee-other-payers-page')),findsOneWidget);
+    expect(find.text('SAMPLE Visitor'),findsOneWidget);
+    expect(find.byKey(const Key('fee-other-add-person')),findsNothing);
+    expect(find.byKey(const Key('fee-other-collect-person-1')),findsNothing);
+    expect(tester.takeException(),isNull);
   });
 }
