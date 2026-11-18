@@ -31,6 +31,7 @@ import 'features/fees/data/fee_monthly_repository.dart';
 import 'features/fees/data/fee_payment_repository.dart';
 import 'features/fees/data/fee_billing_repository.dart';
 import 'features/fees/data/fee_cashbook_repository.dart';
+import 'features/fees/data/school_cashflow_repository.dart';
 import 'features/exams/data/exam_repository.dart';
 import 'features/exams/presentation/exam_management_page.dart';
 import 'features/fees/presentation/fee_finance_page.dart';
@@ -60,6 +61,7 @@ Future<void> main() async {
   FeePaymentRepository? feePaymentRepo;
   FeeBillingRepository? feeBillingRepo;
   FeeCashbookRepository? feeCashbookRepo;
+  SchoolCashflowRepository? schoolCashflowRepo;
   OwnerOperationsRepository? operationsRepo;
   ExamRepository? examRepo;
   AttendanceRepository? attendanceRepo;
@@ -94,6 +96,7 @@ Future<void> main() async {
     feePaymentRepo = SupabaseFeePaymentRepository(Supabase.instance.client);
     feeBillingRepo = SupabaseFeeBillingRepository(Supabase.instance.client);
     feeCashbookRepo = SupabaseFeeCashbookRepository(Supabase.instance.client);
+    schoolCashflowRepo = SupabaseSchoolCashflowRepository(Supabase.instance.client);
     operationsRepo = SupabaseOwnerOperationsRepository(Supabase.instance.client);
     examRepo = SupabaseExamRepository(Supabase.instance.client);
     attendanceRepo = SupabaseAttendanceRepository(Supabase.instance.client);
@@ -119,6 +122,7 @@ Future<void> main() async {
     feePaymentRepository: feePaymentRepo,
     feeBillingRepository: feeBillingRepo,
     feeCashbookRepository: feeCashbookRepo,
+    schoolCashflowRepository: schoolCashflowRepo,
     operationsRepository: operationsRepo,
     examRepository: examRepo,
     attendanceRepository: attendanceRepo,
@@ -150,6 +154,7 @@ class SupaModelSchoolApp extends StatefulWidget {
     this.feePaymentRepository,
     this.feeBillingRepository,
     this.feeCashbookRepository,
+    this.schoolCashflowRepository,
     this.operationsRepository,
     this.examRepository,
     this.attendanceRepository,
@@ -175,6 +180,7 @@ class SupaModelSchoolApp extends StatefulWidget {
   final FeePaymentRepository? feePaymentRepository;
   final FeeBillingRepository? feeBillingRepository;
   final FeeCashbookRepository? feeCashbookRepository;
+  final SchoolCashflowRepository? schoolCashflowRepository;
   final OwnerOperationsRepository? operationsRepository;
   final ExamRepository? examRepository;
   final AttendanceRepository? attendanceRepository;
@@ -354,6 +360,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   feePaymentRepository: widget.feePaymentRepository,
                   feeBillingRepository: widget.feeBillingRepository,
                   feeCashbookRepository: widget.feeCashbookRepository,
+                  schoolCashflowRepository: widget.schoolCashflowRepository,
                   operationsRepository: widget.operationsRepository,
                   examRepository: widget.examRepository,
                   attendanceRepository: widget.attendanceRepository,
@@ -401,6 +408,7 @@ class _SchoolShell extends StatefulWidget {
     this.feePaymentRepository,
     this.feeBillingRepository,
     this.feeCashbookRepository,
+    this.schoolCashflowRepository,
     this.operationsRepository,
     this.examRepository,
     this.attendanceRepository,
@@ -420,6 +428,7 @@ class _SchoolShell extends StatefulWidget {
   final FeePaymentRepository? feePaymentRepository;
   final FeeBillingRepository? feeBillingRepository;
   final FeeCashbookRepository? feeCashbookRepository;
+  final SchoolCashflowRepository? schoolCashflowRepository;
   final OwnerOperationsRepository? operationsRepository;
   final ExamRepository? examRepository;
   final AttendanceRepository? attendanceRepository;
@@ -638,6 +647,7 @@ class _SchoolShellState extends State<_SchoolShell> {
         paymentRepository: widget.feePaymentRepository,
         billingRepository: widget.feeBillingRepository,
         cashbookRepository: widget.feeCashbookRepository,
+        schoolCashflowRepository: widget.schoolCashflowRepository,
         selectedCampusId: activeCampusId,
       );
     }
