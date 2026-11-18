@@ -12,6 +12,9 @@ Private development repository for the Supa Model School Windows and Android Flu
 
 ## Start here
 - `docs/01_SRS.md` — requirements and scope.
+- `docs/51_HANDWRITTEN_FEATURE_EXPANSION_20261118.md` — 57 new/expanded requirements from the three notebook images, mapped to current modules and delivery gates.
+- `planning/HANDWRITTEN_FEATURE_MATRIX_20261118.csv` — traceable per-item implementation status and next action.
+- `supabase/seed/20261118_handwritten_financial_categories.sql` — optional category templates only; not deployed, does not post money.
 - `docs/02_ARCHITECTURE.md` — client/server and deployment boundaries.
 - `docs/03_DATA_MODEL.md` — domain entities and integrity constraints.
 - `docs/04_SYNC_PROTOCOL.md` — offline sync, conflicts, idempotency.
