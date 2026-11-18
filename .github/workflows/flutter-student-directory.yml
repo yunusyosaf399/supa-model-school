@@ -63,3 +63,5 @@ jobs:
         run: flutter test test/features/owner/owner_user_management_widget_test.dart test/features/owner/staff_permissions_dialog_widget_test.dart
       - name: Verified staff account login and password change widgets
         run: flutter test test/features/auth/staff_login_widget_test.dart test/features/auth/staff_password_change_widget_test.dart
+      - name: Exam creation, tests, secure marks and publication widget regression
+        run: flutter test test/features/exams/exam_management_widget_test.dart
