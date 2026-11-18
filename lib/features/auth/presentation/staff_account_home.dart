@@ -12,6 +12,8 @@ import '../../attendance/presentation/teacher_attendance_page.dart';
 import '../../fees/data/fee_payment_repository.dart';
 import '../../fees/data/fee_billing_repository.dart';
 import '../../fees/data/fee_cashbook_repository.dart';
+import '../../fees/data/expense_repository.dart';
+import '../../fees/presentation/expense_management_page.dart';
 import '../../fees/presentation/fee_collection_page.dart';
 
 /// Safe account workspace for authenticated roles whose operational screens
@@ -27,6 +29,7 @@ class StaffAccountHome extends StatelessWidget {
     this.feePaymentRepository,
     this.feeBillingRepository,
     this.feeCashbookRepository,
+    this.expenseRepository,
   });
   final SchoolStaffAccess staff;
   final Future<void> Function() onSignOut;
@@ -38,6 +41,7 @@ class StaffAccountHome extends StatelessWidget {
   final FeePaymentRepository? feePaymentRepository;
   final FeeBillingRepository? feeBillingRepository;
   final FeeCashbookRepository? feeCashbookRepository;
+  final ExpenseRepository? expenseRepository;
 
   @override
   Widget build(BuildContext context)=>Scaffold(
@@ -130,6 +134,24 @@ class StaffAccountHome extends StatelessWidget {
                           ))),
                         icon: const Icon(Icons.payments_outlined),
                         label: const Text('Fee Collection & Quick Pay'),
+                      ),
+                    if (expenseRepository != null &&
+                        (snapshot.data!.contains('expenses.create') ||
+                         snapshot.data!.contains('expenses.read') ||
+                         snapshot.data!.contains('expenses.pay')))
+                      TextButton.icon(
+                        key: const Key('staff-open-expenses'),
+                        onPressed: () => Navigator.push(context,
+                          MaterialPageRoute<void>(builder: (_) => Scaffold(
+                            appBar: AppBar(title: const Text('Expense Management')),
+                            body: ExpenseManagementPage(
+                              repository: expenseRepository!,
+                              schoolId: staff.schoolId,
+                              campusId: staff.campusId,
+                            ),
+                          ))),
+                        icon: const Icon(Icons.request_quote_outlined),
+                        label: const Text('Expenses & Approval Requests'),
                       ),
                     if (staff.role == 'teacher' &&
                         snapshot.data!.contains('attendance.read') &&
