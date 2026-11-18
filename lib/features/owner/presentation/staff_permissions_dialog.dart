@@ -13,7 +13,11 @@ Future<void> showStaffPermissionsDialog(
   if (access == null) return;
   List<StaffPermission> permissions;
   try {
-    permissions = await access.permissions(staff.roleId);
+    // RPC projections are immutable. Keep a mutable dialog-local copy so
+    // confirmed writes can update the switch without changing the source.
+    permissions = List<StaffPermission>.of(
+      await access.permissions(staff.roleId),
+    );
   } catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -69,24 +73,27 @@ Future<void> showStaffPermissionsDialog(
                         try {
                           await access.setPermission(
                             staff.roleId, p.code, allowed);
-                          if (!dialogContext.mounted) return;
-                          updateDialog(() {
-                            permissions[index] = StaffPermission(
-                              code: p.code, section: p.section, title: p.title,
-                              action: p.action, implemented: p.implemented,
-                              allowed: allowed,
-                            );
-                          });
-                        } catch (_) {
+                        } catch (error) {
                           if (dialogContext.mounted) {
-                            updateDialog(() => errorText =
-                              'Could not save this permission. Retry.');
+                            updateDialog(() {
+                              errorText = 'Could not save this permission: '
+                                '${error is StateError ? error.message : error}';
+                              saving = false;
+                            });
                           }
-                        } finally {
-                          if (dialogContext.mounted) {
-                            updateDialog(() => saving = false);
-                          }
+                          return;
                         }
+                        // The database confirmed the change. UI state updates
+                        // must not be mistaken for backend save failures.
+                        if (!dialogContext.mounted) return;
+                        updateDialog(() {
+                          permissions[index] = StaffPermission(
+                            code: p.code, section: p.section, title: p.title,
+                            action: p.action, implemented: p.implemented,
+                            allowed: allowed,
+                          );
+                          saving = false;
+                        });
                       },
                     ),
                   ],
