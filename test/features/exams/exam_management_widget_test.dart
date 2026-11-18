@@ -68,6 +68,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Examinations & Tests'), findsOneWidget);
     expect(find.byKey(const Key('exam-add-subject')), findsOneWidget);
+    // The creation form pushes the exam list below the test viewport.
+    await tester.scrollUntilVisible(
+      find.text('First Term Mathematics'), 280,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('First Term Mathematics'), findsOneWidget);
   });
 
