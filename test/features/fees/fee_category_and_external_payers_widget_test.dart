@@ -103,9 +103,16 @@ void main(){
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('fee-generate-custom-value')),'300.00');
+    await tester.testTextInput.hide();
+    await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.byKey(const Key('fee-generate-process')),170,
       scrollable:find.byType(Scrollable).first);
+    await tester.drag(find.byType(Scrollable).first,
+      const Offset(0,-180));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('fee-generate-process')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('fee-generate-process')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('fee-generate-confirm')));
