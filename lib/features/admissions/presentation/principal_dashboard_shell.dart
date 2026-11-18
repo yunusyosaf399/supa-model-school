@@ -59,8 +59,11 @@ class _PrincipalDashboardShellState extends State<PrincipalDashboardShell> {
     }
   }
 
-  void _reload() => setState(() =>
-      _permissions = widget.permissionGateway.allowedActions());
+  void _reload() {
+    setState(() {
+      _permissions = widget.permissionGateway.allowedActions();
+    });
+  }
 
   void _changeCampus(String campusId) {
     if (!widget.principal.campuses.any((c) => c.id == campusId)) return;
