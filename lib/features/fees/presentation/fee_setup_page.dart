@@ -92,6 +92,7 @@ class _FeeSetupPageState extends State<FeeSetupPage> {
               decoration: const InputDecoration(labelText: 'Billing Frequency'),
               items: const [
                 DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
+                DropdownMenuItem(value: 'yearly', child: Text('Yearly')),
                 DropdownMenuItem(value: 'one_time', child: Text('One Time')),
                 DropdownMenuItem(value: 'manual', child: Text('Manual')),
               ],
