@@ -30,6 +30,8 @@ class FeeFinancePage extends StatelessWidget {
         color: Theme.of(context).colorScheme.surface,
         child: TabBar(
           key: const Key('fee-finance-tabs'),
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           tabs: [
             const Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Monthly Billing'),
             const Tab(icon: Icon(Icons.tune_outlined), text: 'Fee Setup'),
