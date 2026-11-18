@@ -7,6 +7,8 @@ import '../../auth/data/account_password_gateway.dart';
 import '../../exams/data/exam_repository.dart';
 import '../../exams/presentation/exam_management_page.dart';
 import '../../auth/presentation/account_password_page.dart';
+import '../../attendance/data/attendance_repository.dart';
+import '../../attendance/presentation/teacher_attendance_page.dart';
 
 /// Safe account workspace for authenticated roles whose operational screens
 /// are not implemented yet. Never shows Owner or Principal data.
@@ -16,6 +18,7 @@ class StaffAccountHome extends StatelessWidget {
     required this.passwordGateway,
     this.permissionGateway,
     this.studentRepository,
+    this.attendanceRepository,
     this.examRepository,
   });
   final SchoolStaffAccess staff;
@@ -23,6 +26,7 @@ class StaffAccountHome extends StatelessWidget {
   final AccountPasswordGateway passwordGateway;
   final StaffPermissionGateway? permissionGateway;
   final StudentDirectoryRepository? studentRepository;
+  final AttendanceRepository? attendanceRepository;
   final ExamRepository? examRepository;
 
   @override
@@ -51,9 +55,9 @@ class StaffAccountHome extends StatelessWidget {
             Text('Assigned role: ${staff.role.replaceAll('_',' ')}'),
             Text('Campus: ${staff.campusName}'),
             const SizedBox(height:8),
-            const Text('Your account is active. Dedicated operational '
-              'screens for this role are being developed. You can change '
-              'the password assigned by the school Owner below.'),
+            const Text('Your account is active. The school Owner controls '
+              'your permissions and assigned modules. You can change '
+              'your Owner-issued password below.'),
           ]),
         )),
         ),
@@ -98,6 +102,23 @@ class StaffAccountHome extends StatelessWidget {
                         icon: const Icon(Icons.groups_outlined),
                         label: const Text('View Students'),
                       ),
+                    if (staff.role == 'teacher' &&
+                        snapshot.data!.contains('attendance.read') &&
+                        attendanceRepository != null)
+                      TextButton.icon(
+                        key: const Key('teacher-open-attendance'),
+                        onPressed: () => Navigator.push(context,
+                          MaterialPageRoute<void>(builder: (_) =>
+                            TeacherAttendancePage(
+                              repository: attendanceRepository!,
+                            ))),
+                        icon: const Icon(Icons.fact_check_outlined),
+                        label: const Text('Take Attendance'),
+                      ),
+                    if (staff.role == 'teacher' &&
+                        !snapshot.data!.contains('attendance.read'))
+                      const Text('Attendance permission has not been granted '
+                        'by the Owner.'),
                     if (snapshot.data!.contains('exams.read') &&
                         examRepository != null)
                       TextButton.icon(
@@ -116,8 +137,8 @@ class StaffAccountHome extends StatelessWidget {
                         icon: const Icon(Icons.fact_check_outlined),
                         label: const Text('Manage Exams & Tests'),
                       ),
-                    const Text('Sections still in development do not yet '
-                      'provide operational screens.'),
+                    const Text('Other operational sections may still '
+                      'be under development.'),
                   ],
                 );
               },

@@ -34,6 +34,8 @@ import 'features/fees/presentation/fee_finance_page.dart';
 import 'features/operations/data/owner_operations_repository.dart';
 import 'features/operations/presentation/owner_staff_directory_page.dart';
 import 'features/operations/presentation/owner_transport_directory_page.dart';
+import 'features/attendance/data/attendance_repository.dart';
+import 'features/attendance/presentation/owner_attendance_setup_page.dart';
 import 'ui/school_brand.dart';
 import 'ui/school_theme.dart';
 
@@ -54,6 +56,7 @@ Future<void> main() async {
   FeeMonthlyRepository? feeMonthlyRepo;
   OwnerOperationsRepository? operationsRepo;
   ExamRepository? examRepo;
+  AttendanceRepository? attendanceRepo;
   StudentDirectoryRepository? staffStudentRepo;
   AdmissionDraftRepository? admissionRepo;
   AdmissionDocumentService? documentService;
@@ -84,6 +87,7 @@ Future<void> main() async {
     feeMonthlyRepo = SupabaseFeeMonthlyRepository(Supabase.instance.client);
     operationsRepo = SupabaseOwnerOperationsRepository(Supabase.instance.client);
     examRepo = SupabaseExamRepository(Supabase.instance.client);
+    attendanceRepo = SupabaseAttendanceRepository(Supabase.instance.client);
     staffStudentRepo = SupabaseStaffStudentDirectoryRepository(Supabase.instance.client);
     admissionRepo = SupabaseAdmissionDraftRepository(Supabase.instance.client);
     documentService = SupabaseAdmissionDocumentService(Supabase.instance.client);
@@ -105,6 +109,7 @@ Future<void> main() async {
     feeMonthlyRepository: feeMonthlyRepo,
     operationsRepository: operationsRepo,
     examRepository: examRepo,
+    attendanceRepository: attendanceRepo,
     staffStudentDirectoryRepository: staffStudentRepo,
     admissionRepository: admissionRepo,
     admissionDocumentService: documentService,
@@ -132,6 +137,7 @@ class SupaModelSchoolApp extends StatefulWidget {
     this.feeMonthlyRepository,
     this.operationsRepository,
     this.examRepository,
+    this.attendanceRepository,
     this.staffStudentDirectoryRepository,
     this.admissionRepository,
     this.admissionDocumentService,
@@ -153,6 +159,7 @@ class SupaModelSchoolApp extends StatefulWidget {
   final FeeMonthlyRepository? feeMonthlyRepository;
   final OwnerOperationsRepository? operationsRepository;
   final ExamRepository? examRepository;
+  final AttendanceRepository? attendanceRepository;
   final StudentDirectoryRepository? staffStudentDirectoryRepository;
   final AdmissionDraftRepository? admissionRepository;
   final AdmissionDocumentService? admissionDocumentService;
@@ -305,6 +312,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   permissionGateway: widget.staffPermissionGateway,
                   studentRepository: widget.staffStudentDirectoryRepository,
                   examRepository: widget.examRepository,
+                  attendanceRepository: widget.attendanceRepository,
                   passwordGateway: widget.accountPasswordGateway!,
                   onSignOut: _exitShell,
                 )
@@ -321,6 +329,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   feeMonthlyRepository: widget.feeMonthlyRepository,
                   operationsRepository: widget.operationsRepository,
                   examRepository: widget.examRepository,
+                  attendanceRepository: widget.attendanceRepository,
                   admissionRepository: widget.admissionRepository,
                   admissionDocumentService: widget.admissionDocumentService,
                   admissionApprovalRepository: widget.admissionApprovalRepository,
@@ -364,6 +373,7 @@ class _SchoolShell extends StatefulWidget {
     this.feeMonthlyRepository,
     this.operationsRepository,
     this.examRepository,
+    this.attendanceRepository,
     this.admissionRepository,
     this.admissionDocumentService,
     this.admissionApprovalRepository,
@@ -379,6 +389,7 @@ class _SchoolShell extends StatefulWidget {
   final FeeMonthlyRepository? feeMonthlyRepository;
   final OwnerOperationsRepository? operationsRepository;
   final ExamRepository? examRepository;
+  final AttendanceRepository? attendanceRepository;
   final AdmissionDraftRepository? admissionRepository;
   final AdmissionDocumentService? admissionDocumentService;
   final AdmissionApprovalRepository? admissionApprovalRepository;
@@ -591,6 +602,15 @@ class _SchoolShellState extends State<_SchoolShell> {
         owner: widget.owner!,
         setupRepository: widget.feeSetupRepository!,
         monthlyRepository: widget.feeMonthlyRepository!,
+        selectedCampusId: activeCampusId,
+      );
+    }
+    if (selected == 4 && widget.owner != null &&
+        widget.attendanceRepository != null) {
+      return OwnerAttendanceSetupPage(
+        key: ValueKey('owner-attendance-$activeCampusId'),
+        owner: widget.owner!,
+        repository: widget.attendanceRepository!,
         selectedCampusId: activeCampusId,
       );
     }

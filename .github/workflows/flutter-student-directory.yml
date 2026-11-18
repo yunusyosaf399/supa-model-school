@@ -45,6 +45,8 @@ jobs:
         run: flutter test test/features/fees/fee_monthly_finance_widget_test.dart
       - name: Staff and transport Owner read-only integration regression
         run: flutter test test/features/operations/owner_staff_transport_widget_test.dart
+      - name: Owner teacher setup and live attendance regression
+        run: flutter test test/features/attendance/attendance_live_widget_test.dart
       - name: Principal Owner-style dashboard permission and layout regression
         run: flutter test test/features/dashboard/principal_dashboard_shell_widget_test.dart test/features/dashboard/dashboard_reference_widget_test.dart
       - name: Admissions draft widget regression
