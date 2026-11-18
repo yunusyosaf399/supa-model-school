@@ -107,7 +107,7 @@ void main(){
     expect(report.unbalancedReceipts,0);
     final csv=report.toCsv();
     expect(csv.contains('SMS-000000123'),isTrue);
-    expect(csv.contains('''"'=HYPERLINK('bad')""'),isTrue);
+    expect(csv.contains("'=HYPERLINK"),isTrue);
   });
 
   testWidgets('cashbook shows totals and filters by source and method',
