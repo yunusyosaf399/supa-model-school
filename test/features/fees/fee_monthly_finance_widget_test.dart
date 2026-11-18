@@ -164,6 +164,8 @@ void main() {
     expect(repo.generated,1);
     expect(find.textContaining('1000.50'),findsWidgets);
 
+    await tester.ensureVisible(find.byKey(const Key('fee-collect-student-1')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('fee-collect-student-1')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('fee-payment-amount')),'250.25');
@@ -175,7 +177,7 @@ void main() {
     expect(find.textContaining('SMS-000000001'),findsWidgets);
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('749.??'),findsNothing);
+    expect(find.textContaining('750.25'),findsWidgets);
     expect(tester.takeException(),isNull);
   });
 
@@ -184,10 +186,14 @@ void main() {
     final repo = FakeBillingRepository()..failFirstGenerate = true;
     await pumpFinance(tester,repo);
     for (var i=0;i<2;i++) {
+      await tester.ensureVisible(find.byKey(const Key('fee-generate-monthly-bills')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('fee-generate-monthly-bills')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('confirm-generate-bills')));
       await tester.pumpAndSettle();
+      expect(find.byKey(const Key('live-monthly-billing-page')),findsOneWidget);
+      expect(find.byKey(const Key('fee-generate-monthly-bills')),findsOneWidget);
     }
     expect(repo.generated,1);
     final calls=repo.calls.where((x)=>x.startsWith('generate:')).toList();
@@ -200,6 +206,8 @@ void main() {
     (tester) async {
     final repo=FakeBillingRepository();
     await pumpFinance(tester,repo);
+    await tester.ensureVisible(find.byKey(const Key('fee-scholarship-student-1')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('fee-scholarship-student-1')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('fee-discount-value')),'50');
