@@ -101,7 +101,7 @@ void main(){
     addTearDown(()=>tester.binding.setSurfaceSize(null));
     final fake=EvidenceFake(owner:true);
     await tester.pumpWidget(MaterialApp(home:ExpenseEvidencePage(
-      repository:fake,testWorkspace:testWorkspace,request:request)));
+      repository:fake,workspace:testWorkspace,request:request)));
     await tester.pumpAndSettle();
     expect(find.textContaining('Linked posted payment: payment-1'),findsOneWidget);
     expect(find.byKey(const Key('expense-upload-invoice')),findsOneWidget);
@@ -120,7 +120,7 @@ void main(){
     (tester)async{
     final fake=EvidenceFake();
     await tester.pumpWidget(MaterialApp(home:ExpenseEvidencePage(
-      repository:fake,testWorkspace:testWorkspace,request:request)));
+      repository:fake,workspace:testWorkspace,request:request)));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('expense-evidence-verify-evidence-1')),findsNothing);
     expect(find.byKey(const Key('expense-upload-receipt')),findsNothing);
