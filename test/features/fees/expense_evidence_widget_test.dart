@@ -51,7 +51,7 @@ class EvidenceFake implements ExpenseEvidenceRepository {
   Future<String> signedPreview(ExpenseEvidence attachment)async=>
     'https://example.com/short-lived-preview';
 }
-const workspace=ExpenseWorkspace(schoolId:'school-1',campusId:'campus-1',
+const testWorkspace=ExpenseWorkspace(schoolId:'school-1',campusId:'campus-1',
   currency:'PKR',timezone:'Asia/Karachi',isOwner:true,
   canCreate:true,canRead:true,canPay:true,
   categories:[],accounts:[],requests:[request]);
@@ -59,7 +59,7 @@ const workspace=ExpenseWorkspace(schoolId:'school-1',campusId:'campus-1',
 class RequestFake implements ExpenseRepository {
   @override
   Future<ExpenseWorkspace> workspace({required String schoolId,
-    required String campusId})async=>workspace;
+    required String campusId})async=>testWorkspace;
   @override
   Future<String> createCategory({required String schoolId,required String code,
     required String name,required String kind,required String operationId})async=>'unused';
@@ -101,7 +101,7 @@ void main(){
     addTearDown(()=>tester.binding.setSurfaceSize(null));
     final fake=EvidenceFake(owner:true);
     await tester.pumpWidget(MaterialApp(home:ExpenseEvidencePage(
-      repository:fake,workspace:workspace,request:request)));
+      repository:fake,testWorkspace:testWorkspace,request:request)));
     await tester.pumpAndSettle();
     expect(find.textContaining('Linked posted payment: payment-1'),findsOneWidget);
     expect(find.byKey(const Key('expense-upload-invoice')),findsOneWidget);
@@ -120,7 +120,7 @@ void main(){
     (tester)async{
     final fake=EvidenceFake();
     await tester.pumpWidget(MaterialApp(home:ExpenseEvidencePage(
-      repository:fake,workspace:workspace,request:request)));
+      repository:fake,testWorkspace:testWorkspace,request:request)));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('expense-evidence-verify-evidence-1')),findsNothing);
     expect(find.byKey(const Key('expense-upload-receipt')),findsNothing);
