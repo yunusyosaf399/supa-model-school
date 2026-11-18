@@ -4,6 +4,9 @@ import 'package:flutter/services.dart';
 import '../data/fee_monthly_repository.dart';
 import '../data/fee_setup_repository.dart';
 import '../data/fee_payment_repository.dart';
+import '../data/fee_billing_repository.dart';
+import 'fee_category_generation_page.dart';
+import 'fee_other_people_page.dart';
 
 String feeDisplay(int minor, String currency) =>
   currency + ' ' + FeeMoney.showMinor(minor);
@@ -17,8 +20,10 @@ String feeFrequency(String value) => switch (value) {
 
 class FeeCollectionPage extends StatefulWidget {
   const FeeCollectionPage({super.key,required this.repository,
-    required this.schoolId,required this.campusId,this.yearId});
+    required this.schoolId,required this.campusId,this.yearId,
+    this.billingRepository});
   final FeePaymentRepository repository;
+  final FeeBillingRepository? billingRepository;
   final String schoolId,campusId;
   final String? yearId;
   @override State<FeeCollectionPage> createState()=>_FeeCollectionPageState();
@@ -88,6 +93,27 @@ class _FeeCollectionPageState extends State<FeeCollectionPage> {
     if(saved==true&&mounted)await load();
   }
 
+  Future<void> generateFee(FeePaymentWorkspace workspace,
+      {String? studentId}) async {
+    final billing=widget.billingRepository;
+    if(!workspace.canCollect||billing==null)return;
+    final saved=await Navigator.push<bool>(context,MaterialPageRoute(
+      builder:(_)=>FeeCategoryGenerationPage(
+        workspace:workspace,repository:billing,
+        initialStudentId:studentId)));
+    if(saved==true&&mounted)await load();
+  }
+
+  Future<void> otherPayers(FeePaymentWorkspace workspace) async {
+    final billing=widget.billingRepository;
+    if(billing==null)return;
+    await Navigator.push<void>(context,MaterialPageRoute(
+      builder:(_)=>FeeOtherPeoplePage(repository:billing,
+        schoolId:workspace.schoolId,campusId:workspace.campusId,
+        yearId:workspace.yearId)));
+    if(mounted)await load();
+  }
+
   Widget filterSelect(String label,String key,String? value,
     List<DropdownMenuItem<String>> items,ValueChanged<String?> onChanged)=>
     SizedBox(width:205,child:DropdownButtonFormField<String>(
@@ -135,6 +161,20 @@ class _FeeCollectionPageState extends State<FeeCollectionPage> {
               Text('Outstanding: '+feeDisplay(total,w.currency)),
               Text(w.canCollect?'View and collect':'View only'),
             ]))),
+          const SizedBox(height:10),
+          if(widget.billingRepository!=null)
+            Wrap(spacing:8,runSpacing:8,children:[
+              if(w.canCollect)FilledButton.icon(
+                key:const Key('fee-generate-category-open'),
+                onPressed:()=>generateFee(w),
+                icon:const Icon(Icons.post_add_outlined),
+                label:const Text('Generate Category Fees')),
+              OutlinedButton.icon(
+                key:const Key('fee-other-payers-open'),
+                onPressed:()=>otherPayers(w),
+                icon:const Icon(Icons.person_search_outlined),
+                label:const Text('Other Payers')),
+            ]),
           const SizedBox(height:10),
           TextField(key:const Key('fee-collection-search'),
             decoration:const InputDecoration(border:OutlineInputBorder(),
@@ -216,6 +256,12 @@ class _FeeCollectionPageState extends State<FeeCollectionPage> {
                         const SizedBox(height:6),
                         Text('Due: '+feeDisplay(charges(s).fold<int>(0,
                           (a,c)=>a+c.outstandingMinor),w.currency)),
+                        if(widget.billingRepository!=null&&w.canCollect)
+                          TextButton.icon(
+                            key:Key('fee-generate-student-'+s.registration),
+                            onPressed:()=>generateFee(w,studentId:s.id),
+                            icon:const Icon(Icons.add_circle_outline),
+                            label:const Text('Generate Fee')),
                         Align(alignment:Alignment.centerRight,
                           child:FilledButton.icon(
                             key:Key('fee-quickpay-'+s.registration),

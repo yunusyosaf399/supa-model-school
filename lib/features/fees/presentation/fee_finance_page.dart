@@ -5,7 +5,9 @@ import '../../auth/data/owner_auth_gateway.dart';
 import '../data/fee_setup_repository.dart';
 import '../data/fee_monthly_repository.dart';
 import '../data/fee_payment_repository.dart';
+import '../data/fee_billing_repository.dart';
 import 'fee_collection_page.dart';
+import 'fee_category_generation_page.dart';
 import 'fee_setup_page.dart';
 
 /// Shared Owner finance navigation, identical for Windows and Android.
@@ -13,13 +15,14 @@ class FeeFinancePage extends StatelessWidget {
   const FeeFinancePage({
     super.key, required this.owner,
     required this.setupRepository, required this.monthlyRepository,
-    this.selectedCampusId, this.paymentRepository,
+    this.selectedCampusId, this.paymentRepository, this.billingRepository,
   });
 
   final OwnerAccess owner;
   final FeeSetupRepository setupRepository;
   final FeeMonthlyRepository monthlyRepository;
   final FeePaymentRepository? paymentRepository;
+  final FeeBillingRepository? billingRepository;
   final String? selectedCampusId;
 
   @override
@@ -45,6 +48,8 @@ class FeeFinancePage extends StatelessWidget {
         FeeMonthlyPage(
           owner: owner,
           repository: monthlyRepository,
+          paymentRepository: paymentRepository,
+          billingRepository: billingRepository,
           selectedCampusId: selectedCampusId,
         ),
         FeeSetupPage(
@@ -55,6 +60,7 @@ class FeeFinancePage extends StatelessWidget {
         if (paymentRepository != null && owner.campuses.isNotEmpty)
           FeeCollectionPage(
             repository: paymentRepository!,
+            billingRepository: billingRepository,
             schoolId: owner.schoolId,
             campusId: owner.campuses.any((c) => c.id == selectedCampusId)
               ? selectedCampusId! : owner.campuses.first.id,
@@ -69,9 +75,12 @@ class FeeMonthlyPage extends StatefulWidget {
   const FeeMonthlyPage({
     super.key, required this.owner,
     required this.repository, this.selectedCampusId,
+    this.paymentRepository, this.billingRepository,
   });
   final OwnerAccess owner;
   final FeeMonthlyRepository repository;
+  final FeePaymentRepository? paymentRepository;
+  final FeeBillingRepository? billingRepository;
   final String? selectedCampusId;
 
   @override
@@ -177,6 +186,26 @@ class _FeeMonthlyPageState extends State<FeeMonthlyPage> {
       _ledger = null;
     });
     _load();
+  }
+
+  Future<void> _generateCategory() async {
+    if (_busy || widget.billingRepository == null ||
+      widget.paymentRepository == null || widget.owner.activeYearId == null)return;
+    setState(() {_busy=true;_error=null;});
+    try {
+      final data=await widget.paymentRepository!.workspace(
+        schoolId:widget.owner.schoolId,campusId:_campusId,
+        yearId:widget.owner.activeYearId);
+      if(!mounted)return;
+      final saved=await Navigator.push<bool>(context,MaterialPageRoute(
+        builder:(_)=>FeeCategoryGenerationPage(
+          workspace:data,repository:widget.billingRepository!,
+          initialMonth:_month)));
+      if(saved==true&&mounted)await _load();
+      else if(mounted)setState(()=>_busy=false);
+    }catch(e){if(mounted)setState((){
+      _busy=false;_error='Category billing unavailable: $e';
+    });}
   }
 
   Future<void> _generate() async {
@@ -742,12 +771,21 @@ class _FeeMonthlyPageState extends State<FeeMonthlyPage> {
             }),
             const SizedBox(height: 12),
             Align(alignment: Alignment.centerLeft,
-              child: FilledButton.icon(
+              child: Wrap(spacing: 10, runSpacing: 10, children: [
+                if (widget.billingRepository != null &&
+                    widget.paymentRepository != null)
+                  OutlinedButton.icon(
+                    key: const Key('fee-generate-by-category'),
+                    onPressed: _busy ? null : _generateCategory,
+                    icon: const Icon(Icons.category_outlined),
+                    label: const Text('Generate by Category / Student')),
+                FilledButton.icon(
                 key: const Key('fee-generate-monthly-bills'),
                 onPressed: _busy ? null : _generate,
                 icon: const Icon(Icons.post_add_outlined),
                 label: const Text('Generate Monthly Bills'),
-              ),
+                ),
+              ]),
             ),
             const SizedBox(height: 16),
             TextField(
