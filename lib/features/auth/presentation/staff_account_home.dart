@@ -9,6 +9,8 @@ import '../../exams/presentation/exam_management_page.dart';
 import '../../auth/presentation/account_password_page.dart';
 import '../../attendance/data/attendance_repository.dart';
 import '../../attendance/presentation/teacher_attendance_page.dart';
+import '../../fees/data/fee_payment_repository.dart';
+import '../../fees/presentation/fee_collection_page.dart';
 
 /// Safe account workspace for authenticated roles whose operational screens
 /// are not implemented yet. Never shows Owner or Principal data.
@@ -20,6 +22,7 @@ class StaffAccountHome extends StatelessWidget {
     this.studentRepository,
     this.attendanceRepository,
     this.examRepository,
+    this.feePaymentRepository,
   });
   final SchoolStaffAccess staff;
   final Future<void> Function() onSignOut;
@@ -28,6 +31,7 @@ class StaffAccountHome extends StatelessWidget {
   final StudentDirectoryRepository? studentRepository;
   final AttendanceRepository? attendanceRepository;
   final ExamRepository? examRepository;
+  final FeePaymentRepository? feePaymentRepository;
 
   @override
   Widget build(BuildContext context)=>Scaffold(
@@ -101,6 +105,23 @@ class StaffAccountHome extends StatelessWidget {
                           ))),
                         icon: const Icon(Icons.groups_outlined),
                         label: const Text('View Students'),
+                      ),
+                    if ((staff.role == 'accountant' || staff.role == 'admin') &&
+                        snapshot.data!.contains('fees.read') &&
+                        feePaymentRepository != null)
+                      TextButton.icon(
+                        key: const Key('staff-open-fees'),
+                        onPressed: () => Navigator.push(context,
+                          MaterialPageRoute<void>(builder: (_) => Scaffold(
+                            appBar: AppBar(title: const Text('Fees & Quick Pay')),
+                            body: FeeCollectionPage(
+                              repository: feePaymentRepository!,
+                              schoolId: staff.schoolId,
+                              campusId: staff.campusId,
+                            ),
+                          ))),
+                        icon: const Icon(Icons.payments_outlined),
+                        label: const Text('Fee Collection & Quick Pay'),
                       ),
                     if (staff.role == 'teacher' &&
                         snapshot.data!.contains('attendance.read') &&
