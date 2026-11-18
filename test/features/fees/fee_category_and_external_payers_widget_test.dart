@@ -103,7 +103,7 @@ void main(){
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('fee-generate-custom-value')),'300.00');
-    await tester.testTextInput.hide();
+    tester.testTextInput.hide();
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.byKey(const Key('fee-generate-process')),170,
