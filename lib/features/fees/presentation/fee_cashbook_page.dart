@@ -293,8 +293,6 @@ class _FeeCashbookPageState extends State<FeeCashbookPage> {
           if(data.entries.isEmpty)const Text('No matching receipts.'),
           for(final entry in data.entries)
             Card.outlined(
-              key:Key('fee-cashbook-line-'+entry.receiptId+'-'+
-                entry.categoryId),
               child:ListTile(
                 title:Text(entry.receiptNo+' • '+entry.payerName),
                 subtitle:Text(entry.date+' • '+entry.source.toUpperCase()+
