@@ -6,6 +6,8 @@ import '../data/fee_setup_repository.dart';
 import '../data/fee_monthly_repository.dart';
 import '../data/fee_payment_repository.dart';
 import '../data/fee_billing_repository.dart';
+import '../data/fee_cashbook_repository.dart';
+import 'fee_cashbook_page.dart';
 import 'fee_collection_page.dart';
 import 'fee_category_generation_page.dart';
 import 'fee_setup_page.dart';
@@ -16,6 +18,7 @@ class FeeFinancePage extends StatelessWidget {
     super.key, required this.owner,
     required this.setupRepository, required this.monthlyRepository,
     this.selectedCampusId, this.paymentRepository, this.billingRepository,
+    this.cashbookRepository,
   });
 
   final OwnerAccess owner;
@@ -23,11 +26,14 @@ class FeeFinancePage extends StatelessWidget {
   final FeeMonthlyRepository monthlyRepository;
   final FeePaymentRepository? paymentRepository;
   final FeeBillingRepository? billingRepository;
+  final FeeCashbookRepository? cashbookRepository;
   final String? selectedCampusId;
 
   @override
   Widget build(BuildContext context) => DefaultTabController(
-    length: paymentRepository == null ? 2 : 3,
+    length: paymentRepository == null ? 2 :
+      (cashbookRepository != null && owner.activeYearId != null &&
+        owner.campuses.isNotEmpty ? 4 : 3),
     child: Column(children: [
       Material(
         color: Theme.of(context).colorScheme.surface,
@@ -41,6 +47,10 @@ class FeeFinancePage extends StatelessWidget {
             if (paymentRepository != null)
               const Tab(icon: Icon(Icons.payments_outlined),
                 text: 'Quick Pay & Categories'),
+            if (paymentRepository != null && cashbookRepository != null &&
+                owner.activeYearId != null && owner.campuses.isNotEmpty)
+              const Tab(icon: Icon(Icons.summarize_outlined),
+                text: 'Collection Reports'),
           ],
         ),
       ),
@@ -61,10 +71,21 @@ class FeeFinancePage extends StatelessWidget {
           FeeCollectionPage(
             repository: paymentRepository!,
             billingRepository: billingRepository,
+            cashbookRepository: cashbookRepository,
             schoolId: owner.schoolId,
             campusId: owner.campuses.any((c) => c.id == selectedCampusId)
               ? selectedCampusId! : owner.campuses.first.id,
             yearId: owner.activeYearId,
+          ),
+        if (paymentRepository != null && cashbookRepository != null &&
+            owner.activeYearId != null && owner.campuses.isNotEmpty)
+          FeeCashbookPage(
+            repository: cashbookRepository!,
+            schoolId: owner.schoolId,
+            yearId: owner.activeYearId!,
+            initialCampusId: owner.campuses.any((c) => c.id == selectedCampusId)
+              ? selectedCampusId : owner.campuses.first.id,
+            allowAllCampuses: true,
           ),
       ])),
     ]),
