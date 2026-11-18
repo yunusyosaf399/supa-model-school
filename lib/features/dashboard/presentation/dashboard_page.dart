@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../ui/school_brand.dart';
 import '../../auth/data/owner_auth_gateway.dart';
+import '../../auth/data/principal_auth_gateway.dart';
 import '../../owner/data/school_logo_service.dart';
 import '../data/dashboard_repository.dart';
 import 'dashboard_visuals.dart';
@@ -24,6 +25,8 @@ class DashboardPage extends StatefulWidget {
     this.onExit,
     this.onCampusChanged,
     this.owner,
+    this.principal,
+    this.allowedActions = const <String>{},
     this.selectedCampusId,
     this.repository = const UnconfiguredDashboardRepository(),
      this.logoService,
@@ -39,6 +42,8 @@ class DashboardPage extends StatefulWidget {
   final VoidCallback? onExit;
   final ValueChanged<String>? onCampusChanged;
   final OwnerAccess? owner;
+  final PrincipalAccess? principal;
+  final Set<String> allowedActions;
   final String? selectedCampusId;
   final DashboardRepository repository;
   final SchoolLogoService? logoService;
@@ -53,6 +58,9 @@ class _DashboardPageState extends State<DashboardPage> {
   String? _error;
   int _loadSequence = 0;
 
+  bool get _live => widget.owner != null || widget.principal != null;
+  bool get _principal => widget.principal != null;
+  bool _can(String action) => !_principal || widget.allowedActions.contains(action);
   bool get _dark => Theme.of(context).brightness == Brightness.dark;
   Color get _deep => _dark ? const Color(0xFF6BDBD0) : DashboardColors.deep;
   Color get _text => _dark ? Colors.white : DashboardColors.ink;
@@ -62,9 +70,9 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
-    if (widget.owner != null) {
-      // Do not briefly show demo numbers to an actual school account.
-      _data = _emptySnapshot(widget.owner!);
+    if (_live) {
+      // Never show demonstration figures on a real Principal or Owner session.
+      _data = _emptySnapshot();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _refresh();
       });
@@ -76,14 +84,16 @@ class _DashboardPageState extends State<DashboardPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selectedCampusId != widget.selectedCampusId ||
         oldWidget.owner?.userId != widget.owner?.userId ||
+        oldWidget.principal?.userId != widget.principal?.userId ||
+        oldWidget.allowedActions != widget.allowedActions ||
         oldWidget.repository != widget.repository) {
-      if (widget.owner == null) {
+      if (!_live) {
         ++_loadSequence;
         _data = DashboardSnapshot.preview();
         _loading = false;
       } else {
         // Clear values from the previous campus before the new read.
-        _data = _emptySnapshot(widget.owner!);
+        _data = _emptySnapshot();
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _refresh();
         });
@@ -91,37 +101,49 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  DashboardSnapshot _emptySnapshot(OwnerAccess owner) =>
+  DashboardSnapshot _emptySnapshot() =>
       DashboardSnapshot.fromJson({
         'is_demo': false,
         'source': 'loading',
-        'school_name': owner.schoolName,
-        'campus_name': owner.campuses.isEmpty
-            ? 'No campus'
-            : owner.campuses.firstWhere(
-                (c) => c.id == widget.selectedCampusId,
-                orElse: () => owner.campuses.first,
-              ).name,
-        'year_label': owner.activeYearLabel ?? 'Not configured',
-        'currency_code': owner.currencyCode,
+        'school_name': widget.owner?.schoolName ??
+            widget.principal?.schoolName ?? 'Supa Model School',
+        'campus_name': _campusName,
+
+        'year_label': widget.owner?.activeYearLabel ?? 'Not configured',
+        'currency_code': widget.owner?.currencyCode ?? '',
         'fee_trend': <Object>[],
         'recent_admissions': <Object>[],
       });
 
+  List<(String, String)> get _campuses => [
+    for (final c in widget.owner?.campuses ?? const <OwnerCampus>[])
+      (c.id, c.name),
+    for (final c in widget.principal?.campuses ?? const <PrincipalCampus>[])
+      (c.id, c.name),
+  ];
+
   String? get _campusId {
-    final owner = widget.owner;
-    if (owner == null || owner.campuses.isEmpty) return null;
-    if (owner.campuses.any((c) => c.id == widget.selectedCampusId)) {
+    final campuses = _campuses;
+    if (campuses.isEmpty) return null;
+    if (campuses.any((c) => c.$1 == widget.selectedCampusId)) {
       return widget.selectedCampusId;
     }
-    return owner.campuses.first.id;
+    return campuses.first.$1;
+  }
+
+  String get _campusName {
+    final campus = _campusId;
+    for (final c in _campuses) {
+      if (c.$1 == campus) return c.$2;
+    }
+    return 'No campus';
   }
 
   Future<void> _refresh() async {
-    final owner = widget.owner;
+    final schoolId = widget.owner?.schoolId ?? widget.principal?.schoolId;
     final campus = _campusId;
-    if (owner == null || campus == null) {
-      if (mounted) setState(() => _data = DashboardSnapshot.preview());
+    if (schoolId == null || campus == null) {
+      if (mounted && !_live) setState(() => _data = DashboardSnapshot.preview());
       return;
     }
     final request = ++_loadSequence;
@@ -131,7 +153,7 @@ class _DashboardPageState extends State<DashboardPage> {
     });
     try {
       final result = await widget.repository.load(
-        schoolId: owner.schoolId,
+        schoolId: schoolId,
         campusId: campus,
       );
       if (!mounted || request != _loadSequence) return;
@@ -142,10 +164,10 @@ class _DashboardPageState extends State<DashboardPage> {
     } catch (_) {
       if (!mounted || request != _loadSequence) return;
       setState(() {
-        _data = _emptySnapshot(owner);
+        _data = _emptySnapshot();
         _loading = false;
         _error = 'Dashboard data could not be loaded. '
-            'Check the network and Owner access, then retry.';
+            'Check the network and assigned campus access, then retry.';
       });
     }
   }
