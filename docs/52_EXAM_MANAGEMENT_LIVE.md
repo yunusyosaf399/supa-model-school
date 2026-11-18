@@ -7,7 +7,7 @@
 - Owner → Examinations: authenticated subject creation for an existing class and academic year; creation of **exams, class tests or quizzes** with a class/optional section, subject, date, total and passing marks.
 - Owner, and a Principal or staff member with explicit Owner-granted `exams.read`, can see authorized campus exams in a date-sheet-style list and open the eligible student roster.
 - The Owner or a staff member granted `exams.update` can enter student marks or mark absence, individually save, and publish completed results. Published results cannot be silently edited.
-- Teachers use their existing staff account and Owner-issued `exams.read` / `exams.update` grants. The backend checks the actual campus membership on every operation, not only whether a button appears.
+- **Teacher result access is deliberately blocked** in this v1 until class-and-subject teaching assignments can be enforced in the exam RPCs. Owner and explicitly permitted non-teacher staff (including Principal) work now.
 - Student names and registration numbers are read **only through a private, guarded RPC**, not direct RLS table access. The roster is joined to the original enrollment year, class and section.
 - Student transfer/withdrawal after the exam **does not erase historical eligibility/results**; validity at the assessment date controls roster inclusion.
 
@@ -41,13 +41,13 @@ These exact migration versions were applied to project `uebzvfzpbqqttbqyxxos`; t
 3. Select a class, add a subject, then create a scheduled Exam, Test or Quiz. Select `All sections` or a specific class section.
 4. Open the created item; enter marks or Absent for each enrolled student, then save.
 5. Publish after all eligible students have marks/absences. Results become read-only.
-6. To give Principal/Teacher exam access, Owner opens User Control Panel and grants the necessary `exams.read`, `exams.create`, `exams.update` actions. The grant is campus- and role-scoped.
+6. To give a Principal exam access, Owner opens User Control Panel and grants `exams.read`, `exams.create`, `exams.update`. Teachers will require a future assigned-class-and-subject-scoped workflow; a broad permission toggle must not expose other classes.
 
 ## Important remaining work (not part of this delivered vertical slice)
 
 - Multi-subject term/exam session aggregation, grade bands, rankings, cumulative report cards and official exam award lists.
 - PDF date sheets, printable exam sheets, result cards, certificates and school-branded exports.
-- Teacher-specific class/subject assignment checking in addition to general campus+action permissions.
+- Teacher-specific class/subject assignment checks and dedicated exam RPCs (teachers are intentionally denied broad access until implemented).
 - Retake/rechecking, explicit re-open/versioned correction approvals and full history audit UI.
 - Batch spreadsheet/CSV marks import and multi-student bulk-save optimization.
 - End-to-end Android/Windows device validation and rollout performance with hundreds of students.
