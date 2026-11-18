@@ -43,6 +43,8 @@ jobs:
         run: flutter test test/features/fees/fee_setup_widget_test.dart
       - name: Monthly billing, payment receipt and scholarship regression
         run: flutter test test/features/fees/fee_monthly_finance_widget_test.dart
+      - name: Quick Pay allocation review and finance category filters
+        run: flutter test test/features/fees/fee_quick_pay_widget_test.dart
       - name: Staff and transport Owner read-only integration regression
         run: flutter test test/features/operations/owner_staff_transport_widget_test.dart
       - name: Owner teacher setup and live attendance regression
