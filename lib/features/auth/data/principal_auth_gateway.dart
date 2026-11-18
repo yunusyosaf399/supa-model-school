@@ -11,8 +11,10 @@ class PrincipalAccess {
   const PrincipalAccess({
     required this.userId,required this.displayName,
     required this.schoolId,required this.schoolName,required this.campuses,
+    this.logoStoragePath,
   });
   final String userId,displayName,schoolId,schoolName;
+  final String? logoStoragePath;
   final List<PrincipalCampus> campuses;
 
   factory PrincipalAccess.fromJson(Map<String,dynamic> json) {
@@ -41,6 +43,7 @@ class PrincipalAccess {
     return PrincipalAccess(
       userId:userId,displayName:displayName,
       schoolId:schoolId,schoolName:schoolName,campuses:campuses,
+      logoStoragePath:json['logo_storage_path'] as String?,
     );
   }
 }

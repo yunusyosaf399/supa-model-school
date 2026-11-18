@@ -5,6 +5,9 @@ import '../../students/data/student_directory_repository.dart';
 import '../../students/presentation/student_directory_page.dart';
 import '../data/admission_approval_repository.dart';
 import 'principal_approval_page.dart';
+import 'principal_dashboard_shell.dart';
+import '../../dashboard/data/dashboard_repository.dart';
+import '../../owner/data/school_logo_service.dart';
 import '../../auth/data/account_password_gateway.dart';
 import '../../auth/presentation/account_password_page.dart';
 
@@ -17,6 +20,8 @@ class PrincipalAdmissionsHome extends StatefulWidget {
     this.passwordGateway,
     this.permissionGateway,
     this.studentRepository,
+    this.dashboardRepository,
+    this.logoService,
   });
   final PrincipalAccess principal;
   final AdmissionApprovalRepository repository;
@@ -24,6 +29,8 @@ class PrincipalAdmissionsHome extends StatefulWidget {
   final AccountPasswordGateway? passwordGateway;
   final StaffPermissionGateway? permissionGateway;
   final StudentDirectoryRepository? studentRepository;
+  final DashboardRepository? dashboardRepository;
+  final SchoolLogoService? logoService;
 
   @override
   State<PrincipalAdmissionsHome> createState()=>_PrincipalAdmissionsHomeState();
@@ -136,6 +143,23 @@ class _PrincipalAdmissionsHomeState extends State<PrincipalAdmissionsHome> {
 
   @override
   Widget build(BuildContext context) {
+    // New authorized home uses the Owner dashboard's exact shared widgets.
+    // Preserve the legacy approvals-only screen for unconfigured tests.
+    final gateway = widget.permissionGateway;
+    final dashboard = widget.dashboardRepository;
+    if (gateway != null && dashboard != null) {
+      return PrincipalDashboardShell(
+        key: const Key('principal-admissions-home'),
+        principal: widget.principal,
+        dashboardRepository: dashboard,
+        approvalRepository: widget.repository,
+        permissionGateway: gateway,
+        studentRepository: widget.studentRepository,
+        logoService: widget.logoService,
+        passwordGateway: widget.passwordGateway,
+        onSignOut: widget.onSignOut,
+      );
+    }
     final campuses=widget.principal.campuses;
     return Scaffold(
       key:const Key('principal-admissions-home'),

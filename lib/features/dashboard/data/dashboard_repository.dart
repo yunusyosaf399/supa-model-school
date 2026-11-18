@@ -189,3 +189,30 @@ class SupabaseDashboardRepository implements DashboardRepository {
     );
   }
 }
+
+
+/// A separate Principal-only RPC. Reusing the Owner dashboard RPC would
+/// violate the Owner/Principal separation even if the widgets look alike.
+class SupabasePrincipalDashboardRepository implements DashboardRepository {
+  const SupabasePrincipalDashboardRepository(this.client);
+  final SupabaseClient client;
+
+  @override
+  Future<DashboardSnapshot> load({
+    required String schoolId,
+    required String campusId,
+  }) async {
+    if (client.auth.currentSession == null) {
+      throw StateError('Sign in as an authorized Principal');
+    }
+    final response = await client.rpc('principal_dashboard_snapshot', params: {
+      'p_school_id': schoolId,
+      'p_campus_id': campusId,
+    });
+    if (response is! Map || response['is_demo'] != false ||
+        response['source'] != 'live_principal_campus_summary') {
+      throw StateError('Principal live dashboard was not verified');
+    }
+    return DashboardSnapshot.fromJson(Map<String, dynamic>.from(response));
+  }
+}

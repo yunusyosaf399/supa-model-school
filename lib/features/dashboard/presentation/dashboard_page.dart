@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../ui/school_brand.dart';
 import '../../auth/data/owner_auth_gateway.dart';
+import '../../auth/data/principal_auth_gateway.dart';
 import '../../owner/data/school_logo_service.dart';
 import '../data/dashboard_repository.dart';
 import 'dashboard_visuals.dart';
@@ -24,6 +25,8 @@ class DashboardPage extends StatefulWidget {
     this.onExit,
     this.onCampusChanged,
     this.owner,
+    this.principal,
+    this.allowedActions = const <String>{},
     this.selectedCampusId,
     this.repository = const UnconfiguredDashboardRepository(),
      this.logoService,
@@ -39,6 +42,8 @@ class DashboardPage extends StatefulWidget {
   final VoidCallback? onExit;
   final ValueChanged<String>? onCampusChanged;
   final OwnerAccess? owner;
+  final PrincipalAccess? principal;
+  final Set<String> allowedActions;
   final String? selectedCampusId;
   final DashboardRepository repository;
   final SchoolLogoService? logoService;
@@ -53,6 +58,9 @@ class _DashboardPageState extends State<DashboardPage> {
   String? _error;
   int _loadSequence = 0;
 
+  bool get _live => widget.owner != null || widget.principal != null;
+  bool get _principal => widget.principal != null;
+  bool _can(String action) => !_principal || widget.allowedActions.contains(action);
   bool get _dark => Theme.of(context).brightness == Brightness.dark;
   Color get _deep => _dark ? const Color(0xFF6BDBD0) : DashboardColors.deep;
   Color get _text => _dark ? Colors.white : DashboardColors.ink;
@@ -62,9 +70,9 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
-    if (widget.owner != null) {
-      // Do not briefly show demo numbers to an actual school account.
-      _data = _emptySnapshot(widget.owner!);
+    if (_live) {
+      // Never show demonstration figures on a real Principal or Owner session.
+      _data = _emptySnapshot();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _refresh();
       });
@@ -76,14 +84,16 @@ class _DashboardPageState extends State<DashboardPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selectedCampusId != widget.selectedCampusId ||
         oldWidget.owner?.userId != widget.owner?.userId ||
+        oldWidget.principal?.userId != widget.principal?.userId ||
+        oldWidget.allowedActions != widget.allowedActions ||
         oldWidget.repository != widget.repository) {
-      if (widget.owner == null) {
+      if (!_live) {
         ++_loadSequence;
         _data = DashboardSnapshot.preview();
         _loading = false;
       } else {
         // Clear values from the previous campus before the new read.
-        _data = _emptySnapshot(widget.owner!);
+        _data = _emptySnapshot();
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _refresh();
         });
@@ -91,37 +101,49 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  DashboardSnapshot _emptySnapshot(OwnerAccess owner) =>
+  DashboardSnapshot _emptySnapshot() =>
       DashboardSnapshot.fromJson({
         'is_demo': false,
         'source': 'loading',
-        'school_name': owner.schoolName,
-        'campus_name': owner.campuses.isEmpty
-            ? 'No campus'
-            : owner.campuses.firstWhere(
-                (c) => c.id == widget.selectedCampusId,
-                orElse: () => owner.campuses.first,
-              ).name,
-        'year_label': owner.activeYearLabel ?? 'Not configured',
-        'currency_code': owner.currencyCode,
+        'school_name': widget.owner?.schoolName ??
+            widget.principal?.schoolName ?? 'Supa Model School',
+        'campus_name': _campusName,
+
+        'year_label': widget.owner?.activeYearLabel ?? 'Not configured',
+        'currency_code': widget.owner?.currencyCode ?? '',
         'fee_trend': <Object>[],
         'recent_admissions': <Object>[],
       });
 
+  List<(String, String)> get _campuses => [
+    for (final c in widget.owner?.campuses ?? const <OwnerCampus>[])
+      (c.id, c.name),
+    for (final c in widget.principal?.campuses ?? const <PrincipalCampus>[])
+      (c.id, c.name),
+  ];
+
   String? get _campusId {
-    final owner = widget.owner;
-    if (owner == null || owner.campuses.isEmpty) return null;
-    if (owner.campuses.any((c) => c.id == widget.selectedCampusId)) {
+    final campuses = _campuses;
+    if (campuses.isEmpty) return null;
+    if (campuses.any((c) => c.$1 == widget.selectedCampusId)) {
       return widget.selectedCampusId;
     }
-    return owner.campuses.first.id;
+    return campuses.first.$1;
+  }
+
+  String get _campusName {
+    final campus = _campusId;
+    for (final c in _campuses) {
+      if (c.$1 == campus) return c.$2;
+    }
+    return 'No campus';
   }
 
   Future<void> _refresh() async {
-    final owner = widget.owner;
+    final schoolId = widget.owner?.schoolId ?? widget.principal?.schoolId;
     final campus = _campusId;
-    if (owner == null || campus == null) {
-      if (mounted) setState(() => _data = DashboardSnapshot.preview());
+    if (schoolId == null || campus == null) {
+      if (mounted && !_live) setState(() => _data = DashboardSnapshot.preview());
       return;
     }
     final request = ++_loadSequence;
@@ -131,7 +153,7 @@ class _DashboardPageState extends State<DashboardPage> {
     });
     try {
       final result = await widget.repository.load(
-        schoolId: owner.schoolId,
+        schoolId: schoolId,
         campusId: campus,
       );
       if (!mounted || request != _loadSequence) return;
@@ -142,10 +164,10 @@ class _DashboardPageState extends State<DashboardPage> {
     } catch (_) {
       if (!mounted || request != _loadSequence) return;
       setState(() {
-        _data = _emptySnapshot(owner);
+        _data = _emptySnapshot();
         _loading = false;
         _error = 'Dashboard data could not be loaded. '
-            'Check the network and Owner access, then retry.';
+            'Check the network and assigned campus access, then retry.';
       });
     }
   }
@@ -233,7 +255,17 @@ class _DashboardPageState extends State<DashboardPage> {
                 _mobileActionGrid(contentWidth),
               ],
               const SizedBox(height: 15),
-              if (desktop) ...[
+              if (_principal) ...[
+                if (_can('students.read')) ...[
+                  _admissionsPanel(desktop: desktop),
+                  const SizedBox(height: 13),
+                ],
+                if (_can('admissions.review')) ...[
+                  _approvalsPanel(desktop: desktop),
+                  const SizedBox(height: 13),
+                ],
+                _syncPanel(desktop: desktop),
+              ] else if (desktop) ...[
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -347,15 +379,15 @@ class _DashboardPageState extends State<DashboardPage> {
   );
 
   Widget _campusSelector({bool mobile = false}) {
-    final campuses = widget.owner?.campuses ?? const <OwnerCampus>[];
+    final campuses = _campuses;
     return PopupMenuButton<String>(
-      key: const Key('owner-campus-selector'),
+      key: Key(_principal ? 'principal-campus-selector' : 'owner-campus-selector'),
       enabled: campuses.length > 1,
       tooltip: 'Authorized campus',
       onSelected: widget.onCampusChanged,
       itemBuilder: (context) => [
         for (final c in campuses)
-          PopupMenuItem<String>(value: c.id, child: Text(c.name)),
+          PopupMenuItem<String>(value: c.$1, child: Text(c.$2)),
       ],
       child: Container(
         height: mobile ? 36 : 43,
@@ -441,7 +473,7 @@ class _DashboardPageState extends State<DashboardPage> {
           context: context,
           builder: (dialogContext) => AlertDialog(
             title: const Text('Account'),
-            content: Text(widget.owner == null
+            content: Text(!_live
               ? 'Exit the preview dashboard?' : 'Sign out of your school account?'),
             actions: [
               TextButton(
@@ -450,7 +482,7 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
               FilledButton(
                 onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: Text(widget.owner == null ? 'Exit demo' : 'Sign out'),
+                child: Text(!_live ? 'Exit demo' : 'Sign out'),
               ),
             ],
           ),
@@ -472,12 +504,14 @@ class _DashboardPageState extends State<DashboardPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(widget.owner?.displayName ?? 'Demo Administrator',
+              Text(widget.owner?.displayName ??
+                widget.principal?.displayName ?? 'Demo Administrator',
                 maxLines: 1, overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: _text,
-                    fontWeight: FontWeight.w800, fontSize: 12)),
-              Text('Administrator', style: TextStyle(
-                  color: _secondary, fontSize: 11)),
+                    fontWeight: FontWeight.w800, fontSize: 11, height: 1.0)),
+              Text(_principal ? 'Principal' : 'Administrator',
+                maxLines: 1, style: TextStyle(
+                  color: _secondary, fontSize: 10, height: 1.0)),
             ],
           ),
         ),
@@ -515,16 +549,27 @@ class _DashboardPageState extends State<DashboardPage> {
         ],
       )),
       const SizedBox(width: 8),
-      _topAction('New Admission', Icons.person_add_alt_1_outlined,
-          widget.onNewAdmission, primary: true),
-      const SizedBox(width: 9),
-      _topAction('Collect Fee', Icons.savings_outlined, widget.onFees),
-      const SizedBox(width: 9),
-      _topAction('Take Attendance', Icons.calendar_month_outlined,
-          widget.onAttendance),
-      const SizedBox(width: 9),
-      _topAction('Record Expense', Icons.receipt_long_outlined,
-          widget.onExpenses),
+      if (_principal) ...[
+        if (_can('students.read'))
+          _topAction('Students', Icons.groups_outlined, widget.onStudents,
+            primary: true),
+        if (_can('students.read') && _can('admissions.review'))
+          const SizedBox(width: 9),
+        if (_can('admissions.review'))
+          _topAction('Approvals', Icons.fact_check_outlined,
+            widget.onAdmissions ?? () => _notAvailable('Admissions')),
+      ] else ...[
+        _topAction('New Admission', Icons.person_add_alt_1_outlined,
+            widget.onNewAdmission, primary: true),
+        const SizedBox(width: 9),
+        _topAction('Collect Fee', Icons.savings_outlined, widget.onFees),
+        const SizedBox(width: 9),
+        _topAction('Take Attendance', Icons.calendar_month_outlined,
+            widget.onAttendance),
+        const SizedBox(width: 9),
+        _topAction('Record Expense', Icons.receipt_long_outlined,
+            widget.onExpenses),
+      ],
     ],
   );
 
@@ -537,7 +582,8 @@ class _DashboardPageState extends State<DashboardPage> {
       height: 46,
       child: primary
           ? FilledButton.icon(
-              key: const Key('dashboard-new-admission'),
+              key: Key(_principal ? 'principal-dashboard-students-shortcut' :
+                'dashboard-new-admission'),
               style: FilledButton.styleFrom(
                 backgroundColor: DashboardColors.deep,
                 foregroundColor: Colors.white,
@@ -577,7 +623,8 @@ class _DashboardPageState extends State<DashboardPage> {
             Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.owner?.schoolName ?? 'Supa Model School', maxLines: 1,
+                Text(widget.owner?.schoolName ??
+                  widget.principal?.schoolName ?? 'Supa Model School', maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: _deep, fontSize: 15,
                        fontWeight: FontWeight.w900, letterSpacing: -.35)),
@@ -631,6 +678,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final gap = desktop ? 15.0 : 10.0;
     final cardWidth = math.max(80.0, (width - gap * (columns - 1)) / columns);
     final height = desktop ? 119.0 : 91.0;
+    if (_principal) return _principalStatGrid(width, desktop);
     return Wrap(spacing: gap, runSpacing: gap, children: [
       SizedBox(width: cardWidth, height: height,
         child: _metricCard(
@@ -691,6 +739,35 @@ class _DashboardPageState extends State<DashboardPage> {
     ]);
   }
 
+  Widget _principalStatGrid(double width, bool desktop) {
+    final count = _can('admissions.review') ? 2 : 1;
+    final columns = desktop ? count : 2;
+    final gap = desktop ? 15.0 : 10.0;
+    final cardWidth = math.max(80.0, (width - gap * (columns - 1)) / columns);
+    return Wrap(spacing: gap, runSpacing: gap, children: [
+      SizedBox(width: cardWidth, height: desktop ? 119 : 91,
+        child: _metricCard(
+          desktop: desktop, icon: Icons.groups_rounded,
+          label: 'Active Students', value: _count(_data.activeStudents),
+          color: DashboardColors.teal,
+          badgeColor: const Color(0xFF16853B),
+          detail: desktop ? 'Assigned campus' : null,
+        ),
+      ),
+      if (_can('admissions.review'))
+        SizedBox(width: cardWidth, height: desktop ? 119 : 91,
+          child: _metricCard(
+            desktop: desktop, icon: Icons.fact_check_outlined,
+            label: 'Pending Approvals',
+            value: _count(_data.pendingAdmissions),
+            color: DashboardColors.teal,
+            badgeColor: const Color(0xFF16853B),
+            detail: desktop ? 'Awaiting Principal' : null,
+          ),
+        ),
+    ]);
+  }
+
   Widget _metricCard({
     required bool desktop,
     required IconData icon,
@@ -713,11 +790,12 @@ class _DashboardPageState extends State<DashboardPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, maxLines: 2, overflow: TextOverflow.ellipsis,
+          Text(label, maxLines: desktop ? 2 : 1,
+             overflow: TextOverflow.ellipsis,
             style: TextStyle(color: _text, fontSize: desktop ? 13 : 11,
                 fontWeight: FontWeight.w600)),
-          const SizedBox(height: 5),
-          FittedBox(fit: BoxFit.scaleDown,
+          SizedBox(height: desktop ? 5 : 2),
+           FittedBox(fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(value, maxLines: 1,
               style: TextStyle(color: _deep,
@@ -739,7 +817,7 @@ class _DashboardPageState extends State<DashboardPage> {
               ],
             ]),
           ] else if (!desktop && badge != null) ...[
-            const SizedBox(height: 5),
+             const SizedBox(height: 2),
             Align(alignment: Alignment.centerRight,
               child: _metricPill(badge, badgeColor)),
           ],
@@ -759,6 +837,43 @@ class _DashboardPageState extends State<DashboardPage> {
   );
 
   Widget _mobileActionGrid(double width) {
+    if (_principal) {
+      final shortcuts = <(String, IconData, VoidCallback)>[
+        if (_can('students.read'))
+          ('Students', Icons.groups_outlined, widget.onStudents),
+        if (_can('admissions.review') && widget.onAdmissions != null)
+          ('Approvals', Icons.fact_check_outlined, widget.onAdmissions!),
+      ];
+      if (shortcuts.isEmpty) return const SizedBox.shrink();
+      const gap = 8.0;
+      final cell = (width - gap * (shortcuts.length - 1)) / shortcuts.length;
+      return Row(children: [
+        for (var i = 0; i < shortcuts.length; i++) ...[
+          SizedBox(width: cell, height: 80,
+            child: DashboardPanel(
+              padding: EdgeInsets.zero,
+              child: InkWell(
+                key: Key('principal-dashboard-action-${shortcuts[i].$1}'),
+                onTap: shortcuts[i].$3,
+                borderRadius: BorderRadius.circular(15),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(shortcuts[i].$2, size: 28,
+                      color: DashboardColors.teal),
+                    const SizedBox(height: 7),
+                    Text(shortcuts[i].$1,
+                      style: TextStyle(color: _text,
+                        fontSize: 11, fontWeight: FontWeight.w700)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (i != shortcuts.length - 1) const SizedBox(width: gap),
+        ],
+      ]);
+    }
     const gap = 8.0;
     final cell = (width - gap * 3) / 4;
     const actions = <(String, IconData)>[
