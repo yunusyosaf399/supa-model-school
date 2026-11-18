@@ -81,4 +81,7 @@ do
   psql "$PGURL" -X -v ON_ERROR_STOP=1 -q -f "supabase/tests/$name"
 done
 
-echo "PASS: all seven schema DDL scripts, RLS smoke checks and rollback-only fictional domain fixtures succeeded on isolated local database"
+echo "== Verify DB30 private expense evidence, RLS and permissioned RPC grants =="
+psql "$PGURL" -X -v ON_ERROR_STOP=1 -q -f supabase/tests/DB30_EXPENSE_EVIDENCE_INTEGRATION.sql
+
+echo "PASS: DB03-DB09 domain fixtures plus DB30 evidence privacy regressions succeeded on isolated local database"
