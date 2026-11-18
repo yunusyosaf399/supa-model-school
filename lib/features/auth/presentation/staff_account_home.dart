@@ -4,6 +4,8 @@ import '../../auth/data/staff_permission_gateway.dart';
 import '../../students/data/student_directory_repository.dart';
 import '../../students/presentation/student_directory_page.dart';
 import '../../auth/data/account_password_gateway.dart';
+import '../../exams/data/exam_repository.dart';
+import '../../exams/presentation/exam_management_page.dart';
 import '../../auth/presentation/account_password_page.dart';
 
 /// Safe account workspace for authenticated roles whose operational screens
@@ -14,12 +16,14 @@ class StaffAccountHome extends StatelessWidget {
     required this.passwordGateway,
     this.permissionGateway,
     this.studentRepository,
+    this.examRepository,
   });
   final SchoolStaffAccess staff;
   final Future<void> Function() onSignOut;
   final AccountPasswordGateway passwordGateway;
   final StaffPermissionGateway? permissionGateway;
   final StudentDirectoryRepository? studentRepository;
+  final ExamRepository? examRepository;
 
   @override
   Widget build(BuildContext context)=>Scaffold(
@@ -93,6 +97,24 @@ class StaffAccountHome extends StatelessWidget {
                           ))),
                         icon: const Icon(Icons.groups_outlined),
                         label: const Text('View Students'),
+                      ),
+                    if (snapshot.data!.contains('exams.read') &&
+                        examRepository != null)
+                      TextButton.icon(
+                        key: const Key('staff-open-exams'),
+                        onPressed: () => Navigator.push(context,
+                          MaterialPageRoute<void>(builder: (_) => Scaffold(
+                            appBar: AppBar(title: const Text('Examinations')),
+                            body: ExamManagementPage(
+                              repository: examRepository!,
+                              schoolId: staff.schoolId,
+                              campusId: staff.campusId,
+                              canCreate: snapshot.data!.contains('exams.create'),
+                              canUpdate: snapshot.data!.contains('exams.update'),
+                            ),
+                          ))),
+                        icon: const Icon(Icons.fact_check_outlined),
+                        label: const Text('Manage Exams & Tests'),
                       ),
                     const Text('Sections still in development do not yet '
                       'provide operational screens.'),
