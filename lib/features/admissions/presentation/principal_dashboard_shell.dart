@@ -8,6 +8,8 @@ import '../../dashboard/presentation/dashboard_page.dart';
 import '../../owner/data/school_logo_service.dart';
 import '../../exams/data/exam_repository.dart';
 import '../../exams/presentation/exam_management_page.dart';
+import '../../fees/data/fee_payment_repository.dart';
+import '../../fees/presentation/fee_collection_page.dart';
 import '../../students/data/student_directory_repository.dart';
 import '../../students/presentation/student_directory_page.dart';
 import '../data/admission_approval_repository.dart';
@@ -20,7 +22,7 @@ class PrincipalDashboardShell extends StatefulWidget {
     super.key, required this.principal, required this.dashboardRepository,
     required this.approvalRepository, required this.permissionGateway,
     required this.onSignOut, this.studentRepository, this.examRepository,
-    this.logoService, this.passwordGateway,
+    this.logoService, this.passwordGateway, this.feePaymentRepository,
   });
 
   final PrincipalAccess principal;
@@ -29,6 +31,7 @@ class PrincipalDashboardShell extends StatefulWidget {
   final StaffPermissionGateway permissionGateway;
   final StudentDirectoryRepository? studentRepository;
   final ExamRepository? examRepository;
+  final FeePaymentRepository? feePaymentRepository;
   final SchoolLogoService? logoService;
   final AccountPasswordGateway? passwordGateway;
   final Future<void> Function() onSignOut;
@@ -83,6 +86,8 @@ class _PrincipalDashboardShellState extends State<PrincipalDashboardShell> {
       (2, 'Approvals', Icons.fact_check_outlined),
     if (grants.contains('exams.read') && widget.examRepository != null)
       (4, 'Examinations', Icons.fact_check_outlined),
+    if (grants.contains('fees.read') && widget.feePaymentRepository != null)
+      (5, 'Fees', Icons.payments_outlined),
     (3, 'Account', Icons.manage_accounts_outlined),
   ];
 
@@ -118,6 +123,13 @@ class _PrincipalDashboardShellState extends State<PrincipalDashboardShell> {
           schoolId: widget.principal.schoolId,
           campusId: _campusId,
           repository: widget.approvalRepository,
+        );
+      case 5:
+        return FeeCollectionPage(
+          key: ValueKey('principal-fees-' + _campusId),
+          repository: widget.feePaymentRepository!,
+          schoolId: widget.principal.schoolId,
+          campusId: _campusId,
         );
       case 4:
         return ExamManagementPage(
