@@ -246,11 +246,11 @@ class _FeeCashbookPageState extends State<FeeCashbookPage> {
             leading:Icon(data.unbalancedReceipts==0 &&
                 summary!.totalsReconcile
                 ?Icons.verified_outlined:Icons.warning_amber_outlined),
-            title:Text(data.unbalancedReceipts==0&&summary.totalsReconcile
+            title:Text(data.unbalancedReceipts==0&&summary!.totalsReconcile
               ?'Receipt allocations reconciled'
               :'Receipt reconciliation needs review'),
-            subtitle:Text(summary.receiptCount.toString()+
-              ' distinct receipts • '+summary.allocationLines.toString()+
+            subtitle:Text(summary!.receiptCount.toString()+
+              ' distinct receipts • '+summary!.allocationLines.toString()+
               ' allocation lines • '+
               data.unbalancedReceipts.toString()+
               ' unmatched source receipts in period'),
