@@ -41,6 +41,8 @@ jobs:
         run: flutter test test/features/students/student_directory_live_widget_test.dart
       - name: Real fee setup widget and money regression
         run: flutter test test/features/fees/fee_setup_widget_test.dart
+      - name: Monthly billing, payment receipt and scholarship regression
+        run: flutter test test/features/fees/fee_monthly_finance_widget_test.dart
       - name: Principal Owner-style dashboard permission and layout regression
         run: flutter test test/features/dashboard/principal_dashboard_shell_widget_test.dart test/features/dashboard/dashboard_reference_widget_test.dart
       - name: Admissions draft widget regression
