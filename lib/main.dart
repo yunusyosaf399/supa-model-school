@@ -291,7 +291,6 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   principal: _principal!,
                   repository: widget.admissionApprovalRepository!,
                   dashboardRepository: widget.principalDashboardRepository,
-                  examRepository: widget.examRepository,
                   logoService: widget.schoolLogoService,
                   permissionGateway: widget.staffPermissionGateway,
                   studentRepository: widget.staffStudentDirectoryRepository,
