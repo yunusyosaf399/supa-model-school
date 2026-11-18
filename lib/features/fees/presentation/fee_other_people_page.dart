@@ -97,6 +97,9 @@ class _FeeOtherPeoplePageState extends State<FeeOtherPeoplePage>{
               }
             },child:Text(locked?'Retry Save':'Save Payer')),
         ])));
+    // Dialog exit animates after the route result completes. Dispose only
+    // once its TextFields are fully removed from the widget tree.
+    await Future<void>.delayed(const Duration(milliseconds:400));
     name.dispose();contact.dispose();
   }
 
@@ -172,6 +175,7 @@ class _FeeOtherPeoplePageState extends State<FeeOtherPeoplePage>{
               }
             },child:Text(locked?'Retry Posting':'Post Fee Charge')),
         ])));
+    await Future<void>.delayed(const Duration(milliseconds:400));
     amount.dispose();due.dispose();note.dispose();
   }
 
