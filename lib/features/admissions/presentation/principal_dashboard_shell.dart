@@ -6,6 +6,8 @@ import '../../auth/presentation/account_password_page.dart';
 import '../../dashboard/data/dashboard_repository.dart';
 import '../../dashboard/presentation/dashboard_page.dart';
 import '../../owner/data/school_logo_service.dart';
+import '../../exams/data/exam_repository.dart';
+import '../../exams/presentation/exam_management_page.dart';
 import '../../students/data/student_directory_repository.dart';
 import '../../students/presentation/student_directory_page.dart';
 import '../data/admission_approval_repository.dart';
@@ -17,7 +19,7 @@ class PrincipalDashboardShell extends StatefulWidget {
   const PrincipalDashboardShell({
     super.key, required this.principal, required this.dashboardRepository,
     required this.approvalRepository, required this.permissionGateway,
-    required this.onSignOut, this.studentRepository,
+    required this.onSignOut, this.studentRepository, this.examRepository,
     this.logoService, this.passwordGateway,
   });
 
@@ -26,6 +28,7 @@ class PrincipalDashboardShell extends StatefulWidget {
   final AdmissionApprovalRepository approvalRepository;
   final StaffPermissionGateway permissionGateway;
   final StudentDirectoryRepository? studentRepository;
+  final ExamRepository? examRepository;
   final SchoolLogoService? logoService;
   final AccountPasswordGateway? passwordGateway;
   final Future<void> Function() onSignOut;
@@ -78,6 +81,8 @@ class _PrincipalDashboardShellState extends State<PrincipalDashboardShell> {
       (1, 'Students', Icons.groups_outlined),
     if (grants.contains('admissions.review'))
       (2, 'Approvals', Icons.fact_check_outlined),
+    if (grants.contains('exams.read') && widget.examRepository != null)
+      (4, 'Examinations', Icons.fact_check_outlined),
     (3, 'Account', Icons.manage_accounts_outlined),
   ];
 
@@ -113,6 +118,15 @@ class _PrincipalDashboardShellState extends State<PrincipalDashboardShell> {
           schoolId: widget.principal.schoolId,
           campusId: _campusId,
           repository: widget.approvalRepository,
+        );
+      case 4:
+        return ExamManagementPage(
+          key: ValueKey('principal-exams-$_campusId'),
+          repository: widget.examRepository!,
+          schoolId: widget.principal.schoolId,
+          campusId: _campusId,
+          canCreate: grants.contains('exams.create'),
+          canUpdate: grants.contains('exams.update'),
         );
       default:
         return widget.passwordGateway == null
