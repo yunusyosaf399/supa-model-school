@@ -5,6 +5,8 @@ import '../../students/data/student_directory_repository.dart';
 import '../../students/presentation/student_directory_page.dart';
 import '../../auth/data/account_password_gateway.dart';
 import '../../auth/presentation/account_password_page.dart';
+import '../../attendance/data/attendance_repository.dart';
+import '../../attendance/presentation/teacher_attendance_page.dart';
 
 /// Safe account workspace for authenticated roles whose operational screens
 /// are not implemented yet. Never shows Owner or Principal data.
@@ -14,12 +16,14 @@ class StaffAccountHome extends StatelessWidget {
     required this.passwordGateway,
     this.permissionGateway,
     this.studentRepository,
+    this.attendanceRepository,
   });
   final SchoolStaffAccess staff;
   final Future<void> Function() onSignOut;
   final AccountPasswordGateway passwordGateway;
   final StaffPermissionGateway? permissionGateway;
   final StudentDirectoryRepository? studentRepository;
+  final AttendanceRepository? attendanceRepository;
 
   @override
   Widget build(BuildContext context)=>Scaffold(
@@ -47,9 +51,9 @@ class StaffAccountHome extends StatelessWidget {
             Text('Assigned role: ${staff.role.replaceAll('_',' ')}'),
             Text('Campus: ${staff.campusName}'),
             const SizedBox(height:8),
-            const Text('Your account is active. Dedicated operational '
-              'screens for this role are being developed. You can change '
-              'the password assigned by the school Owner below.'),
+            const Text('Your account is active. The school Owner controls '
+              'your permissions and assigned modules. You can change '
+              'your Owner-issued password below.'),
           ]),
         )),
         ),
@@ -94,8 +98,25 @@ class StaffAccountHome extends StatelessWidget {
                         icon: const Icon(Icons.groups_outlined),
                         label: const Text('View Students'),
                       ),
-                    const Text('Sections still in development do not yet '
-                      'provide operational screens.'),
+                    if (staff.role == 'teacher' &&
+                        snapshot.data!.contains('attendance.read') &&
+                        attendanceRepository != null)
+                      TextButton.icon(
+                        key: const Key('teacher-open-attendance'),
+                        onPressed: () => Navigator.push(context,
+                          MaterialPageRoute<void>(builder: (_) =>
+                            TeacherAttendancePage(
+                              repository: attendanceRepository!,
+                            ))),
+                        icon: const Icon(Icons.fact_check_outlined),
+                        label: const Text('Take Attendance'),
+                      ),
+                    if (staff.role == 'teacher' &&
+                        !snapshot.data!.contains('attendance.read'))
+                      const Text('Attendance permission has not been granted '
+                        'by the Owner.'),
+                    const Text('Other operational sections may still '
+                      'be under development.'),
                   ],
                 );
               },
