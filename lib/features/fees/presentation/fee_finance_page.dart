@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import '../../auth/data/owner_auth_gateway.dart';
 import '../data/fee_setup_repository.dart';
 import '../data/fee_monthly_repository.dart';
+import '../data/fee_payment_repository.dart';
+import 'fee_collection_page.dart';
 import 'fee_setup_page.dart';
 
 /// Shared Owner finance navigation, identical for Windows and Android.
@@ -11,25 +13,29 @@ class FeeFinancePage extends StatelessWidget {
   const FeeFinancePage({
     super.key, required this.owner,
     required this.setupRepository, required this.monthlyRepository,
-    this.selectedCampusId,
+    this.selectedCampusId, this.paymentRepository,
   });
 
   final OwnerAccess owner;
   final FeeSetupRepository setupRepository;
   final FeeMonthlyRepository monthlyRepository;
+  final FeePaymentRepository? paymentRepository;
   final String? selectedCampusId;
 
   @override
   Widget build(BuildContext context) => DefaultTabController(
-    length: 2,
+    length: paymentRepository == null ? 2 : 3,
     child: Column(children: [
       Material(
         color: Theme.of(context).colorScheme.surface,
-        child: const TabBar(
-          key: Key('fee-finance-tabs'),
+        child: TabBar(
+          key: const Key('fee-finance-tabs'),
           tabs: [
-            Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Monthly Billing'),
-            Tab(icon: Icon(Icons.tune_outlined), text: 'Fee Setup'),
+            const Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Monthly Billing'),
+            const Tab(icon: Icon(Icons.tune_outlined), text: 'Fee Setup'),
+            if (paymentRepository != null)
+              const Tab(icon: Icon(Icons.payments_outlined),
+                text: 'Quick Pay & Categories'),
           ],
         ),
       ),
@@ -44,6 +50,14 @@ class FeeFinancePage extends StatelessWidget {
           repository: setupRepository,
           selectedCampusId: selectedCampusId,
         ),
+        if (paymentRepository != null && owner.campuses.isNotEmpty)
+          FeeCollectionPage(
+            repository: paymentRepository!,
+            schoolId: owner.schoolId,
+            campusId: owner.campuses.any((c) => c.id == selectedCampusId)
+              ? selectedCampusId! : owner.campuses.first.id,
+            yearId: owner.activeYearId,
+          ),
       ])),
     ]),
   );
