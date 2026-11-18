@@ -10,6 +10,7 @@ import '../../exams/data/exam_repository.dart';
 import '../../exams/presentation/exam_management_page.dart';
 import '../../fees/data/fee_payment_repository.dart';
 import '../../fees/data/fee_billing_repository.dart';
+import '../../fees/data/fee_cashbook_repository.dart';
 import '../../fees/presentation/fee_collection_page.dart';
 import '../../students/data/student_directory_repository.dart';
 import '../../students/presentation/student_directory_page.dart';
@@ -25,6 +26,7 @@ class PrincipalDashboardShell extends StatefulWidget {
     required this.onSignOut, this.studentRepository, this.examRepository,
     this.logoService, this.passwordGateway, this.feePaymentRepository,
     this.feeBillingRepository,
+    this.feeCashbookRepository,
   });
 
   final PrincipalAccess principal;
@@ -35,6 +37,7 @@ class PrincipalDashboardShell extends StatefulWidget {
   final ExamRepository? examRepository;
   final FeePaymentRepository? feePaymentRepository;
   final FeeBillingRepository? feeBillingRepository;
+  final FeeCashbookRepository? feeCashbookRepository;
   final SchoolLogoService? logoService;
   final AccountPasswordGateway? passwordGateway;
   final Future<void> Function() onSignOut;
@@ -132,6 +135,7 @@ class _PrincipalDashboardShellState extends State<PrincipalDashboardShell> {
           key: ValueKey('principal-fees-' + _campusId),
           repository: widget.feePaymentRepository!,
           billingRepository: widget.feeBillingRepository,
+          cashbookRepository: widget.feeCashbookRepository,
           schoolId: widget.principal.schoolId,
           campusId: _campusId,
         );
