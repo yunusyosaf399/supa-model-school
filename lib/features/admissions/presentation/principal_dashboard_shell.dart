@@ -11,6 +11,8 @@ import '../../exams/presentation/exam_management_page.dart';
 import '../../fees/data/fee_payment_repository.dart';
 import '../../fees/data/fee_billing_repository.dart';
 import '../../fees/data/fee_cashbook_repository.dart';
+import '../../fees/data/expense_repository.dart';
+import '../../fees/presentation/expense_management_page.dart';
 import '../../fees/presentation/fee_collection_page.dart';
 import '../../students/data/student_directory_repository.dart';
 import '../../students/presentation/student_directory_page.dart';
@@ -27,6 +29,7 @@ class PrincipalDashboardShell extends StatefulWidget {
     this.logoService, this.passwordGateway, this.feePaymentRepository,
     this.feeBillingRepository,
     this.feeCashbookRepository,
+    this.expenseRepository,
   });
 
   final PrincipalAccess principal;
@@ -38,6 +41,7 @@ class PrincipalDashboardShell extends StatefulWidget {
   final FeePaymentRepository? feePaymentRepository;
   final FeeBillingRepository? feeBillingRepository;
   final FeeCashbookRepository? feeCashbookRepository;
+  final ExpenseRepository? expenseRepository;
   final SchoolLogoService? logoService;
   final AccountPasswordGateway? passwordGateway;
   final Future<void> Function() onSignOut;
@@ -94,6 +98,10 @@ class _PrincipalDashboardShellState extends State<PrincipalDashboardShell> {
       (4, 'Examinations', Icons.fact_check_outlined),
     if (grants.contains('fees.read') && widget.feePaymentRepository != null)
       (5, 'Fees', Icons.payments_outlined),
+    if (widget.expenseRepository != null &&
+        (grants.contains('expenses.read') ||
+         grants.contains('expenses.create') || grants.contains('expenses.pay')))
+      (6, 'Expenses', Icons.request_quote_outlined),
     (3, 'Account', Icons.manage_accounts_outlined),
   ];
 
@@ -136,6 +144,13 @@ class _PrincipalDashboardShellState extends State<PrincipalDashboardShell> {
           repository: widget.feePaymentRepository!,
           billingRepository: widget.feeBillingRepository,
           cashbookRepository: widget.feeCashbookRepository,
+          schoolId: widget.principal.schoolId,
+          campusId: _campusId,
+        );
+      case 6:
+        return ExpenseManagementPage(
+          key: ValueKey('principal-expenses-' + _campusId),
+          repository: widget.expenseRepository!,
           schoolId: widget.principal.schoolId,
           campusId: _campusId,
         );
