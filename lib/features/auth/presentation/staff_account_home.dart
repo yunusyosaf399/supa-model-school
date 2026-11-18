@@ -4,6 +4,8 @@ import '../../auth/data/staff_permission_gateway.dart';
 import '../../students/data/student_directory_repository.dart';
 import '../../students/presentation/student_directory_page.dart';
 import '../../auth/data/account_password_gateway.dart';
+import '../../exams/data/exam_repository.dart';
+import '../../exams/presentation/exam_management_page.dart';
 import '../../auth/presentation/account_password_page.dart';
 import '../../attendance/data/attendance_repository.dart';
 import '../../attendance/presentation/teacher_attendance_page.dart';
@@ -17,6 +19,7 @@ class StaffAccountHome extends StatelessWidget {
     this.permissionGateway,
     this.studentRepository,
     this.attendanceRepository,
+    this.examRepository,
   });
   final SchoolStaffAccess staff;
   final Future<void> Function() onSignOut;
@@ -24,6 +27,7 @@ class StaffAccountHome extends StatelessWidget {
   final StaffPermissionGateway? permissionGateway;
   final StudentDirectoryRepository? studentRepository;
   final AttendanceRepository? attendanceRepository;
+  final ExamRepository? examRepository;
 
   @override
   Widget build(BuildContext context)=>Scaffold(
@@ -115,6 +119,25 @@ class StaffAccountHome extends StatelessWidget {
                         !snapshot.data!.contains('attendance.read'))
                       const Text('Attendance permission has not been granted '
                         'by the Owner.'),
+                    if (staff.role != 'teacher' &&
+                        snapshot.data!.contains('exams.read') &&
+                        examRepository != null)
+                      TextButton.icon(
+                        key: const Key('staff-open-exams'),
+                        onPressed: () => Navigator.push(context,
+                          MaterialPageRoute<void>(builder: (_) => Scaffold(
+                            appBar: AppBar(title: const Text('Examinations')),
+                            body: ExamManagementPage(
+                              repository: examRepository!,
+                              schoolId: staff.schoolId,
+                              campusId: staff.campusId,
+                              canCreate: snapshot.data!.contains('exams.create'),
+                              canUpdate: snapshot.data!.contains('exams.update'),
+                            ),
+                          ))),
+                        icon: const Icon(Icons.fact_check_outlined),
+                        label: const Text('Manage Exams & Tests'),
+                      ),
                     const Text('Other operational sections may still '
                       'be under development.'),
                   ],
