@@ -151,8 +151,12 @@ void main() {
 
   testWidgets('desktop Principal dashboard uses same dashboard widgets',
     (tester) async {
-    await tester.binding.setSurfaceSize(const Size(1440, 960));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.devicePixelRatio = 1.0;
+    tester.view.physicalSize = const Size(1440, 960);
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
     final dashboard = TestPrincipalDashboard();
     await tester.pumpWidget(shell(
       permissions: const TestPermissions({
