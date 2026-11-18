@@ -25,6 +25,8 @@ import 'features/owner/data/owner_user_management_repository.dart';
 import 'features/owner/data/school_logo_service.dart';
 import 'features/students/presentation/student_directory_page.dart';
 import 'features/students/data/student_directory_repository.dart';
+import 'features/fees/data/fee_setup_repository.dart';
+import 'features/fees/presentation/fee_setup_page.dart';
 import 'ui/school_brand.dart';
 import 'ui/school_theme.dart';
 
@@ -41,6 +43,7 @@ Future<void> main() async {
   DashboardRepository dashboardRepo = const UnconfiguredDashboardRepository();
   DashboardRepository? principalDashboardRepo;
   StudentDirectoryRepository? studentRepo;
+  FeeSetupRepository? feeSetupRepo;
   StudentDirectoryRepository? staffStudentRepo;
   AdmissionDraftRepository? admissionRepo;
   AdmissionDocumentService? documentService;
@@ -67,6 +70,7 @@ Future<void> main() async {
     dashboardRepo = SupabaseDashboardRepository(Supabase.instance.client);
     principalDashboardRepo = SupabasePrincipalDashboardRepository(Supabase.instance.client);
     studentRepo = SupabaseStudentDirectoryRepository(Supabase.instance.client);
+    feeSetupRepo = SupabaseFeeSetupRepository(Supabase.instance.client);
     staffStudentRepo = SupabaseStaffStudentDirectoryRepository(Supabase.instance.client);
     admissionRepo = SupabaseAdmissionDraftRepository(Supabase.instance.client);
     documentService = SupabaseAdmissionDocumentService(Supabase.instance.client);
@@ -84,6 +88,7 @@ Future<void> main() async {
     dashboardRepository: dashboardRepo,
     principalDashboardRepository: principalDashboardRepo,
     studentDirectoryRepository: studentRepo,
+    feeSetupRepository: feeSetupRepo,
     staffStudentDirectoryRepository: staffStudentRepo,
     admissionRepository: admissionRepo,
     admissionDocumentService: documentService,
@@ -107,6 +112,7 @@ class SupaModelSchoolApp extends StatefulWidget {
     this.dashboardRepository,
     this.principalDashboardRepository,
     this.studentDirectoryRepository,
+    this.feeSetupRepository,
     this.staffStudentDirectoryRepository,
     this.admissionRepository,
     this.admissionDocumentService,
@@ -124,6 +130,7 @@ class SupaModelSchoolApp extends StatefulWidget {
   final DashboardRepository? dashboardRepository;
   final DashboardRepository? principalDashboardRepository;
   final StudentDirectoryRepository? studentDirectoryRepository;
+  final FeeSetupRepository? feeSetupRepository;
   final StudentDirectoryRepository? staffStudentDirectoryRepository;
   final AdmissionDraftRepository? admissionRepository;
   final AdmissionDocumentService? admissionDocumentService;
@@ -286,6 +293,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   dashboardRepository: widget.dashboardRepository ??
                       const UnconfiguredDashboardRepository(),
                   studentDirectoryRepository: widget.studentDirectoryRepository,
+                  feeSetupRepository: widget.feeSetupRepository,
                   admissionRepository: widget.admissionRepository,
                   admissionDocumentService: widget.admissionDocumentService,
                   admissionApprovalRepository: widget.admissionApprovalRepository,
@@ -325,6 +333,7 @@ class _SchoolShell extends StatefulWidget {
     required this.academicRepository,
     required this.dashboardRepository,
     this.studentDirectoryRepository,
+    this.feeSetupRepository,
     this.admissionRepository,
     this.admissionDocumentService,
     this.admissionApprovalRepository,
@@ -336,6 +345,7 @@ class _SchoolShell extends StatefulWidget {
   final AcademicStructureRepository academicRepository;
   final DashboardRepository dashboardRepository;
   final StudentDirectoryRepository? studentDirectoryRepository;
+  final FeeSetupRepository? feeSetupRepository;
   final AdmissionDraftRepository? admissionRepository;
   final AdmissionDocumentService? admissionDocumentService;
   final AdmissionApprovalRepository? admissionApprovalRepository;
@@ -536,6 +546,15 @@ class _SchoolShellState extends State<_SchoolShell> {
         owner: widget.owner,
         selectedCampusId: activeCampusId,
         repository: widget.studentDirectoryRepository,
+      );
+    }
+    if (selected == 3 && widget.owner != null &&
+        widget.feeSetupRepository != null) {
+      return FeeSetupPage(
+        key: ValueKey('fee-setup-$activeCampusId'),
+        owner: widget.owner!,
+        repository: widget.feeSetupRepository!,
+        selectedCampusId: activeCampusId,
       );
     }
     if (selected == 10 && widget.owner != null) {
