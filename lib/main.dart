@@ -27,6 +27,8 @@ import 'features/students/presentation/student_directory_page.dart';
 import 'features/students/data/student_directory_repository.dart';
 import 'features/fees/data/fee_setup_repository.dart';
 import 'features/fees/presentation/fee_setup_page.dart';
+import 'features/fees/data/fee_monthly_repository.dart';
+import 'features/fees/presentation/fee_finance_page.dart';
 import 'ui/school_brand.dart';
 import 'ui/school_theme.dart';
 
@@ -44,6 +46,7 @@ Future<void> main() async {
   DashboardRepository? principalDashboardRepo;
   StudentDirectoryRepository? studentRepo;
   FeeSetupRepository? feeSetupRepo;
+  FeeMonthlyRepository? feeMonthlyRepo;
   StudentDirectoryRepository? staffStudentRepo;
   AdmissionDraftRepository? admissionRepo;
   AdmissionDocumentService? documentService;
@@ -71,6 +74,7 @@ Future<void> main() async {
     principalDashboardRepo = SupabasePrincipalDashboardRepository(Supabase.instance.client);
     studentRepo = SupabaseStudentDirectoryRepository(Supabase.instance.client);
     feeSetupRepo = SupabaseFeeSetupRepository(Supabase.instance.client);
+    feeMonthlyRepo = SupabaseFeeMonthlyRepository(Supabase.instance.client);
     staffStudentRepo = SupabaseStaffStudentDirectoryRepository(Supabase.instance.client);
     admissionRepo = SupabaseAdmissionDraftRepository(Supabase.instance.client);
     documentService = SupabaseAdmissionDocumentService(Supabase.instance.client);
@@ -89,6 +93,7 @@ Future<void> main() async {
     principalDashboardRepository: principalDashboardRepo,
     studentDirectoryRepository: studentRepo,
     feeSetupRepository: feeSetupRepo,
+    feeMonthlyRepository: feeMonthlyRepo,
     staffStudentDirectoryRepository: staffStudentRepo,
     admissionRepository: admissionRepo,
     admissionDocumentService: documentService,
@@ -113,6 +118,7 @@ class SupaModelSchoolApp extends StatefulWidget {
     this.principalDashboardRepository,
     this.studentDirectoryRepository,
     this.feeSetupRepository,
+    this.feeMonthlyRepository,
     this.staffStudentDirectoryRepository,
     this.admissionRepository,
     this.admissionDocumentService,
@@ -131,6 +137,7 @@ class SupaModelSchoolApp extends StatefulWidget {
   final DashboardRepository? principalDashboardRepository;
   final StudentDirectoryRepository? studentDirectoryRepository;
   final FeeSetupRepository? feeSetupRepository;
+  final FeeMonthlyRepository? feeMonthlyRepository;
   final StudentDirectoryRepository? staffStudentDirectoryRepository;
   final AdmissionDraftRepository? admissionRepository;
   final AdmissionDocumentService? admissionDocumentService;
@@ -294,6 +301,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                       const UnconfiguredDashboardRepository(),
                   studentDirectoryRepository: widget.studentDirectoryRepository,
                   feeSetupRepository: widget.feeSetupRepository,
+                  feeMonthlyRepository: widget.feeMonthlyRepository,
                   admissionRepository: widget.admissionRepository,
                   admissionDocumentService: widget.admissionDocumentService,
                   admissionApprovalRepository: widget.admissionApprovalRepository,
@@ -334,6 +342,7 @@ class _SchoolShell extends StatefulWidget {
     required this.dashboardRepository,
     this.studentDirectoryRepository,
     this.feeSetupRepository,
+    this.feeMonthlyRepository,
     this.admissionRepository,
     this.admissionDocumentService,
     this.admissionApprovalRepository,
@@ -346,6 +355,7 @@ class _SchoolShell extends StatefulWidget {
   final DashboardRepository dashboardRepository;
   final StudentDirectoryRepository? studentDirectoryRepository;
   final FeeSetupRepository? feeSetupRepository;
+  final FeeMonthlyRepository? feeMonthlyRepository;
   final AdmissionDraftRepository? admissionRepository;
   final AdmissionDocumentService? admissionDocumentService;
   final AdmissionApprovalRepository? admissionApprovalRepository;
@@ -549,11 +559,13 @@ class _SchoolShellState extends State<_SchoolShell> {
       );
     }
     if (selected == 3 && widget.owner != null &&
-        widget.feeSetupRepository != null) {
-      return FeeSetupPage(
-        key: ValueKey('fee-setup-$activeCampusId'),
+        widget.feeSetupRepository != null &&
+        widget.feeMonthlyRepository != null) {
+      return FeeFinancePage(
+        key: ValueKey('fee-finance-$activeCampusId'),
         owner: widget.owner!,
-        repository: widget.feeSetupRepository!,
+        setupRepository: widget.feeSetupRepository!,
+        monthlyRepository: widget.feeMonthlyRepository!,
         selectedCampusId: activeCampusId,
       );
     }
