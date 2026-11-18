@@ -370,7 +370,6 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   feeCashbookRepository: widget.feeCashbookRepository,
                   expenseRepository: widget.expenseRepository,
                   schoolCashflowRepository: widget.schoolCashflowRepository,
-        expenseRepository: widget.expenseRepository,
                   operationsRepository: widget.operationsRepository,
                   examRepository: widget.examRepository,
                   attendanceRepository: widget.attendanceRepository,
