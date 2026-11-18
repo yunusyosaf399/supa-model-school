@@ -508,9 +508,10 @@ class _DashboardPageState extends State<DashboardPage> {
                 widget.principal?.displayName ?? 'Demo Administrator',
                 maxLines: 1, overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: _text,
-                    fontWeight: FontWeight.w800, fontSize: 12)),
-              Text(_principal ? 'Principal' : 'Administrator', style: TextStyle(
-                  color: _secondary, fontSize: 11)),
+                    fontWeight: FontWeight.w800, fontSize: 11, height: 1.0)),
+              Text(_principal ? 'Principal' : 'Administrator',
+                maxLines: 1, style: TextStyle(
+                  color: _secondary, fontSize: 10, height: 1.0)),
             ],
           ),
         ),
@@ -789,11 +790,12 @@ class _DashboardPageState extends State<DashboardPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, maxLines: 2, overflow: TextOverflow.ellipsis,
+          Text(label, maxLines: desktop ? 2 : 1,
+             overflow: TextOverflow.ellipsis,
             style: TextStyle(color: _text, fontSize: desktop ? 13 : 11,
                 fontWeight: FontWeight.w600)),
-          const SizedBox(height: 5),
-          FittedBox(fit: BoxFit.scaleDown,
+          SizedBox(height: desktop ? 5 : 2),
+           FittedBox(fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(value, maxLines: 1,
               style: TextStyle(color: _deep,
@@ -815,7 +817,7 @@ class _DashboardPageState extends State<DashboardPage> {
               ],
             ]),
           ] else if (!desktop && badge != null) ...[
-            const SizedBox(height: 5),
+             const SizedBox(height: 2),
             Align(alignment: Alignment.centerRight,
               child: _metricPill(badge, badgeColor)),
           ],
