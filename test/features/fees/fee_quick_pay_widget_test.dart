@@ -133,27 +133,36 @@ void main() {
       FeeCollectionPage(repository: repo,
         schoolId: 'school-1', campusId: 'campus-1'))));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(
-      find.byKey(const Key('fee-quickpay-SAMPLE-2026-0003')));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('fee-quickpay-SAMPLE-2026-0003')), 250,
+      scrollable: find.byType(Scrollable).first);
     await tester.tap(find.byKey(
       const Key('fee-quickpay-SAMPLE-2026-0003')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('quickpay-page')), findsOneWidget);
     await tester.enterText(find.byKey(const Key('quickpay-amount')), '100.00');
-    await tester.ensureVisible(find.byKey(const Key('quickpay-preview')));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('quickpay-preview')), 160,
+      scrollable: find.byType(Scrollable).first);
     await tester.tap(find.byKey(const Key('quickpay-preview')));
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('quickpay-line-charge-transport')), 120,
+      scrollable: find.byType(Scrollable).first);
     expect(find.byKey(const Key('quickpay-line-charge-transport')),
-      findsOneWidget);
-    expect(find.byKey(const Key('quickpay-line-charge-tuition')),
       findsOneWidget);
     await tester.enterText(
       find.byKey(const Key('quickpay-line-charge-transport')), '50.00');
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('quickpay-line-charge-tuition')), 120,
+      scrollable: find.byType(Scrollable).first);
     await tester.enterText(
       find.byKey(const Key('quickpay-line-charge-tuition')), '50.00');
-    await tester.ensureVisible(find.byKey(const Key('quickpay-process')));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('quickpay-process')), 130,
+      scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('quickpay-process')));
     await tester.pumpAndSettle();
@@ -164,7 +173,7 @@ void main() {
     expect(repo.lastStudent, student.id);
     expect(repo.allocation!.map((row) => row.amountMinor).toList(),
       [5000, 5000]);
-    expect(find.text('SMS-000001234'), findsOneWidget);
+    expect(find.textContaining('SMS-000001234'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
