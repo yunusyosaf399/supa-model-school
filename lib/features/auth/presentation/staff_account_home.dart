@@ -11,6 +11,7 @@ import '../../attendance/data/attendance_repository.dart';
 import '../../attendance/presentation/teacher_attendance_page.dart';
 import '../../fees/data/fee_payment_repository.dart';
 import '../../fees/data/fee_billing_repository.dart';
+import '../../fees/data/fee_cashbook_repository.dart';
 import '../../fees/presentation/fee_collection_page.dart';
 
 /// Safe account workspace for authenticated roles whose operational screens
@@ -25,6 +26,7 @@ class StaffAccountHome extends StatelessWidget {
     this.examRepository,
     this.feePaymentRepository,
     this.feeBillingRepository,
+    this.feeCashbookRepository,
   });
   final SchoolStaffAccess staff;
   final Future<void> Function() onSignOut;
@@ -35,6 +37,7 @@ class StaffAccountHome extends StatelessWidget {
   final ExamRepository? examRepository;
   final FeePaymentRepository? feePaymentRepository;
   final FeeBillingRepository? feeBillingRepository;
+  final FeeCashbookRepository? feeCashbookRepository;
 
   @override
   Widget build(BuildContext context)=>Scaffold(
@@ -120,6 +123,7 @@ class StaffAccountHome extends StatelessWidget {
                             body: FeeCollectionPage(
                               repository: feePaymentRepository!,
                               billingRepository: feeBillingRepository,
+                              cashbookRepository: feeCashbookRepository,
                               schoolId: staff.schoolId,
                               campusId: staff.campusId,
                             ),

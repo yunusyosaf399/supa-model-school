@@ -5,6 +5,8 @@ import '../data/fee_monthly_repository.dart';
 import '../data/fee_setup_repository.dart';
 import '../data/fee_payment_repository.dart';
 import '../data/fee_billing_repository.dart';
+import '../data/fee_cashbook_repository.dart';
+import 'fee_cashbook_page.dart';
 import 'fee_category_generation_page.dart';
 import 'fee_other_people_page.dart';
 
@@ -21,9 +23,10 @@ String feeFrequency(String value) => switch (value) {
 class FeeCollectionPage extends StatefulWidget {
   const FeeCollectionPage({super.key,required this.repository,
     required this.schoolId,required this.campusId,this.yearId,
-    this.billingRepository});
+    this.billingRepository,this.cashbookRepository});
   final FeePaymentRepository repository;
   final FeeBillingRepository? billingRepository;
+  final FeeCashbookRepository? cashbookRepository;
   final String schoolId,campusId;
   final String? yearId;
   @override State<FeeCollectionPage> createState()=>_FeeCollectionPageState();
@@ -114,6 +117,18 @@ class _FeeCollectionPageState extends State<FeeCollectionPage> {
     if(mounted)await load();
   }
 
+  Future<void> openCashbook(FeePaymentWorkspace workspace) async {
+    final cashbook=widget.cashbookRepository;
+    if(cashbook==null)return;
+    await Navigator.push<void>(context,MaterialPageRoute(
+      builder:(_)=>Scaffold(
+        appBar:AppBar(title:const Text('Fee Collection Reports')),
+        body:FeeCashbookPage(repository:cashbook,
+          schoolId:workspace.schoolId,yearId:workspace.yearId,
+          initialCampusId:workspace.campusId))));
+    if(mounted)await load();
+  }
+
   Widget filterSelect(String label,String key,String? value,
     List<DropdownMenuItem<String>> items,ValueChanged<String?> onChanged)=>
     SizedBox(width:205,child:DropdownButtonFormField<String>(
@@ -174,6 +189,11 @@ class _FeeCollectionPageState extends State<FeeCollectionPage> {
                 onPressed:()=>otherPayers(w),
                 icon:const Icon(Icons.person_search_outlined),
                 label:const Text('Other Payers')),
+              if(widget.cashbookRepository!=null)OutlinedButton.icon(
+                key:const Key('fee-open-cashbook'),
+                onPressed:()=>openCashbook(w),
+                icon:const Icon(Icons.summarize_outlined),
+                label:const Text('Collection Reports')),
             ]),
           const SizedBox(height:10),
           TextField(key:const Key('fee-collection-search'),
