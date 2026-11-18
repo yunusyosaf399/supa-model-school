@@ -581,7 +581,8 @@ class _DashboardPageState extends State<DashboardPage> {
       height: 46,
       child: primary
           ? FilledButton.icon(
-              key: const Key('dashboard-new-admission'),
+              key: Key(_principal ? 'principal-dashboard-students-shortcut' :
+                'dashboard-new-admission'),
               style: FilledButton.styleFrom(
                 backgroundColor: DashboardColors.deep,
                 foregroundColor: Colors.white,
