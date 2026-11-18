@@ -28,6 +28,8 @@ import 'features/students/data/student_directory_repository.dart';
 import 'features/fees/data/fee_setup_repository.dart';
 import 'features/fees/presentation/fee_setup_page.dart';
 import 'features/fees/data/fee_monthly_repository.dart';
+import 'features/exams/data/exam_repository.dart';
+import 'features/exams/presentation/exam_management_page.dart';
 import 'features/fees/presentation/fee_finance_page.dart';
 import 'features/operations/data/owner_operations_repository.dart';
 import 'features/operations/presentation/owner_staff_directory_page.dart';
@@ -51,6 +53,7 @@ Future<void> main() async {
   FeeSetupRepository? feeSetupRepo;
   FeeMonthlyRepository? feeMonthlyRepo;
   OwnerOperationsRepository? operationsRepo;
+  ExamRepository? examRepo;
   StudentDirectoryRepository? staffStudentRepo;
   AdmissionDraftRepository? admissionRepo;
   AdmissionDocumentService? documentService;
@@ -80,6 +83,7 @@ Future<void> main() async {
     feeSetupRepo = SupabaseFeeSetupRepository(Supabase.instance.client);
     feeMonthlyRepo = SupabaseFeeMonthlyRepository(Supabase.instance.client);
     operationsRepo = SupabaseOwnerOperationsRepository(Supabase.instance.client);
+    examRepo = SupabaseExamRepository(Supabase.instance.client);
     staffStudentRepo = SupabaseStaffStudentDirectoryRepository(Supabase.instance.client);
     admissionRepo = SupabaseAdmissionDraftRepository(Supabase.instance.client);
     documentService = SupabaseAdmissionDocumentService(Supabase.instance.client);
@@ -100,6 +104,7 @@ Future<void> main() async {
     feeSetupRepository: feeSetupRepo,
     feeMonthlyRepository: feeMonthlyRepo,
     operationsRepository: operationsRepo,
+    examRepository: examRepo,
     staffStudentDirectoryRepository: staffStudentRepo,
     admissionRepository: admissionRepo,
     admissionDocumentService: documentService,
@@ -126,6 +131,7 @@ class SupaModelSchoolApp extends StatefulWidget {
     this.feeSetupRepository,
     this.feeMonthlyRepository,
     this.operationsRepository,
+    this.examRepository,
     this.staffStudentDirectoryRepository,
     this.admissionRepository,
     this.admissionDocumentService,
@@ -146,6 +152,7 @@ class SupaModelSchoolApp extends StatefulWidget {
   final FeeSetupRepository? feeSetupRepository;
   final FeeMonthlyRepository? feeMonthlyRepository;
   final OwnerOperationsRepository? operationsRepository;
+  final ExamRepository? examRepository;
   final StudentDirectoryRepository? staffStudentDirectoryRepository;
   final AdmissionDraftRepository? admissionRepository;
   final AdmissionDocumentService? admissionDocumentService;
@@ -284,9 +291,11 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   principal: _principal!,
                   repository: widget.admissionApprovalRepository!,
                   dashboardRepository: widget.principalDashboardRepository,
+                  examRepository: widget.examRepository,
                   logoService: widget.schoolLogoService,
                   permissionGateway: widget.staffPermissionGateway,
                   studentRepository: widget.staffStudentDirectoryRepository,
+                  examRepository: widget.examRepository,
                   onSignOut: _exitShell,
                   passwordGateway: widget.accountPasswordGateway,
                 )
@@ -296,6 +305,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   staff: _staff!,
                   permissionGateway: widget.staffPermissionGateway,
                   studentRepository: widget.staffStudentDirectoryRepository,
+                  examRepository: widget.examRepository,
                   passwordGateway: widget.accountPasswordGateway!,
                   onSignOut: _exitShell,
                 )
@@ -311,6 +321,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   feeSetupRepository: widget.feeSetupRepository,
                   feeMonthlyRepository: widget.feeMonthlyRepository,
                   operationsRepository: widget.operationsRepository,
+                  examRepository: widget.examRepository,
                   admissionRepository: widget.admissionRepository,
                   admissionDocumentService: widget.admissionDocumentService,
                   admissionApprovalRepository: widget.admissionApprovalRepository,
@@ -353,6 +364,7 @@ class _SchoolShell extends StatefulWidget {
     this.feeSetupRepository,
     this.feeMonthlyRepository,
     this.operationsRepository,
+    this.examRepository,
     this.admissionRepository,
     this.admissionDocumentService,
     this.admissionApprovalRepository,
@@ -367,6 +379,7 @@ class _SchoolShell extends StatefulWidget {
   final FeeSetupRepository? feeSetupRepository;
   final FeeMonthlyRepository? feeMonthlyRepository;
   final OwnerOperationsRepository? operationsRepository;
+  final ExamRepository? examRepository;
   final AdmissionDraftRepository? admissionRepository;
   final AdmissionDocumentService? admissionDocumentService;
   final AdmissionApprovalRepository? admissionApprovalRepository;
@@ -404,7 +417,7 @@ class _SchoolShellState extends State<_SchoolShell> {
   static const modules = <String>[
     'Dashboard', 'Students', 'Admissions', 'Fees', 'Attendance',
     'Employees', 'Payroll', 'Expenses', 'Reports', 'Sync Center', 'Settings',
-    'Academic Setup', 'Transport',
+    'Academic Setup', 'Transport', 'Examinations',
   ];
 
   static const icons = <IconData>[
@@ -421,6 +434,7 @@ class _SchoolShellState extends State<_SchoolShell> {
     Icons.settings_outlined,
     Icons.school_outlined,
     Icons.directions_bus_outlined,
+    Icons.fact_check_outlined,
   ];
 
   Future<void> _newAdmission() async {
@@ -597,6 +611,15 @@ class _SchoolShellState extends State<_SchoolShell> {
         owner: widget.owner!,
         repository: widget.operationsRepository!,
         selectedCampusId: activeCampusId,
+      );
+    }
+    if (selected == 13 && widget.owner != null && widget.examRepository != null) {
+      return ExamManagementPage(
+        key: ValueKey('owner-exams-$activeCampusId'),
+        repository: widget.examRepository!,
+        schoolId: widget.owner!.schoolId,
+        campusId: activeCampusId ?? widget.owner!.campuses.first.id,
+        yearId: widget.owner!.activeYearId,
       );
     }
     if (selected == 10 && widget.owner != null) {
