@@ -119,7 +119,8 @@ class StaffAccountHome extends StatelessWidget {
                         !snapshot.data!.contains('attendance.read'))
                       const Text('Attendance permission has not been granted '
                         'by the Owner.'),
-                    if (snapshot.data!.contains('exams.read') &&
+                    if (staff.role != 'teacher' &&
+                        snapshot.data!.contains('exams.read') &&
                         examRepository != null)
                       TextButton.icon(
                         key: const Key('staff-open-exams'),
