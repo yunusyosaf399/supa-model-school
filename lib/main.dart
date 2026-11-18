@@ -329,7 +329,6 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   feePaymentRepository: widget.feePaymentRepository,
                   feeBillingRepository: widget.feeBillingRepository,
                   feeCashbookRepository: widget.feeCashbookRepository,
-                  schoolCashflowRepository: widget.schoolCashflowRepository,
                   onSignOut: _exitShell,
                   passwordGateway: widget.accountPasswordGateway,
                 )
@@ -344,7 +343,6 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   feePaymentRepository: widget.feePaymentRepository,
                   feeBillingRepository: widget.feeBillingRepository,
                   feeCashbookRepository: widget.feeCashbookRepository,
-                  schoolCashflowRepository: widget.schoolCashflowRepository,
                   passwordGateway: widget.accountPasswordGateway!,
                   onSignOut: _exitShell,
                 )
