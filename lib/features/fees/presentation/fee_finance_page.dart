@@ -5,6 +5,7 @@ import '../../auth/data/owner_auth_gateway.dart';
 import '../data/fee_setup_repository.dart';
 import '../data/fee_monthly_repository.dart';
 import '../data/fee_payment_repository.dart';
+import '../data/fee_billing_repository.dart';
 import 'fee_collection_page.dart';
 import 'fee_setup_page.dart';
 
@@ -13,13 +14,14 @@ class FeeFinancePage extends StatelessWidget {
   const FeeFinancePage({
     super.key, required this.owner,
     required this.setupRepository, required this.monthlyRepository,
-    this.selectedCampusId, this.paymentRepository,
+    this.selectedCampusId, this.paymentRepository, this.billingRepository,
   });
 
   final OwnerAccess owner;
   final FeeSetupRepository setupRepository;
   final FeeMonthlyRepository monthlyRepository;
   final FeePaymentRepository? paymentRepository;
+  final FeeBillingRepository? billingRepository;
   final String? selectedCampusId;
 
   @override
@@ -55,6 +57,7 @@ class FeeFinancePage extends StatelessWidget {
         if (paymentRepository != null && owner.campuses.isNotEmpty)
           FeeCollectionPage(
             repository: paymentRepository!,
+            billingRepository: billingRepository,
             schoolId: owner.schoolId,
             campusId: owner.campuses.any((c) => c.id == selectedCampusId)
               ? selectedCampusId! : owner.campuses.first.id,
