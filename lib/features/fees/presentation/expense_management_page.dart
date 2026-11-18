@@ -357,8 +357,9 @@ class _ExpenseManagementPageState extends State<ExpenseManagementPage>{
           Wrap(spacing:8,runSpacing:8,
             crossAxisAlignment:WrapCrossAlignment.center,children:[
               Text('Expense Requests',style:Theme.of(context).textTheme.titleLarge),
-              SizedBox(width:190,child:DropdownButtonFormField<String>(
+              SizedBox(width:230,child:DropdownButtonFormField<String>(
                 key:const Key('expense-status-filter'),value:status,
+                isExpanded:true,
                 decoration:const InputDecoration(
                   border:OutlineInputBorder(),labelText:'Status',isDense:true),
                 items:const [
