@@ -6,7 +6,8 @@ import '../data/fee_setup_repository.dart';
 
 String _cashDate(DateTime d)=>d.year.toString().padLeft(4,'0')+'-'+
  d.month.toString().padLeft(2,'0')+'-'+d.day.toString().padLeft(2,'0');
-String _cashAmount(int minor,String currency)=>currency+' '+FeeMoney.showMinor(minor);
+String _cashAmount(int minor,String currency)=>
+  (minor<0?'-':'')+currency+' '+FeeMoney.showMinor(minor.abs());
 
 class SchoolCashflowPage extends StatefulWidget {
   const SchoolCashflowPage({super.key,required this.repository,
