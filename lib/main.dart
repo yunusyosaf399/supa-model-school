@@ -28,6 +28,7 @@ import 'features/students/data/student_directory_repository.dart';
 import 'features/fees/data/fee_setup_repository.dart';
 import 'features/fees/presentation/fee_setup_page.dart';
 import 'features/fees/data/fee_monthly_repository.dart';
+import 'features/fees/data/fee_payment_repository.dart';
 import 'features/exams/data/exam_repository.dart';
 import 'features/exams/presentation/exam_management_page.dart';
 import 'features/fees/presentation/fee_finance_page.dart';
@@ -54,6 +55,7 @@ Future<void> main() async {
   StudentDirectoryRepository? studentRepo;
   FeeSetupRepository? feeSetupRepo;
   FeeMonthlyRepository? feeMonthlyRepo;
+  FeePaymentRepository? feePaymentRepo;
   OwnerOperationsRepository? operationsRepo;
   ExamRepository? examRepo;
   AttendanceRepository? attendanceRepo;
@@ -85,6 +87,7 @@ Future<void> main() async {
     studentRepo = SupabaseStudentDirectoryRepository(Supabase.instance.client);
     feeSetupRepo = SupabaseFeeSetupRepository(Supabase.instance.client);
     feeMonthlyRepo = SupabaseFeeMonthlyRepository(Supabase.instance.client);
+    feePaymentRepo = SupabaseFeePaymentRepository(Supabase.instance.client);
     operationsRepo = SupabaseOwnerOperationsRepository(Supabase.instance.client);
     examRepo = SupabaseExamRepository(Supabase.instance.client);
     attendanceRepo = SupabaseAttendanceRepository(Supabase.instance.client);
@@ -107,6 +110,7 @@ Future<void> main() async {
     studentDirectoryRepository: studentRepo,
     feeSetupRepository: feeSetupRepo,
     feeMonthlyRepository: feeMonthlyRepo,
+    feePaymentRepository: feePaymentRepo,
     operationsRepository: operationsRepo,
     examRepository: examRepo,
     attendanceRepository: attendanceRepo,
@@ -135,6 +139,7 @@ class SupaModelSchoolApp extends StatefulWidget {
     this.studentDirectoryRepository,
     this.feeSetupRepository,
     this.feeMonthlyRepository,
+    this.feePaymentRepository,
     this.operationsRepository,
     this.examRepository,
     this.attendanceRepository,
@@ -157,6 +162,7 @@ class SupaModelSchoolApp extends StatefulWidget {
   final StudentDirectoryRepository? studentDirectoryRepository;
   final FeeSetupRepository? feeSetupRepository;
   final FeeMonthlyRepository? feeMonthlyRepository;
+  final FeePaymentRepository? feePaymentRepository;
   final OwnerOperationsRepository? operationsRepository;
   final ExamRepository? examRepository;
   final AttendanceRepository? attendanceRepository;
@@ -302,6 +308,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   permissionGateway: widget.staffPermissionGateway,
                   studentRepository: widget.staffStudentDirectoryRepository,
                   examRepository: widget.examRepository,
+                  feePaymentRepository: widget.feePaymentRepository,
                   onSignOut: _exitShell,
                   passwordGateway: widget.accountPasswordGateway,
                 )
@@ -313,6 +320,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   studentRepository: widget.staffStudentDirectoryRepository,
                   examRepository: widget.examRepository,
                   attendanceRepository: widget.attendanceRepository,
+                  feePaymentRepository: widget.feePaymentRepository,
                   passwordGateway: widget.accountPasswordGateway!,
                   onSignOut: _exitShell,
                 )
@@ -327,6 +335,7 @@ class _SupaModelSchoolAppState extends State<SupaModelSchoolApp> {
                   studentDirectoryRepository: widget.studentDirectoryRepository,
                   feeSetupRepository: widget.feeSetupRepository,
                   feeMonthlyRepository: widget.feeMonthlyRepository,
+                  feePaymentRepository: widget.feePaymentRepository,
                   operationsRepository: widget.operationsRepository,
                   examRepository: widget.examRepository,
                   attendanceRepository: widget.attendanceRepository,
@@ -371,6 +380,7 @@ class _SchoolShell extends StatefulWidget {
     this.studentDirectoryRepository,
     this.feeSetupRepository,
     this.feeMonthlyRepository,
+    this.feePaymentRepository,
     this.operationsRepository,
     this.examRepository,
     this.attendanceRepository,
@@ -387,6 +397,7 @@ class _SchoolShell extends StatefulWidget {
   final StudentDirectoryRepository? studentDirectoryRepository;
   final FeeSetupRepository? feeSetupRepository;
   final FeeMonthlyRepository? feeMonthlyRepository;
+  final FeePaymentRepository? feePaymentRepository;
   final OwnerOperationsRepository? operationsRepository;
   final ExamRepository? examRepository;
   final AttendanceRepository? attendanceRepository;
@@ -602,6 +613,7 @@ class _SchoolShellState extends State<_SchoolShell> {
         owner: widget.owner!,
         setupRepository: widget.feeSetupRepository!,
         monthlyRepository: widget.feeMonthlyRepository!,
+        paymentRepository: widget.feePaymentRepository,
         selectedCampusId: activeCampusId,
       );
     }
