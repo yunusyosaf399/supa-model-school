@@ -316,7 +316,7 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
               'correction requires an authorized correction workflow.'))),
           const SizedBox(height:20),
         ],
-      )),
+      ),
     );
   }
 }
