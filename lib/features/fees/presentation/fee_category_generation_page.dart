@@ -6,10 +6,10 @@ import '../data/fee_setup_repository.dart';
 
 class FeeCategoryGenerationPage extends StatefulWidget {
   const FeeCategoryGenerationPage({super.key,required this.workspace,
-    required this.repository,this.initialStudentId});
+    required this.repository,this.initialStudentId,this.initialMonth});
   final FeePaymentWorkspace workspace;
   final FeeBillingRepository repository;
-  final String? initialStudentId;
+  final String? initialStudentId,initialMonth;
   @override State<FeeCategoryGenerationPage> createState()=>
     _FeeCategoryGenerationPageState();
 }
@@ -22,6 +22,9 @@ class _FeeCategoryGenerationPageState extends State<FeeCategoryGenerationPage>{
 
   @override void initState(){
     super.initState();
+    if(widget.initialMonth!=null&&widget.initialMonth!.length>=7){
+      month.text=widget.initialMonth!.substring(0,7);
+    }
     if(widget.initialStudentId!=null){
       scope='student';targetId=widget.initialStudentId;
     }
