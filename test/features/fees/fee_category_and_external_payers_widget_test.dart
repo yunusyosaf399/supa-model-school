@@ -35,7 +35,9 @@ OtherPeopleLedger exampleExternal({bool collect=true})=>OtherPeopleLedger(
 class FakeBilling implements FeeBillingRepository{
   FakeBilling({this.allowCollect=true});
   final bool allowCollect;
-  int generated=0,charged=0,collected=0,created=0;
+  int generated=0,generatedBatch=0,charged=0,collected=0,created=0;
+  List<String>? lastBatchCategories;
+  String? lastBatchOperation;
   int? lastOverride;
   String? lastScope,lastTarget,lastCategory;
   List<QuickPayAllocation>? lastAlloc;
@@ -50,6 +52,30 @@ class FakeBilling implements FeeBillingRepository{
     expect(month,'2026-11-01');
     return const CategoryBillResult(
       added:1,skipped:0,eligible:1,category:'Transport');
+  }
+  @override
+  Future<BatchBillResult> generateCategories({
+    required String schoolId,required String campusId,required String yearId,
+    required String month,required List<String> categoryIds,
+    required String scope,String? targetId,
+    required bool includeOptional,required String operationId,
+  })async{
+    expect(month,'2026-11-01');
+    expect(scope,'student');
+    expect(targetId,'s-1');
+    expect(includeOptional,false);
+    generatedBatch++;
+    lastBatchCategories=categoryIds;
+    lastBatchOperation=operationId;
+    return const BatchBillResult(
+      added:2,skipped:0,eligible:2,
+      categories:[
+        BatchBillCategory(name:'Tuition',frequency:'monthly',
+          added:1,skipped:0),
+        BatchBillCategory(name:'Transport',frequency:'monthly',
+          added:1,skipped:0),
+      ],
+    );
   }
   @override
   Future<OtherPeopleLedger> otherPeople({required String schoolId,
@@ -123,6 +149,36 @@ void main(){
     expect(repo.lastOverride,30000);
     expect(repo.lastCategory,'transport');
     expect(find.textContaining('Generated 1 Transport'),findsOneWidget);
+    expect(tester.takeException(),isNull);
+  });
+
+  testWidgets('Single student generates multiple fee categories atomically',
+    (tester)async{
+    await tester.binding.setSurfaceSize(const Size(980,1100));
+    addTearDown(()=>tester.binding.setSurfaceSize(null));
+    final repo=FakeBilling();
+    await tester.pumpWidget(MaterialApp(home:FeeCategoryGenerationPage(
+      repository:repo,workspace:exampleWorkspace(),
+      initialStudentId:'s-1',initialMonth:'2026-11-01')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('fee-generate-batch-mode')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('fee-generate-batch-TUITION')),
+      findsOneWidget);
+    expect(find.byKey(const Key('fee-generate-batch-TRANSPORT')),
+      findsOneWidget);
+    expect(find.byKey(const Key('fee-generate-custom-amount')),findsNothing);
+    await tester.ensureVisible(find.byKey(const Key('fee-generate-process')));
+    await tester.tap(find.byKey(const Key('fee-generate-process')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Tuition (monthly)'),findsOneWidget);
+    await tester.tap(find.byKey(const Key('fee-generate-confirm')));
+    await tester.pumpAndSettle();
+    expect(repo.generatedBatch,1);
+    expect(repo.generated,0);
+    expect(repo.lastBatchCategories,['tuition','transport']);
+    expect(repo.lastBatchOperation,isNotNull);
+    expect(find.textContaining('across 2 categories'),findsOneWidget);
     expect(tester.takeException(),isNull);
   });
 
