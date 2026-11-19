@@ -235,9 +235,9 @@ class _StudentFeeRatesPageState extends State<StudentFeeRatesPage>{
                   child:Text('Exempt from this fee')),
                 DropdownMenuItem(value:'standard',
                   child:Text('Restore class standard rate')),
-              ],onChanged:locked?null:(x)=>setState(()=>{
-                kind=x??'override',
-                if(x=='standard')endMonth.clear(),
+              ],onChanged:locked?null:(x)=>setState((){
+                kind=x??'override';
+                if(x=='standard')endMonth.clear();
               })),
             if(kind=='override')...[
               const SizedBox(height:10),
