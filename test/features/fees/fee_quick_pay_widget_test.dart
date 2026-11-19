@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:supa_model_school/features/fees/data/fee_payment_repository.dart';
+import 'package:supa_model_school/features/fees/data/fee_detailed_statement.dart';
 import 'package:supa_model_school/features/fees/presentation/fee_collection_page.dart';
 
 const student = FeePaymentStudent(
@@ -48,6 +49,12 @@ FeePaymentWorkspace fixtureWorkspace({bool collect = true}) => FeePaymentWorkspa
 
 class FakeFeePaymentRepo implements FeePaymentRepository {
   FakeFeePaymentRepo({this.collectAllowed = true});
+
+  @override
+  Future<FeeDetailedStudentLedger> detailedLedger({
+    required String schoolId,required String campusId,
+    required String yearId,required String studentId,
+  })=>throw UnsupportedError('Unused in Quick Pay regression');
   final bool collectAllowed;
   int loads = 0;
   int payments = 0;
