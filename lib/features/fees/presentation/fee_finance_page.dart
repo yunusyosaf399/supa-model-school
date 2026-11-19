@@ -37,11 +37,9 @@ class FeeFinancePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DefaultTabController(
-    length: (paymentRepository == null ? 2 :
-      (cashbookRepository != null && owner.activeYearId != null &&
-        owner.campuses.isNotEmpty
-          ? (schoolCashflowRepository != null ? 5 : 4) : 3)) +
-        0,
+    length: (paymentRepository == null || owner.campuses.isEmpty ? 2 :
+      (cashbookRepository != null && owner.activeYearId != null
+        ? (schoolCashflowRepository != null ? 5 : 4) : 3)),
     initialIndex: paymentRepository != null && owner.campuses.isNotEmpty ? 2 : 0,
     child: Column(children: [
       Material(
