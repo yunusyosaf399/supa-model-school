@@ -8,6 +8,7 @@ import '../data/fee_billing_repository.dart';
 import '../data/fee_cashbook_repository.dart';
 import 'fee_cashbook_page.dart';
 import 'fee_category_generation_page.dart';
+import 'individual_fee_page.dart';
 import 'fee_other_people_page.dart';
 
 String feeDisplay(int minor, String currency) =>
@@ -107,6 +108,17 @@ class _FeeCollectionPageState extends State<FeeCollectionPage> {
     if(saved==true&&mounted)await load();
   }
 
+  Future<void> addIndividual(FeePaymentWorkspace workspace,
+      {String? studentId}) async {
+    final billing=widget.billingRepository;
+    if(!workspace.canCollect||billing==null)return;
+    final saved=await Navigator.push<bool>(context,MaterialPageRoute(
+      builder:(_)=>IndividualFeePage(
+        workspace:workspace,repository:billing,
+        initialStudentId:studentId)));
+    if(saved==true&&mounted)await load();
+  }
+
   Future<void> otherPayers(FeePaymentWorkspace workspace) async {
     final billing=widget.billingRepository;
     if(billing==null)return;
@@ -184,6 +196,11 @@ class _FeeCollectionPageState extends State<FeeCollectionPage> {
                 onPressed:()=>generateFee(w),
                 icon:const Icon(Icons.post_add_outlined),
                 label:const Text('Generate Category Fees')),
+              if(w.canCollect)FilledButton.icon(
+                key:const Key('fee-add-individual-open'),
+                onPressed:()=>addIndividual(w),
+                icon:const Icon(Icons.person_add_alt_1),
+                label:const Text('Add Fee to One Student')),
               OutlinedButton.icon(
                 key:const Key('fee-other-payers-open'),
                 onPressed:()=>otherPayers(w),
@@ -282,6 +299,30 @@ class _FeeCollectionPageState extends State<FeeCollectionPage> {
                             onPressed:()=>generateFee(w,studentId:s.id),
                             icon:const Icon(Icons.add_circle_outline),
                             label:const Text('Generate Fee')),
+                        if(widget.billingRepository!=null&&w.canCollect)
+                          OutlinedButton.icon(
+                            key:Key('fee-add-individual-${s.registration}'),
+                            onPressed:()=>addIndividual(w,studentId:s.id),
+                            icon:const Icon(Icons.receipt_long_outlined),
+                            label:const Text('Add Individual Fee')),
+                        ExpansionTile(
+                          key:Key('fee-charge-lines-${s.registration}'),
+                          tilePadding:EdgeInsets.zero,
+                          title:const Text('Category-wise fee records'),
+                          subtitle:Text('${s.charges.length} posted charges'),
+                          children:[
+                            for(final c in s.charges)
+                              ListTile(
+                                dense:true,
+                                title:Text(c.categoryName+' • '+feeFrequency(c.frequency)),
+                                subtitle:Text('Billing: '+c.month+' • Due: '+c.dueOn+
+                                  '\\nBilled: '+feeDisplay(c.netMinor,w.currency)+
+                                  ' • Collected: '+feeDisplay(c.paidMinor,w.currency)),
+                                trailing:Text(feeDisplay(c.outstandingMinor,w.currency),
+                                  style:TextStyle(color:c.outstandingMinor>0
+                                    ?Theme.of(context).colorScheme.error:null)),
+                              ),
+                          ]),
                         Align(alignment:Alignment.centerRight,
                           child:FilledButton.icon(
                             key:Key('fee-quickpay-'+s.registration),
