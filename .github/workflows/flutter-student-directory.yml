@@ -53,7 +53,7 @@ jobs:
         run: flutter test test/features/fees/fee_scoped_generation_widget_test.dart
       - name: Owner recurring student-specific fee rates and exemptions regression
         run: flutter test test/features/fees/student_fee_rates_widget_test.dart
-      - name: Reconciled student fee statement, PDF and billing report regression
+      - name: Fee statement, dual-copy posted receipts, PDFs and billing reports regression
         run: flutter test test/features/fees/fee_detailed_ledger_widget_test.dart
       - name: Reconciled Fee Income cashbook and collection report regression
         run: flutter test test/features/fees/fee_cashbook_widget_test.dart
