@@ -248,3 +248,8 @@ revoke execute on function
  public.expense_evidence_review(uuid,uuid,uuid,text,text)
 from authenticated;
 
+
+-- Staff permission labels must reflect direct expense recording.
+update app_private.sms_permission_catalog
+ set title='Post Expense Payments'
+ where code='expenses.pay';
