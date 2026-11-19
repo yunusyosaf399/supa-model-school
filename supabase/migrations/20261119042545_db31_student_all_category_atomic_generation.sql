@@ -105,8 +105,7 @@ begin
   values(p_school,p_operation,'generate_charges',v_actor,v_hash,v_result);
   return v_result;
 end;
-$function$
-
+$function$;
 
 CREATE OR REPLACE FUNCTION public.fee_generate_categories(p_school uuid, p_campus uuid, p_year uuid, p_month date, p_categories uuid[], p_scope text, p_target uuid, p_include_optional boolean, p_operation uuid)
  RETURNS jsonb
@@ -116,8 +115,7 @@ AS $function$
   select app_private.sms_fee_generate_categories(
     p_school,p_campus,p_year,p_month,p_categories,
     p_scope,p_target,p_include_optional,p_operation);
-$function$
-
+$function$;
 
 revoke all on function app_private.sms_fee_generate_categories(uuid,uuid,uuid,date,uuid[],text,uuid,boolean,uuid),
   public.fee_generate_categories(uuid,uuid,uuid,date,uuid[],text,uuid,boolean,uuid)
