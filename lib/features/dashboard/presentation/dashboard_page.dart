@@ -1191,8 +1191,6 @@ class _DashboardPageState extends State<DashboardPage> {
       _approvalRow(desktop ? 'Admission Applications' : 'Admission Requests',
           Icons.person_add_alt_1_outlined,
           _data.pendingAdmissions, widget.onAdmissions ?? widget.onNewAdmission),
-      _approvalRow('Expense Requests', Icons.receipt_long_outlined,
-          _data.pendingExpenses, widget.onExpenses),
       _approvalRow(desktop ? 'Leave Requests' : 'Student Transfer Requests',
           desktop ? Icons.groups_2_outlined : Icons.swap_horiz_rounded,
           desktop ? _data.pendingLeave :

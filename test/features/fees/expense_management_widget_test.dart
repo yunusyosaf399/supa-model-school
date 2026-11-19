@@ -13,6 +13,11 @@ const approvedExpense=ExpenseRequest(
   kind:'operating',amountMinor:30000,paidMinor:10000,
   expenseDate:'2026-11-18',purpose:'Test classroom maintenance',
   status:'approved',requesterId:'staff-1',payments:[]);
+const recordedExpense=ExpenseRequest(
+  id:'expense-1',categoryId:'category-1',category:'Repairs',
+  kind:'operating',amountMinor:30000,paidMinor:0,
+  expenseDate:'2026-11-18',purpose:'Test classroom maintenance',
+  status:'recorded',requesterId:'staff-1',payments:[]);
 const pendingExpense=ExpenseRequest(
   id:'expense-1',categoryId:'category-1',category:'Repairs',
   kind:'operating',amountMinor:30000,paidMinor:0,
@@ -61,7 +66,7 @@ class MockExpenses implements ExpenseRepository {
     required String operationId})async {
     submitted++;lastOperation=operationId;lastCategory=categoryId;
     lastAmount=amountMinor;
-    current=pendingExpense;return 'expense-1';
+    current=recordedExpense;return 'expense-1';
   }
   @override
   Future<String> review({required String schoolId,required String campusId,
@@ -98,7 +103,7 @@ void main(){
     expect(pendingExpense.remainingMinor,30000);
   });
 
-  testWidgets('staff submits a request but does not auto-approve or pay',
+  testWidgets('staff records expense immediately without approval or payment',
       (tester)async {
     await tester.binding.setSurfaceSize(const Size(1150,950));
     addTearDown(()=>tester.binding.setSurfaceSize(null));
@@ -119,33 +124,29 @@ void main(){
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('expense-submit-request')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('expense-submit-confirm')));
-    await tester.pumpAndSettle();
     expect(fake.submitted,1);
     expect(fake.lastAmount,26050);
     expect(fake.lastCategory,'category-1');
     expect(fake.approved,0);
     expect(fake.paid,0);
+    expect(fake.current?.status,'recorded');
+    expect(find.textContaining('RECORDED'),findsWidgets);
     expect(find.byKey(const Key('expense-approve-expense-1')),findsNothing);
     expect(tester.takeException(),isNull);
   });
 
-  testWidgets('Owner sees approval queue and approves without paying',
+  testWidgets('Owner sees recorded expenses with no approval queue',
     (tester)async {
     await tester.binding.setSurfaceSize(const Size(1100,950));
     addTearDown(()=>tester.binding.setSurfaceSize(null));
     final fake=MockExpenses(owner:true,hasRequest:true);
+    fake.current=recordedExpense;
     await showExpense(tester,fake);
     expect(find.byKey(const Key('expense-owner-setup')),findsOneWidget);
-    await tester.ensureVisible(find.byKey(const Key('expense-approve-expense-1')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('expense-approve-expense-1')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('expense-review-confirm')));
-    await tester.pumpAndSettle();
-    expect(fake.approved,1);
-    expect(fake.lastReview,'approved');
-    expect(fake.paid,0);
+    expect(find.byKey(const Key('expense-approve-expense-1')),findsNothing);
+    expect(find.byKey(const Key('expense-reject-expense-1')),findsNothing);
+    expect(find.textContaining('RECORDED'),findsWidgets);
+    expect(fake.approved,0);
     expect(tester.takeException(),isNull);
   });
 

@@ -12,7 +12,7 @@ const payment=ExpensePayment(id:'payment-1',amountMinor:12000,
 const request=ExpenseRequest(id:'request-1',categoryId:'category-1',
   category:'Lab Equipment',kind:'capital_asset',amountMinor:12000,
   paidMinor:12000,expenseDate:'2026-11-18',purpose:'Lab oscilloscope',
-  status:'approved',requesterId:'user-1',payments:[payment]);
+  status:'recorded',requesterId:'user-1',payments:[payment]);
 const evidenceEntry=ExpenseEvidence(id:'evidence-1',kind:'receipt',
   path:'school/campus/request-1/payment-1/object.pdf',
   fileName:'payment.pdf',status:'pending',bytes:1024,
@@ -29,7 +29,7 @@ class EvidenceFake implements ExpenseEvidenceRepository {
     required String campusId,required String requestId})async{
     expect(schoolId,'school-1');expect(campusId,'campus-1');
     expect(requestId,'request-1');
-    return ExpenseEvidenceWorkspace(isOwner:owner,requestStatus:'approved',
+    return ExpenseEvidenceWorkspace(isOwner:owner,requestStatus:'recorded',
       canUploadInvoice:true,canUploadReceipt:owner,
       attachments:[ExpenseEvidence(id:evidenceEntry.id,kind:evidenceEntry.kind,
         path:evidenceEntry.path,fileName:evidenceEntry.fileName,status:status,
@@ -95,7 +95,7 @@ void main(){
     expect(ExpenseEvidenceValidator.mime('exe'),null);
     expect(ExpenseEvidenceValidator.maxBytes,10485760);
   });
-  testWidgets('Owner can verify private receipt linked to a posted payment',
+  testWidgets('Owner can optionally attach invoice and posted-payment receipt',
     (tester)async{
     await tester.binding.setSurfaceSize(const Size(1000,950));
     addTearDown(()=>tester.binding.setSurfaceSize(null));
@@ -106,14 +106,20 @@ void main(){
     expect(find.textContaining('Linked posted payment: payment-1'),findsOneWidget);
     expect(find.byKey(const Key('expense-upload-invoice')),findsOneWidget);
     expect(find.byKey(const Key('expense-upload-receipt')),findsOneWidget);
-    await tester.ensureVisible(find.byKey(const Key('expense-evidence-verify-evidence-1')));
-    await tester.tap(find.byKey(const Key('expense-evidence-verify-evidence-1')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('expense-evidence-review-confirm')));
-    await tester.pumpAndSettle();
-    expect(fake.reviews,1);
-    expect(fake.status,'verified');
     expect(find.byKey(const Key('expense-evidence-verify-evidence-1')),findsNothing);
+    await tester.ensureVisible(find.byKey(const Key('expense-upload-invoice')));
+    await tester.tap(find.byKey(const Key('expense-upload-invoice')));
+    await tester.pumpAndSettle();
+    expect(fake.uploads,1);
+    expect(fake.lastKind,'invoice');
+    expect(fake.lastPayment,isNull);
+    await tester.ensureVisible(find.byKey(const Key('expense-upload-receipt')));
+    await tester.tap(find.byKey(const Key('expense-upload-receipt')));
+    await tester.pumpAndSettle();
+    expect(fake.uploads,2);
+    expect(fake.lastKind,'receipt');
+    expect(fake.lastPayment,'payment-1');
+    expect(fake.reviews,0);
     expect(tester.takeException(),isNull);
   });
   testWidgets('staff may see receipt but cannot verify or upload one',

@@ -26,7 +26,6 @@ class _ExpenseManagementPageState extends State<ExpenseManagementPage>{
   String? catId,catOp,accOp,reqOp,error,notice;
   bool loading=false,writing=false;
   int version=0;
-  final Map<String,({String operation,String? reason})> reviews={};
 
   @override void initState(){
     super.initState();
@@ -129,23 +128,7 @@ class _ExpenseManagementPageState extends State<ExpenseManagementPage>{
       setState(()=>error='Select a category and enter amount, date, and purpose (at least 4 characters).');
       return;
     }
-    if(reqOp==null){
-      final yes=await showDialog<bool>(context:context,builder:(d)=>
-        AlertDialog(title:const Text('Submit Expense for Owner Approval'),
-        content:Text(w.currency+' '+FeeMoney.showMinor(amount)+
-          ' • '+w.categories.firstWhere((c)=>c.id==catId).name+
-          '\n'+reqPurpose.text.trim()+
-          '\nNo payment will be made until the Owner approves.'),
-        actions:[
-          TextButton(onPressed:()=>Navigator.pop(d,false),
-            child:const Text('Edit')),
-          FilledButton(key:const Key('expense-submit-confirm'),
-            onPressed:()=>Navigator.pop(d,true),
-            child:const Text('Submit Request')),
-        ]));
-      if(yes!=true||!mounted)return;
-      reqOp=FeeOperationId.create();
-    }
+    reqOp ??= FeeOperationId.create();
     setState((){writing=true;error=null;notice=null;});
     try{
       await widget.repository.request(
@@ -154,65 +137,14 @@ class _ExpenseManagementPageState extends State<ExpenseManagementPage>{
         purpose:reqPurpose.text.trim(),operationId:reqOp!);
       if(!mounted)return;
       reqOp=null;reqAmount.clear();reqPurpose.clear();
-      notice='Expense submitted for Owner approval. No payment was recorded.';
+      notice='Expense recorded successfully. Payment and attachments are optional.';
       await load();
     }catch(e){
-      if(mounted)setState(()=>error='Request not confirmed: '+e.toString()+
+      if(mounted)setState(()=>error='Expense not confirmed: '+e.toString()+
         '. Retry unchanged details to avoid duplicates.');
     }finally{if(mounted)setState(()=>writing=false);}
   }
 
-  Future<void> review(ExpenseRequest request,String decision)async{
-    final w=workspace;
-    if(w==null||!w.isOwner||writing)return;
-    final key=request.id+'-'+decision;
-    final existing=reviews[key];
-    String reason=existing?.reason??'';
-    if(existing==null){
-      final yes=await showDialog<bool>(context:context,builder:(d)=>
-        AlertDialog(
-          title:Text(decision=='approved'?'Approve Expense':'Reject Expense'),
-          content:Column(mainAxisSize:MainAxisSize.min,children:[
-            Text(request.category+' • '+w.currency+' '+
-              FeeMoney.showMinor(request.amountMinor)),
-            if(decision=='rejected')...[
-              const SizedBox(height:10),
-              TextField(key:const Key('expense-reject-reason'),
-                onChanged:(v)=>reason=v,maxLength:500,
-                decoration:const InputDecoration(
-                  border:OutlineInputBorder(),labelText:'Rejection Reason')),
-            ],
-          ]),
-          actions:[
-            TextButton(onPressed:()=>Navigator.pop(d,false),
-              child:const Text('Cancel')),
-            FilledButton(key:const Key('expense-review-confirm'),
-              onPressed:()=>Navigator.pop(d,true),
-              child:Text(decision=='approved'?'Approve':'Reject')),
-          ]));
-      if(yes!=true||!mounted)return;
-      if(decision=='rejected'&&reason.trim().length<4){
-        setState(()=>error='Rejection reason must have at least 4 characters.');
-        return;
-      }
-      reviews[key]=(operation:FeeOperationId.create(),
-        reason:decision=='rejected'?reason.trim():null);
-    }
-    setState((){writing=true;error=null;notice=null;});
-    try{
-      await widget.repository.review(
-        schoolId:w.schoolId,campusId:w.campusId,requestId:request.id,
-        decision:decision,reason:reviews[key]!.reason,
-        operationId:reviews[key]!.operation);
-      if(!mounted)return;
-      reviews.remove(key);
-      notice='Expense '+decision+'. No payment created by approval.';
-      await load();
-    }catch(e){
-      if(mounted)setState(()=>error='Review not confirmed: '+e.toString()+
-        '. Retry '+decision+' using the same operation.');
-    }finally{if(mounted)setState(()=>writing=false);}
-  }
   Future<void> pay(ExpenseWorkspace w,ExpenseRequest request)async{
     final saved=await Navigator.push<bool>(context,MaterialPageRoute(
       builder:(_)=>ExpensePayPage(
@@ -239,12 +171,12 @@ class _ExpenseManagementPageState extends State<ExpenseManagementPage>{
     final w=workspace;
     final requests=(w?.requests??const <ExpenseRequest>[]).where((r)=>
       status=='all'||r.status==status||(status=='paid'&&
-      r.status=='approved'&&r.remainingMinor==0)).toList();
+      (r.status=='approved'||r.status=='recorded')&&r.remainingMinor==0)).toList();
     return RefreshIndicator(onRefresh:load,child:ListView(
       key:const Key('expense-management-page'),
       padding:const EdgeInsets.all(14),children:[
         Text('Expense Management',style:Theme.of(context).textTheme.headlineSmall),
-        const Text('Staff requests • Owner approval • Authorized cash/bank payments'),
+        const Text('Record expenses directly. Payments and attachments are optional.'),
         const SizedBox(height:8),
         if(loading||writing)const LinearProgressIndicator(),
         if(error!=null)Text(error!,style:TextStyle(
@@ -329,8 +261,8 @@ class _ExpenseManagementPageState extends State<ExpenseManagementPage>{
           ],
           if(w.canCreate)Card.outlined(child:ExpansionTile(
             key:const Key('expense-request-form'),
-            title:const Text('Submit Expense Request'),
-            subtitle:const Text('Requires Owner approval before payment'),
+            title:const Text('Add Expense'),
+            subtitle:const Text('No Owner or Principal approval required'),
             children:[Padding(padding:const EdgeInsets.all(12),
               child:Column(children:[
                 if(w.categories.where((c)=>c.active).isEmpty)
@@ -350,7 +282,7 @@ class _ExpenseManagementPageState extends State<ExpenseManagementPage>{
                   controller:reqAmount,enabled:reqOp==null,
                   keyboardType:const TextInputType.numberWithOptions(decimal:true),
                   decoration:InputDecoration(border:const OutlineInputBorder(),
-                    labelText:'Requested Amount ('+w.currency+')')),
+                    labelText:'Expense Amount ('+w.currency+')')),
                 const SizedBox(height:8),
                 TextField(key:const Key('expense-request-date'),
                   controller:reqDate,enabled:reqOp==null,
@@ -361,16 +293,16 @@ class _ExpenseManagementPageState extends State<ExpenseManagementPage>{
                   controller:reqPurpose,enabled:reqOp==null,
                   maxLines:3,maxLength:1000,
                   decoration:const InputDecoration(
-                    border:OutlineInputBorder(),labelText:'Purpose / Reason')),
+                    border:OutlineInputBorder(),labelText:'Expense Description')),
                 FilledButton.icon(key:const Key('expense-submit-request'),
                   onPressed:writing||catId==null?null:sendRequest,
                   icon:const Icon(Icons.send_outlined),
-                  label:Text(reqOp==null?'Review & Submit Request':'Retry Same Request')),
+                  label:Text(reqOp==null?'Save Expense':'Retry Same Expense')),
               ]))])),
           const SizedBox(height:10),
           Wrap(spacing:8,runSpacing:8,
             crossAxisAlignment:WrapCrossAlignment.center,children:[
-              Text('Expense Requests',style:Theme.of(context).textTheme.titleLarge),
+              Text('Recorded Expenses',style:Theme.of(context).textTheme.titleLarge),
               SizedBox(width:230,child:DropdownButtonFormField<String>(
                 key:const Key('expense-status-filter'),value:status,
                 isExpanded:true,
@@ -378,16 +310,17 @@ class _ExpenseManagementPageState extends State<ExpenseManagementPage>{
                   border:OutlineInputBorder(),labelText:'Status',isDense:true),
                 items:const [
                   DropdownMenuItem(value:'all',child:Text('All')),
-                  DropdownMenuItem(value:'pending',child:Text('Pending')),
-                  DropdownMenuItem(value:'approved',child:Text('Approved')),
-                  DropdownMenuItem(value:'rejected',child:Text('Rejected')),
+                  DropdownMenuItem(value:'recorded',child:Text('Recorded')),
+                  DropdownMenuItem(value:'approved',child:Text('Approved (legacy)')),
+                  DropdownMenuItem(value:'pending',child:Text('Pending (legacy)')),
+                  DropdownMenuItem(value:'rejected',child:Text('Rejected (legacy)')),
                   DropdownMenuItem(value:'paid',child:Text('Fully Paid')),
                 ],onChanged:(v)=>setState(()=>status=v??'all'))),
               IconButton(onPressed:loading?null:load,
                 tooltip:'Refresh Expenses',icon:const Icon(Icons.refresh)),
             ]),
           if(requests.isEmpty)
-            const Text('No matching expense requests in this campus.'),
+            const Text('No matching expenses recorded in this campus.'),
           for(final r in requests)
             Card.outlined(key:Key('expense-row-'+r.id),
               child:Padding(padding:const EdgeInsets.all(12),
@@ -396,7 +329,7 @@ class _ExpenseManagementPageState extends State<ExpenseManagementPage>{
                     style:Theme.of(context).textTheme.titleMedium),
                   Text(r.purpose),
                   Text('Date: '+r.expenseDate+' • '+r.kind),
-                  Text('Requested '+money(r.amountMinor,w.currency)+
+                  Text('Amount '+money(r.amountMinor,w.currency)+
                     ' • Paid '+money(r.paidMinor,w.currency)+
                     ' • Remaining '+money(r.remainingMinor,w.currency)),
                   if(r.rejectionReason!=null)
@@ -412,24 +345,18 @@ class _ExpenseManagementPageState extends State<ExpenseManagementPage>{
                       key:Key('expense-evidence-${r.id}'),
                       onPressed:writing?null:()=>viewEvidence(w,r),
                       icon:const Icon(Icons.attach_file),
-                      label:const Text('Receipts & Invoices')),
-                  if(r.status=='pending'&&w.isOwner)Wrap(spacing:8,children:[
-                    FilledButton(key:Key('expense-approve-'+r.id),
-                      onPressed:writing?null:()=>review(r,'approved'),
-                      child:const Text('Approve')),
-                    OutlinedButton(key:Key('expense-reject-'+r.id),
-                      onPressed:writing?null:()=>review(r,'rejected'),
-                      child:const Text('Reject')),
-                  ]),
-                  if(r.status=='approved'&&r.remainingMinor>0&&w.canPay)
+                      label:const Text('Attachments (optional)')),
+                  if((r.status=='recorded'||r.status=='approved')&&
+                      r.remainingMinor>0&&w.canPay)
                     FilledButton.icon(key:Key('expense-pay-'+r.id),
                       onPressed:writing?null:()=>pay(w,r),
                       icon:const Icon(Icons.payments_outlined),
                       label:const Text('Post Cash / Bank Payment')),
                 ]))),
           const SizedBox(height:10),
-          const Text('Paid expenses are recorded once in the cash movement '
-            'report. A request or approval alone never changes the cashbook.'),
+          const Text('Saving an expense records its description and amount. '
+            'Only posted cash or bank payments change the cash movement report. '
+            'An invoice or receipt is never mandatory.'),
         ],
       ]));
   }
