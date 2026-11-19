@@ -765,8 +765,8 @@ class _SchoolShellState extends State<_SchoolShell> {
         child: ListView(
           shrinkWrap: true,
           children: [
-            for (var i = 0; i < modules.length; i++)
-              ListTile(
+            for (var i = 0; i < modules.length; i++) ...[
+              if (i != 7) ListTile(
                 leading: Icon(icons[i]),
                 title: Text(modules[i]),
                 onTap: () {
@@ -774,6 +774,27 @@ class _SchoolShellState extends State<_SchoolShell> {
                   Navigator.pop(sheetContext);
                 },
               ),
+              if (i == 3) ...[
+                ListTile(
+                  key: const Key('mobile-finance-fee'),
+                  contentPadding: const EdgeInsets.only(left: 42,right:16),
+                  leading: const Icon(Icons.receipt_long_outlined),
+                  title: const Text('Fee'),
+                  onTap: () {
+                    setState(() => selected = 3);
+                    Navigator.pop(sheetContext);
+                  }),
+                ListTile(
+                  key: const Key('mobile-finance-expenses'),
+                  contentPadding: const EdgeInsets.only(left: 42,right:16),
+                  leading: const Icon(Icons.request_quote_outlined),
+                  title: const Text('Expenses'),
+                  onTap: () {
+                    setState(() => selected = 7);
+                    Navigator.pop(sheetContext);
+                  }),
+              ],
+            ],
           ],
         ),
       ),
@@ -856,7 +877,7 @@ class _SchoolShellState extends State<_SchoolShell> {
                             const SizedBox(width: 13),
                             Expanded(child: Text(modules[i],
                               style: TextStyle(
-                                color: selected == i ? Colors.white : ink,
+                                color: (selected == i || (i == 3 && selected == 7)) ? Colors.white : ink,
                                 fontSize: 13,
                                 fontWeight: (selected == i || (i == 3 && selected == 7))
                                     ? FontWeight.w800 : FontWeight.w500,
