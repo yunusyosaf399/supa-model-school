@@ -337,7 +337,7 @@ class _FeeSetupPageState extends State<FeeSetupPage> {
                 Text('Class Fee Setup • ' + (data?.yearLabel ??
                     widget.owner.activeYearLabel ?? 'No active year')),
               ]),
-              Row(mainAxisSize: MainAxisSize.min, children: [
+              Wrap(spacing:7,runSpacing:7,children: [
                 IconButton(key: const Key('fee-refresh'),
                   onPressed: _loading ? null : _load,
                   icon: const Icon(Icons.refresh),
