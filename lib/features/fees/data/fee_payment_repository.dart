@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'fee_monthly_repository.dart';
+import 'fee_detailed_statement.dart';
 
 int feeInt(Object? x) {
   if (x is num) return x.toInt();
@@ -216,6 +217,13 @@ class QuickPayReceipt {
 abstract class FeePaymentRepository {
   const FeePaymentRepository();
 
+  /// Read-only, campus-authorized school-year charges and receipt allocations.
+  Future<FeeDetailedStudentLedger> detailedLedger({
+    required String schoolId,required String campusId,
+    required String yearId,required String studentId,
+  });
+
+
   Future<FeePaymentWorkspace> workspace({
     required String schoolId, required String campusId, String? yearId,
   });
@@ -241,6 +249,22 @@ class SupabaseFeePaymentRepository implements FeePaymentRepository {
     final data = await client.rpc(name, params: params);
     if (data is! Map) throw StateError('Invalid payment response');
     return Map<String, dynamic>.from(data);
+  }
+
+  @override
+  Future<FeeDetailedStudentLedger> detailedLedger({
+    required String schoolId,required String campusId,
+    required String yearId,required String studentId,
+  }) async {
+    final response=await _rpc('fee_student_detailed_ledger',{
+      'p_school':schoolId,'p_campus':campusId,
+      'p_year':yearId,'p_student':studentId});
+    final value=FeeDetailedStudentLedger.fromJson(response);
+    if(value.schoolId!=schoolId||value.campusId!=campusId||
+       value.yearId!=yearId||value.studentId!=studentId){
+      throw StateError('Statement returned another school, campus or student');
+    }
+    return value;
   }
 
   @override
