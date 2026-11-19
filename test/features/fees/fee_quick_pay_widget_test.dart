@@ -181,6 +181,7 @@ void main() {
     expect(repo.allocation!.map((row) => row.amountMinor).toList(),
       [5000, 5000]);
     expect(find.textContaining('SMS-000001234'), findsOneWidget);
+    expect(find.byKey(const Key('quickpay-print-receipt')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

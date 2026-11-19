@@ -7,6 +7,7 @@ import '../data/fee_detailed_statement.dart';
 import '../data/fee_setup_repository.dart';
 import '../data/fee_payment_repository.dart';
 import 'fee_statement_pdf.dart';
+import 'fee_receipt_slip_page.dart';
 
 class FeeDetailedLedgerPage extends StatefulWidget {
   const FeeDetailedLedgerPage({super.key,required this.repository,
@@ -44,6 +45,19 @@ class _FeeDetailedLedgerPageState extends State<FeeDetailedLedgerPage> {
       setState((){error='Unable to load detailed fee statement: '+e.toString();
         loading=false;ledger=null;});
     }
+  }
+
+  Future<void> openPostedReceipt(String receiptId)async{
+    final data=ledger;
+    if(data==null)return;
+    await Navigator.push<void>(context,MaterialPageRoute(
+      builder:(_)=>FeeReceiptSlipPage(
+        repository:widget.repository,
+        schoolId:widget.workspace.schoolId,
+        campusId:widget.workspace.campusId,
+        yearId:widget.workspace.yearId,
+        studentId:widget.student.id,
+        receiptId:receiptId,preloadedLedger:data)));
   }
 
   Future<void> printStatement({bool share=false})async{
@@ -235,8 +249,12 @@ class _FeeDetailedLedgerPageState extends State<FeeDetailedLedgerPage> {
                 subtitle:Text(p.issuedAt.substring(0,10)+
                   (p.bankReference==null?'':' · Ref: '+p.bankReference!)+
                   '\nReceipt total: '+money(p.total,r.currency)),
-                trailing:Text('Year allocation\n'+
-                  money(p.yearAllocated,r.currency)),
+                trailing:IconButton(
+                  key:Key('student-ledger-print-receipt-'+p.number),
+                  tooltip:'View / print receipt',
+                  onPressed:()=>openPostedReceipt(p.id),
+                  icon:const Icon(Icons.print_outlined)),
+                onTap:()=>openPostedReceipt(p.id),
               ),
           ],
         ]),

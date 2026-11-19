@@ -8,6 +8,7 @@ import '../data/fee_billing_repository.dart';
 import '../data/fee_cashbook_repository.dart';
 import 'fee_cashbook_page.dart';
 import 'fee_detailed_ledger_page.dart';
+import 'fee_receipt_slip_page.dart';
 import 'fee_billing_reports_page.dart';
 import 'fee_category_generation_page.dart';
 import 'fee_scoped_generation_page.dart';
@@ -500,6 +501,17 @@ class _QuickPayPageState extends State<QuickPayPage> {
     }
   }
 
+  Future<void> openPostedReceipt()async {
+    final r=receipt;
+    if(r==null)return;
+    await Navigator.push<void>(context,MaterialPageRoute(
+      builder:(_)=>FeeReceiptSlipPage(
+        repository:widget.repository,
+        schoolId:widget.workspace.schoolId,campusId:widget.workspace.campusId,
+        yearId:widget.workspace.yearId,studentId:widget.student.id,
+        receiptId:r.id)));
+  }
+
   Widget selectionStep(){
     final categories=widget.workspace.categories.where((cat)=>
       dues.any((c)=>c.categoryId==cat.id)).toList();
@@ -622,6 +634,11 @@ class _QuickPayPageState extends State<QuickPayPage> {
             ClipboardData(text:receipt!.number)),
             icon:const Icon(Icons.copy_outlined),
             label:const Text('Copy Receipt')),
+          OutlinedButton.icon(
+            key:const Key('quickpay-print-receipt'),
+            onPressed:openPostedReceipt,
+            icon:const Icon(Icons.print_outlined),
+            label:const Text('Print Student & Office Copies')),
           FilledButton(key:const Key('quickpay-done'),
             onPressed:()=>Navigator.pop(context,true),
             child:const Text('Back to Ledger')),
