@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:printing/printing.dart';
+import 'package:pdf/pdf.dart';
 
 import '../data/fee_detailed_statement.dart';
 import '../data/fee_monthly_repository.dart';
@@ -51,9 +52,7 @@ class _FeeDetailedLedgerPageState extends State<FeeDetailedLedgerPage> {
     setState(()=>printing=true);
     try {
       if(share){
-        final bytes=await FeeStatementPdf.build(
-          r, (await Printing.info()).canPrint?
-            const PdfPageFormat(595,842):const PdfPageFormat(595,842));
+        final bytes=await FeeStatementPdf.build(r,PdfPageFormat.a4);
         await Printing.sharePdf(bytes:bytes,
           filename:'fee_statement_'+
             r.registration.replaceAll(RegExp(r'[^A-Za-z0-9_-]'),'_')+'.pdf');
