@@ -4,7 +4,7 @@ import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
 
 import '../data/fee_detailed_statement.dart';
-import '../data/fee_monthly_repository.dart';
+import '../data/fee_setup_repository.dart';
 import '../data/fee_payment_repository.dart';
 import 'fee_statement_pdf.dart';
 
