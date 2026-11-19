@@ -299,6 +299,13 @@ class _FeeCollectionPageState extends State<FeeCollectionPage> {
                             onPressed:()=>generateFee(w,studentId:s.id),
                             icon:const Icon(Icons.add_circle_outline),
                             label:const Text('Generate Fee')),
+                        Align(alignment:Alignment.centerRight,
+                          child:FilledButton.icon(
+                            key:Key('fee-quickpay-'+s.registration),
+                            onPressed:w.canCollect&&s.outstandingMinor>0
+                              ?()=>quickPay(w,s):null,
+                            icon:const Icon(Icons.payments_outlined),
+                            label:const Text('Quick Pay'))),
                         if(widget.billingRepository!=null&&w.canCollect)
                           OutlinedButton.icon(
                             key:Key('fee-add-individual-${s.registration}'),
@@ -323,13 +330,6 @@ class _FeeCollectionPageState extends State<FeeCollectionPage> {
                                     ?Theme.of(context).colorScheme.error:null)),
                               ),
                           ]),
-                        Align(alignment:Alignment.centerRight,
-                          child:FilledButton.icon(
-                            key:Key('fee-quickpay-'+s.registration),
-                            onPressed:w.canCollect&&s.outstandingMinor>0
-                              ?()=>quickPay(w,s):null,
-                            icon:const Icon(Icons.payments_outlined),
-                            label:const Text('Quick Pay'))),
                       ])))),
             ]);
           }),
