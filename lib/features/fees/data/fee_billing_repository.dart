@@ -54,6 +54,24 @@ class BatchBillResult {
   }
 }
 
+
+class IndividualFeeResult {
+  const IndividualFeeResult({required this.chargeId,required this.grossMinor,
+    required this.discountMinor,required this.netMinor,required this.category});
+  final String chargeId,category;
+  final int grossMinor,discountMinor,netMinor;
+  factory IndividualFeeResult.fromJson(Map<String,dynamic> x) {
+    if(x['saved']!=true||x['charge_id'] is! String||
+       x['source']!='manual') {
+      throw StateError('Individual fee save not confirmed. Retry same request.');
+    }
+    return IndividualFeeResult(chargeId:x['charge_id'] as String,
+      category:x['category'] as String,grossMinor:feeInt(x['gross_minor']),
+      discountMinor:feeInt(x['discount_minor']),
+      netMinor:feeInt(x['net_minor']));
+  }
+}
+
 class OtherPersonCharge {
   const OtherPersonCharge({
     required this.id,required this.categoryId,required this.categoryName,
@@ -117,6 +135,17 @@ class OtherPeopleLedger {
 
 abstract class FeeBillingRepository {
   const FeeBillingRepository();
+
+  /// Separate manual bill: never changes the class plan or bills classmates.
+  /// Default implementation keeps existing repository test doubles compatible.
+  Future<IndividualFeeResult> addIndividualCharge({
+    required String schoolId,required String campusId,required String yearId,
+    required String studentId,required String categoryId,
+    required String chargeOn,required String dueOn,
+    required String priceMode,int? amountMinor,
+    required String description,required String operationId,
+  }) => throw UnsupportedError('Individual charging not configured');
+
   Future<CategoryBillResult> generateCategory({
     required String schoolId,required String campusId,required String yearId,
     required String month,required String categoryId,
@@ -148,6 +177,31 @@ abstract class FeeBillingRepository {
 
 class SupabaseFeeBillingRepository implements FeeBillingRepository {
   const SupabaseFeeBillingRepository(this.client);
+
+  @override
+  Future<IndividualFeeResult> addIndividualCharge({
+    required String schoolId,required String campusId,required String yearId,
+    required String studentId,required String categoryId,
+    required String chargeOn,required String dueOn,
+    required String priceMode,int? amountMinor,
+    required String description,required String operationId,
+  }) async {
+    if(!{'standard','custom'}.contains(priceMode) ||
+       (priceMode=='custom'&&(amountMinor==null||amountMinor<=0)) ||
+       (priceMode=='standard'&&amountMinor!=null) ||
+       description.trim().length<4) {
+      throw const FormatException('Valid fee price and description required');
+    }
+    final result=await rpc('fee_add_individual_charge',{
+      'p_school':schoolId,'p_campus':campusId,'p_year':yearId,
+      'p_student':studentId,'p_category':categoryId,
+      'p_charge_on':chargeOn,'p_due_on':dueOn,
+      'p_price_mode':priceMode,'p_amount_minor':amountMinor,
+      'p_description':description.trim(),'p_operation':operationId,
+    });
+    return IndividualFeeResult.fromJson(result);
+  }
+
   final SupabaseClient client;
 
   Future<Map<String,dynamic>> rpc(
