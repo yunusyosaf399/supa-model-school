@@ -131,7 +131,7 @@ void main(){
    expect(report.receipts.first.yearAllocated,8500);
    final csv=report.chargesCsv();
    expect(csv,contains('"Tuition"'));
-   expect(csv,contains('"Individual Student"'),isFalse);
+   expect(csv,isNot(contains('"Individual Student"')));
  });
 
  test('fails closed on mismatched charge allocation',(){
