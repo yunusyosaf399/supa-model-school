@@ -201,7 +201,7 @@ class _IndividualFeePageState extends State<IndividualFeePage> {
           const SizedBox(height:10),
           DropdownButtonFormField<String>(
             key:const Key('individual-fee-pricing'),
-            value:priceMode,
+            value:priceMode,isExpanded:true,
             decoration:const InputDecoration(border:OutlineInputBorder(),
               labelText:'Price source'),
             items:const [
