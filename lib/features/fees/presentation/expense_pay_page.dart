@@ -34,7 +34,7 @@ class _ExpensePayPageState extends State<ExpensePayPage>{
     final parsed=DateTime.tryParse(paidOn.text.trim());
     if(minor==null||minor<=0||minor>widget.request.remainingMinor||
        accountId==null||parsed==null||paidOn.text.trim().length!=10){
-      setState(()=>error='Choose an account, date and amount within the approved balance.');
+      setState(()=>error='Choose an account, date and amount within the unpaid expense balance.');
       return;
     }
     final account=widget.workspace.accounts.firstWhere((a)=>a.id==accountId);
@@ -88,12 +88,12 @@ class _ExpensePayPageState extends State<ExpensePayPage>{
     final active=w.accounts.where((a)=>a.status=='active').toList();
     return Scaffold(
       key:const Key('expense-payment-page'),
-      appBar:AppBar(title:const Text('Pay Approved Expense')),
+      appBar:AppBar(title:const Text('Record Expense Payment')),
       body:ListView(padding:const EdgeInsets.all(14),children:[
         Text(widget.request.category,style:Theme.of(context).textTheme.headlineSmall),
         Text(widget.request.purpose),
         const SizedBox(height:6),
-        Text('Approved '+w.currency+' '+FeeMoney.showMinor(widget.request.amountMinor)+
+        Text('Expense '+w.currency+' '+FeeMoney.showMinor(widget.request.amountMinor)+
           ' • Paid '+w.currency+' '+FeeMoney.showMinor(widget.request.paidMinor)),
         Text('Remaining '+w.currency+' '+FeeMoney.showMinor(widget.request.remainingMinor)),
         const SizedBox(height:12),
