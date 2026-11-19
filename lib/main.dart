@@ -36,6 +36,7 @@ import 'features/fees/data/expense_repository.dart';
 import 'features/exams/data/exam_repository.dart';
 import 'features/exams/presentation/exam_management_page.dart';
 import 'features/fees/presentation/fee_finance_page.dart';
+import 'features/fees/presentation/expense_management_page.dart';
 import 'features/operations/data/owner_operations_repository.dart';
 import 'features/operations/presentation/owner_staff_directory_page.dart';
 import 'features/operations/presentation/owner_transport_directory_page.dart';
@@ -478,7 +479,7 @@ class _SchoolShellState extends State<_SchoolShell> {
   }
 
   static const modules = <String>[
-    'Dashboard', 'Students', 'Admissions', 'Fees', 'Attendance',
+    'Dashboard', 'Students', 'Admissions', 'Fee & Finance', 'Attendance',
     'Employees', 'Payroll', 'Expenses', 'Reports', 'Sync Center', 'Settings',
     'Academic Setup', 'Transport', 'Examinations',
   ];
@@ -663,6 +664,16 @@ class _SchoolShellState extends State<_SchoolShell> {
         selectedCampusId: activeCampusId,
       );
     }
+    if (selected == 7 && widget.owner != null &&
+        widget.expenseRepository != null && widget.owner!.campuses.isNotEmpty) {
+      return ExpenseManagementPage(
+        key:ValueKey('finance-expenses-$activeCampusId'),
+        repository:widget.expenseRepository!,
+        schoolId:widget.owner!.schoolId,
+        campusId:widget.owner!.campuses.any((c)=>c.id==activeCampusId)
+          ? activeCampusId!:widget.owner!.campuses.first.id,
+      );
+    }
     if (selected == 4 && widget.owner != null &&
         widget.attendanceRepository != null) {
       return OwnerAttendanceSetupPage(
@@ -815,13 +826,14 @@ class _SchoolShellState extends State<_SchoolShell> {
             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
             children: [
               for (var i = 0; i < modules.length; i++)
-                Padding(
+                if (i != 7) Column(children: [
+                  Padding(
                   padding: const EdgeInsets.only(bottom: 3),
                   child: Material(
                     color: Colors.transparent,
                     child: Ink(
                       decoration: BoxDecoration(
-                        gradient: selected == i
+                        gradient: (selected == i || (i == 3 && selected == 7))
                             ? const LinearGradient(
                                 colors: [Color(0xFF079989), Color(0xFF005651)],
                                 begin: Alignment.topLeft,
@@ -839,14 +851,14 @@ class _SchoolShellState extends State<_SchoolShell> {
                           Icon(i == 0 && selected == i
                                   ? Icons.home_rounded : icons[i],
                             size: 21,
-                            color: selected == i ? Colors.white : ink),
+                            color: (selected == i || (i == 3 && selected == 7)) ? Colors.white : ink),
                           if (extended) ...[
                             const SizedBox(width: 13),
                             Expanded(child: Text(modules[i],
                               style: TextStyle(
                                 color: selected == i ? Colors.white : ink,
                                 fontSize: 13,
-                                fontWeight: selected == i
+                                fontWeight: (selected == i || (i == 3 && selected == 7))
                                     ? FontWeight.w800 : FontWeight.w500,
                               ),
                             )),
@@ -856,6 +868,42 @@ class _SchoolShellState extends State<_SchoolShell> {
                     ),
                   ),
                 ),
+                  if(i==3)
+                    Column(children:[
+                      for(final item in const [
+                        (3,'Fee',Icons.receipt_long_outlined),
+                        (7,'Expenses',Icons.request_quote_outlined),
+                      ])
+                        Padding(
+                          padding:EdgeInsets.only(
+                            left:extended?18:0,right:0,bottom:3),
+                          child:InkWell(
+                            key:Key('finance-child-${item.$1}'),
+                            borderRadius:BorderRadius.circular(8),
+                            onTap:()=>setState(()=>selected=item.$1),
+                            child:Container(
+                              height:36,
+                              padding:const EdgeInsets.symmetric(horizontal:10),
+                              decoration:BoxDecoration(
+                                color:selected==item.$1
+                                  ?Theme.of(context).colorScheme.primaryContainer
+                                  :null,
+                                borderRadius:BorderRadius.circular(8)),
+                              child:Row(children:[
+                                Icon(item.$3,size:19),
+                                if(extended)...[
+                                  const SizedBox(width:11),
+                                  Expanded(child:Text(item.$2,
+                                    style:TextStyle(fontSize:13,
+                                      fontWeight:selected==item.$1
+                                        ?FontWeight.bold:FontWeight.normal))),
+                                ],
+                              ]),
+                            ),
+                          ),
+                        ),
+                    ]),
+                ]),
             ],
           )),
         ]),
