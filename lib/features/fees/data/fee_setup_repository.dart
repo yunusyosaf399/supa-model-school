@@ -116,8 +116,80 @@ class FeeSetupSnapshot {
   }
 }
 
+
+class StudentFeeRateStudent {
+  const StudentFeeRateStudent({required this.id,required this.name,
+    required this.registration,required this.classId,required this.className,
+    this.sectionName});
+  final String id,name,registration,classId,className;
+  final String? sectionName;
+  factory StudentFeeRateStudent.fromJson(Map<String,dynamic> x) =>
+    StudentFeeRateStudent(id:x['id'] as String,name:x['name'] as String,
+      registration:x['registration'] as String,classId:x['class_id'] as String,
+      className:x['class_name'] as String,sectionName:x['section_name'] as String?);
+}
+class StudentFeeRateCategory {
+  const StudentFeeRateCategory({required this.id,required this.name,
+    required this.code,required this.frequency});
+  final String id,name,code,frequency;
+  factory StudentFeeRateCategory.fromJson(Map<String,dynamic> x) =>
+    StudentFeeRateCategory(id:x['id'] as String,name:x['name'] as String,
+      code:x['code'] as String,frequency:x['frequency'] as String);
+}
+class StudentFeeRateRule {
+  const StudentFeeRateRule({required this.id,required this.studentId,
+    required this.categoryId,required this.kind,required this.startMonth,
+    required this.reason,required this.active,this.amountMinor,this.endMonth});
+  final String id,studentId,categoryId,kind,startMonth,reason;
+  final int? amountMinor;
+  final String? endMonth;
+  final bool active;
+  factory StudentFeeRateRule.fromJson(Map<String,dynamic> x) =>
+    StudentFeeRateRule(id:x['id'] as String,studentId:x['student_id'] as String,
+      categoryId:x['category_id'] as String,kind:x['kind'] as String,
+      amountMinor:(x['amount_minor'] as num?)?.toInt(),
+      startMonth:x['start_month'] as String,endMonth:x['end_month'] as String?,
+      reason:x['reason'] as String,active:x['active']==true);
+}
+class StudentFeeRatesSnapshot {
+  const StudentFeeRatesSnapshot({required this.schoolId,required this.campusId,
+    required this.yearId,required this.currency,required this.students,
+    required this.categories,required this.rules});
+  final String schoolId,campusId,yearId,currency;
+  final List<StudentFeeRateStudent> students;
+  final List<StudentFeeRateCategory> categories;
+  final List<StudentFeeRateRule> rules;
+  factory StudentFeeRatesSnapshot.fromJson(Map<String,dynamic> x) {
+    List<Map<String,dynamic>> rows(Object? v) {
+      if(v is! List)throw const FormatException('Invalid rate snapshot');
+      return [for(final y in v)Map<String,dynamic>.from(y as Map)];
+    }
+    return StudentFeeRatesSnapshot(
+      schoolId:x['school_id'] as String,campusId:x['campus_id'] as String,
+      yearId:x['year_id'] as String,currency:x['currency'] as String,
+      students:List.unmodifiable([
+        for(final y in rows(x['students']))StudentFeeRateStudent.fromJson(y)]),
+      categories:List.unmodifiable([
+        for(final y in rows(x['categories']))StudentFeeRateCategory.fromJson(y)]),
+      rules:List.unmodifiable([
+        for(final y in rows(x['rules']))StudentFeeRateRule.fromJson(y)]));
+  }
+}
+
 abstract class FeeSetupRepository {
   const FeeSetupRepository();
+
+  Future<StudentFeeRatesSnapshot> loadStudentRates({
+    required String schoolId,required String campusId,required String yearId,
+  }) => throw UnsupportedError('Student rate setup unavailable');
+
+  Future<void> saveStudentRate({
+    required String schoolId,required String campusId,required String yearId,
+    required String studentId,required String categoryId,required String kind,
+    int? amountMinor,required String startMonth,String? endMonth,
+    required String reason,required String operationId,
+  }) => throw UnsupportedError('Student rate changes unavailable');
+
 
   Future<FeeSetupSnapshot> load({
     required String schoolId, required String campusId,
@@ -139,6 +211,54 @@ abstract class FeeSetupRepository {
 class SupabaseFeeSetupRepository implements FeeSetupRepository {
   const SupabaseFeeSetupRepository(this.client);
   final SupabaseClient client;
+
+  @override
+  Future<StudentFeeRatesSnapshot> loadStudentRates({
+    required String schoolId,required String campusId,required String yearId,
+  }) async {
+    _requireSession();
+    final response=await client.rpc('owner_student_fee_rates_snapshot',params:{
+      'p_school':schoolId,'p_campus':campusId,'p_year':yearId});
+    if(response is! Map)throw StateError('Invalid student rates response');
+    final result=StudentFeeRatesSnapshot.fromJson(Map<String,dynamic>.from(response));
+    if(result.schoolId!=schoolId||result.campusId!=campusId||
+       result.yearId!=yearId) {
+      throw StateError('Fee rates returned from an unrelated school/year');
+    }
+    return result;
+  }
+
+  @override
+  Future<void> saveStudentRate({
+    required String schoolId,required String campusId,required String yearId,
+    required String studentId,required String categoryId,required String kind,
+    int? amountMinor,required String startMonth,String? endMonth,
+    required String reason,required String operationId,
+  }) async {
+    _requireSession();
+    if(!{'override','exempt','standard'}.contains(kind)||
+      (kind=='override'&&(amountMinor==null||amountMinor<=0))||
+      (kind!='override'&&amountMinor!=null)||
+      reason.trim().length<4||reason.trim().length>500||
+      !RegExp(r'^\d{4}-(0[1-9]|1[0-2])-01$').hasMatch(startMonth)||
+      (endMonth!=null&&
+       !RegExp(r'^\d{4}-(0[1-9]|1[0-2])-01$').hasMatch(endMonth))) {
+      throw const FormatException('Invalid individual fee rate terms');
+    }
+    final response=await client.rpc('owner_set_student_fee_rate',params:{
+      'p_school':schoolId,'p_campus':campusId,'p_year':yearId,
+      'p_student':studentId,'p_category':categoryId,
+      'p_kind':kind,'p_amount_minor':amountMinor,
+      'p_start_month':startMonth,'p_end_month':endMonth,
+      'p_reason':reason.trim(),'p_operation':operationId,
+    });
+    if(response is! Map || response['saved']!=true ||
+       response['rate_id'] is! String||response['student_id']!=studentId||
+       response['category_id']!=categoryId||response['kind']!=kind){
+      throw StateError('Rate change not confirmed; retry same operation');
+    }
+  }
+
 
   void _requireSession() {
     if (client.auth.currentSession == null) {

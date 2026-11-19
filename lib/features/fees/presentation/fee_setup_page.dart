@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../auth/data/owner_auth_gateway.dart';
 import '../data/fee_setup_repository.dart';
+import 'student_fee_rates_page.dart';
 
 /// Live Owner-only fee master data. No demonstration amounts or payment writes.
 class FeeSetupPage extends StatefulWidget {
@@ -66,6 +67,17 @@ class _FeeSetupPageState extends State<FeeSetupPage> {
       if (!mounted || sequence != _request) return;
       setState(() { _loading = false; _error = 'Could not load fees: $error'; });
     }
+  }
+
+
+  Future<void> _openStudentRates() async {
+    final data=_data;
+    if(data==null)return;
+    await Navigator.of(context).push<void>(MaterialPageRoute(
+      builder:(_)=>StudentFeeRatesPage(
+        repository:widget.repository,plans:data,
+        schoolId:widget.owner.schoolId,campusId:_campusId,
+        yearId:data.yearId,yearLabel:data.yearLabel)));
   }
 
   Future<void> _addCategory() async {
@@ -325,11 +337,16 @@ class _FeeSetupPageState extends State<FeeSetupPage> {
                 Text('Class Fee Setup • ' + (data?.yearLabel ??
                     widget.owner.activeYearLabel ?? 'No active year')),
               ]),
-              Row(mainAxisSize: MainAxisSize.min, children: [
+              Wrap(spacing:7,runSpacing:7,children: [
                 IconButton(key: const Key('fee-refresh'),
                   onPressed: _loading ? null : _load,
                   icon: const Icon(Icons.refresh),
                   tooltip: 'Refresh fees from Supabase'),
+                OutlinedButton.icon(key: const Key('fee-student-rates-open'),
+                  onPressed: _loading || data==null ? null : _openStudentRates,
+                  icon: const Icon(Icons.person_pin_outlined),
+                  label: const Text('Student Rates')),
+                const SizedBox(width: 7),
                 FilledButton.icon(key: const Key('fee-add-category'),
                   onPressed: _loading ? null : _addCategory,
                   icon: const Icon(Icons.add),
@@ -338,9 +355,10 @@ class _FeeSetupPageState extends State<FeeSetupPage> {
             ]),
           const SizedBox(height: 14),
           const Card(child: Padding(padding: EdgeInsets.all(12),
-            child: Text('Live Supabase fee configuration. Payment collection, '
-              'individual discounts, invoices and outstanding balances '
-              'are separate upcoming integrations.'))),
+            child: Text('Set class fee plans or use Student Rates to override '
+              'tuition and transport for a specific student. Changes '
+              'apply to future unbilled periods only; existing receipts '
+              'and invoices are preserved.'))),
           if (_loading) const LinearProgressIndicator(),
           if (_error != null) ListTile(
             leading: const Icon(Icons.error_outline),
