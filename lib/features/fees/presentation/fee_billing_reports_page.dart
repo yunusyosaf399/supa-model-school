@@ -4,7 +4,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
-import '../data/fee_monthly_repository.dart';
+import '../data/fee_setup_repository.dart';
 import '../data/fee_payment_repository.dart';
 
 class _BillLine {
@@ -82,7 +82,7 @@ class _FeeBillingReportsPageState extends State<FeeBillingReportsPage>{
      final doc=pw.Document(title:'School fee billing report',
        creator:'Supa Model School');
      pw.Widget table(List<String> head,List<List<String>> data)=>
-       pw.Table.fromTextArray(headers:head,
+       pw.TableHelper.fromTextArray(headers:head,
          data:data.isEmpty?[List.filled(head.length,'—')]:data,
          headerStyle:pw.TextStyle(fontSize:8,fontWeight:pw.FontWeight.bold),
          cellStyle:const pw.TextStyle(fontSize:7),
