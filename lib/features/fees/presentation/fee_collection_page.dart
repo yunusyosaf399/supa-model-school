@@ -7,6 +7,8 @@ import '../data/fee_payment_repository.dart';
 import '../data/fee_billing_repository.dart';
 import '../data/fee_cashbook_repository.dart';
 import 'fee_cashbook_page.dart';
+import 'fee_detailed_ledger_page.dart';
+import 'fee_billing_reports_page.dart';
 import 'fee_category_generation_page.dart';
 import 'fee_scoped_generation_page.dart';
 import 'individual_fee_page.dart';
@@ -89,6 +91,20 @@ class _FeeCollectionPageState extends State<FeeCollectionPage> {
       (q.isEmpty||s.name.toLowerCase().contains(q)||
         s.registration.toLowerCase().contains(q))&&
       ((frequency=='all'&&categoryId==null)||charges(s).isNotEmpty);
+  }
+
+  Future<void> openBillingReports(FeePaymentWorkspace workspace) async {
+    await Navigator.push<void>(context,MaterialPageRoute(
+      builder:(_)=>FeeBillingReportsPage(workspace:workspace)));
+    if(mounted)await load();
+  }
+
+  Future<void> openStatement(
+      FeePaymentWorkspace workspace,FeePaymentStudent student) async {
+    await Navigator.push<void>(context,MaterialPageRoute(
+      builder:(_)=>FeeDetailedLedgerPage(
+        repository:widget.repository,workspace:workspace,student:student)));
+    if(mounted)await load();
   }
 
   Future<void> quickPay(FeePaymentWorkspace workspace,FeePaymentStudent s) async{
@@ -222,6 +238,11 @@ class _FeeCollectionPageState extends State<FeeCollectionPage> {
                 onPressed:()=>otherPayers(w),
                 icon:const Icon(Icons.person_search_outlined),
                 label:const Text('Other Payers')),
+              OutlinedButton.icon(
+                key:const Key('fee-open-billing-reports'),
+                onPressed:()=>openBillingReports(w),
+                icon:const Icon(Icons.bar_chart_outlined),
+                label:const Text('Billing Reports')),
               if(widget.cashbookRepository!=null)OutlinedButton.icon(
                 key:const Key('fee-open-cashbook'),
                 onPressed:()=>openCashbook(w),
@@ -322,6 +343,11 @@ class _FeeCollectionPageState extends State<FeeCollectionPage> {
                               ?()=>quickPay(w,s):null,
                             icon:const Icon(Icons.payments_outlined),
                             label:const Text('Quick Pay'))),
+                        OutlinedButton.icon(
+                          key:Key('fee-detailed-statement-${s.registration}'),
+                          onPressed:()=>openStatement(w,s),
+                          icon:const Icon(Icons.article_outlined),
+                          label:const Text('Detailed Statement')),
                         if(widget.billingRepository!=null&&w.canCollect)
                           OutlinedButton.icon(
                             key:Key('fee-add-individual-${s.registration}'),
