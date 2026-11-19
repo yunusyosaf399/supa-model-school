@@ -24,7 +24,9 @@ const workspace=FeePaymentWorkspace(
   categories:[tuition,transport],
   students:[a,b,c]);
 
-class FakeScopedRepository extends FeeBillingRepository {
+class FakeScopedRepository implements FeeBillingRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
   int calls=0;
   String? scope,section,operation;
   List<String>? selected,categories;
