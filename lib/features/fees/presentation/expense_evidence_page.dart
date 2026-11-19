@@ -5,8 +5,8 @@ import '../data/expense_evidence_repository.dart';
 import '../data/expense_repository.dart';
 import '../data/fee_setup_repository.dart';
 
-/// Request-scoped evidence review. Payment receipts point to immutable DB29
-/// posted payment IDs; document verification never changes the ledger.
+/// Optional request-scoped attachments. Payment receipts point to actual posted
+/// payment IDs. File upload is never a condition for recording an expense.
 class ExpenseEvidencePage extends StatefulWidget {
   const ExpenseEvidencePage({super.key,required this.repository,
     required this.workspace,required this.request});
@@ -54,7 +54,7 @@ class _ExpenseEvidencePageState extends State<ExpenseEvidencePage>{
         requestId:widget.request.id,kind:kind,paymentId:target);
       if(!mounted)return;
       if(saved){
-        notice='Evidence uploaded. Owner verification is pending.';
+        notice='Attachment uploaded. No approval is needed.';
         await load();
       }else{setState(()=>notice='No file selected.');}
     }catch(e){
@@ -76,46 +76,6 @@ class _ExpenseEvidencePageState extends State<ExpenseEvidencePage>{
       if(mounted)setState(()=>error='Preview unavailable: $e');
     }finally{if(mounted)setState(()=>busy=false);}
   }
-  Future<void> verify(ExpenseEvidence attachment,String decision)async{
-    if(busy||evidence?.isOwner!=true||attachment.status!='pending')return;
-    String reason='';
-    final confirmed=await showDialog<bool>(context:context,builder:(d)=>
-      AlertDialog(title:Text(decision=='verified'
-        ?'Verify Receipt / Invoice':'Reject Receipt / Invoice'),
-        content:Column(mainAxisSize:MainAxisSize.min,children:[
-          Text(attachment.fileName),
-          const Text('Document verification does not create or amend payment.'),
-          if(decision=='rejected')TextField(
-            key:const Key('expense-evidence-reject-reason'),
-            onChanged:(v)=>reason=v,maxLength:500,
-            decoration:const InputDecoration(border:OutlineInputBorder(),
-              labelText:'Rejection reason (required)')),
-        ]),
-        actions:[
-          TextButton(onPressed:()=>Navigator.pop(d,false),
-            child:const Text('Cancel')),
-          FilledButton(key:const Key('expense-evidence-review-confirm'),
-            onPressed:()=>Navigator.pop(d,true),
-            child:Text(decision=='verified'?'Verify':'Reject')),
-        ]));
-    if(confirmed!=true||!mounted)return;
-    if(decision=='rejected'&&reason.trim().length<4){
-      setState(()=>error='Rejection requires at least 4 characters.');
-      return;
-    }
-    setState((){busy=true;error=null;notice=null;});
-    try{
-      await widget.repository.review(
-        schoolId:widget.workspace.schoolId,campusId:widget.workspace.campusId,
-        attachmentId:attachment.id,decision:decision,
-        reason:decision=='rejected'?reason.trim():null);
-      if(!mounted)return;
-      notice='Evidence $decision. The posted payment record is unchanged.';
-      await load();
-    }catch(e){
-      if(mounted)setState(()=>error='Verification not confirmed: $e');
-    }finally{if(mounted)setState(()=>busy=false);}
-  }
   @override
   Widget build(BuildContext context){
     final items=evidence?.attachments??const <ExpenseEvidence>[];
@@ -130,8 +90,8 @@ class _ExpenseEvidencePageState extends State<ExpenseEvidencePage>{
             style:Theme.of(context).textTheme.titleLarge),
           Text(widget.request.purpose),
           const SizedBox(height:6),
-          Text('Request status: ${widget.request.status} • '
-            'Invoices are linked to this request; receipts link to a posted payment.'),
+          Text('Expense status: ${widget.request.status} • '
+            'Attachments are optional. Payment receipts link to a posted payment.'),
           const SizedBox(height:8),
           if(loading||busy)const LinearProgressIndicator(),
           if(error!=null)Text(error!,style:TextStyle(
@@ -142,7 +102,7 @@ class _ExpenseEvidencePageState extends State<ExpenseEvidencePage>{
             key:const Key('expense-upload-invoice'),
             onPressed:busy?null:()=>upload('invoice'),
             icon:const Icon(Icons.upload_file),
-            label:const Text('Upload Invoice (PDF / Image)')),
+            label:const Text('Add Invoice (optional)')),
           if(evidence?.canUploadReceipt==true)...[
             const SizedBox(height:8),
             if(widget.request.payments.isNotEmpty)...[
@@ -163,7 +123,7 @@ class _ExpenseEvidencePageState extends State<ExpenseEvidencePage>{
             FilledButton.icon(key:const Key('expense-upload-receipt'),
               onPressed:busy||!canReceipt?null:()=>upload('receipt'),
               icon:const Icon(Icons.receipt_long),
-              label:const Text('Upload Payment Receipt')),
+              label:const Text('Add Payment Receipt (optional)')),
           ],
           const Divider(height:28),
           Text('Uploaded Evidence',style:Theme.of(context).textTheme.titleMedium),
@@ -173,7 +133,8 @@ class _ExpenseEvidencePageState extends State<ExpenseEvidencePage>{
             Card.outlined(key:Key('expense-evidence-row-${entry.id}'),
               child:Padding(padding:const EdgeInsets.all(10),child:Column(
                 crossAxisAlignment:CrossAxisAlignment.start,children:[
-                  Text('${entry.kind.toUpperCase()} • ${entry.status.toUpperCase()}',
+                  Text('${entry.kind.toUpperCase()} • '
+                    '${entry.status=='pending'?'UPLOADED':entry.status.toUpperCase()}',
                     style:Theme.of(context).textTheme.titleSmall),
                   Text(entry.fileName,overflow:TextOverflow.ellipsis),
                   Text('${(entry.bytes/1024).toStringAsFixed(1)} KiB • '
@@ -189,20 +150,12 @@ class _ExpenseEvidencePageState extends State<ExpenseEvidencePage>{
                       onPressed:busy?null:()=>preview(entry),
                       icon:const Icon(Icons.open_in_new),
                       label:const Text('Private Preview (90 sec)')),
-                    if(evidence?.isOwner==true&&entry.status=='pending')...[
-                      FilledButton(key:Key('expense-evidence-verify-${entry.id}'),
-                        onPressed:busy?null:()=>verify(entry,'verified'),
-                        child:const Text('Verify')),
-                      OutlinedButton(key:Key('expense-evidence-reject-${entry.id}'),
-                        onPressed:busy?null:()=>verify(entry,'rejected'),
-                        child:const Text('Reject')),
-                    ],
                   ]),
                 ]))),
           const SizedBox(height:8),
-          const Text('Evidence stays private and cannot be overwritten or deleted '
-            'from the app. Verified documents are audit evidence only. '
-            'They do not create, reverse, or approve cash payments.'),
+          const Text('Attachments are optional and stored privately. '
+            'They cannot be overwritten or deleted from the app and '
+            'do not create or change any payments.'),
         ],
       )));
   }
