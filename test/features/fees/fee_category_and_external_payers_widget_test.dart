@@ -43,6 +43,14 @@ class FakeBilling implements FeeBillingRepository{
     required String priceMode,int? amountMinor,
     required String description,required String operationId,
   }) => throw UnsupportedError('Unused in legacy generation tests');
+  @override
+  Future<ScopedBillResult> generateScoped({
+    required String schoolId,required String campusId,required String yearId,
+    required String month,required List<String> categoryIds,
+    required String scope,String? sectionId,List<String> studentIds=const [],
+    required bool includeOptional,required String operationId,
+  }) => throw UnsupportedError('Unused in legacy category tests');
+
   int generated=0,generatedBatch=0,charged=0,collected=0,created=0;
   List<String>? lastBatchCategories;
   String? lastBatchOperation;
