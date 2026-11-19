@@ -67,7 +67,7 @@ class FeeFinancePage extends StatelessWidget {
                 text: 'School Cash Movement'),
             if (expenseRepository != null && owner.campuses.isNotEmpty)
               const Tab(icon: Icon(Icons.request_quote_outlined),
-                text: 'Expenses & Approvals'),
+                text: 'Expenses'),
           ],
         ),
       ),

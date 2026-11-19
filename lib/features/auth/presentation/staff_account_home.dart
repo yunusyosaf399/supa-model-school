@@ -151,7 +151,7 @@ class StaffAccountHome extends StatelessWidget {
                             ),
                           ))),
                         icon: const Icon(Icons.request_quote_outlined),
-                        label: const Text('Expenses & Approval Requests'),
+                        label: const Text('Expenses'),
                       ),
                     if (staff.role == 'teacher' &&
                         snapshot.data!.contains('attendance.read') &&
