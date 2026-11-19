@@ -87,4 +87,7 @@ psql "$PGURL" -X -v ON_ERROR_STOP=1 -q -f supabase/tests/DB30_EXPENSE_EVIDENCE_I
 echo "== Verify DB31 direct expense recording and optional evidence permissions =="
 psql "$PGURL" -X -v ON_ERROR_STOP=1 -q -f supabase/tests/DB31_DIRECT_EXPENSE_INTEGRATION.sql
 
-echo "PASS: DB03-DB09 domain fixtures plus DB30-DB31 regressions succeeded on isolated local database"
+echo "== Verify DB31 all-category billing RPC security =="
+psql "$PGURL" -X -v ON_ERROR_STOP=1 -q -f supabase/tests/DB31_ALL_CATEGORY_BILLING_INTEGRATION.sql
+
+echo "PASS: DB03-DB09 domain fixtures plus DB30-DB31 expense and fee security regressions succeeded on isolated local database"

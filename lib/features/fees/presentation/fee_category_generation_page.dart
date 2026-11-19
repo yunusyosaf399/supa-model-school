@@ -19,6 +19,8 @@ class _FeeCategoryGenerationPageState extends State<FeeCategoryGenerationPage>{
   String scope='campus';
   String? targetId,categoryId,error,notice,operationId;
   bool includeOptional=false,useCustom=false,busy=false,done=false;
+  bool batch=false;
+  final selectedCategoryIds=<String>{};
 
   @override void initState(){
     super.initState();
@@ -30,6 +32,7 @@ class _FeeCategoryGenerationPageState extends State<FeeCategoryGenerationPage>{
     }
     final cats=widget.workspace.categories.where((c)=>c.active).toList();
     if(cats.isNotEmpty)categoryId=cats.first.id;
+    selectedCategoryIds.addAll(cats.map((c)=>c.id));
   }
   @override void dispose(){month.dispose();custom.dispose();super.dispose();}
 
@@ -39,24 +42,35 @@ class _FeeCategoryGenerationPageState extends State<FeeCategoryGenerationPage>{
     if(!RegExp(r'^\d{4}-(0[1-9]|1[0-2])$').hasMatch(text)){
       setState(()=>error='Use YYYY-MM for billing month.');return;
     }
-    if(categoryId==null||((scope=='class'||scope=='student')&&targetId==null)){
+    final categories=widget.workspace.categories.where((c)=>c.active &&
+      (!batch||selectedCategoryIds.contains(c.id))).toList();
+    if((!batch&&categoryId==null)||(batch&&categories.isEmpty)||
+       ((scope=='class'||scope=='student')&&targetId==null)){
       setState(()=>error='Choose a fee category and recipient.');return;
     }
-    final amount=useCustom?FeeMoney.parseMinor(custom.text):null;
+    if(batch&&categories.length>40){
+      setState(()=>error='Select no more than 40 categories.');return;
+    }
+    final amount=!batch&&useCustom?FeeMoney.parseMinor(custom.text):null;
     if(useCustom&&(amount==null||amount<=0)){
       setState(()=>error='Enter a valid positive individual fee.');return;
     }
     if(operationId==null){
-      final cat=widget.workspace.categories.firstWhere((c)=>c.id==categoryId);
+      final selected=batch?categories:
+        [widget.workspace.categories.firstWhere((c)=>c.id==categoryId)];
       final confirmed=await showDialog<bool>(context:context,builder:(d)=>
         AlertDialog(title:const Text('Confirm Bill Generation'),
-          content:Text('Category: '+cat.name+' ('+cat.frequency+').\n'+
-            'Scope: '+scope+'. Month: '+text+'.\n'+
+          content:SingleChildScrollView(child:Text(
+            'Categories ('+selected.length.toString()+'):\n'+
+            selected.map((c)=>'• '+c.name+' ('+c.frequency+')').join('\n')+
+            '\n\nScope: '+scope+'. Month: '+text+'.\n'+
             (amount==null?'Only effective class fee plans will be used. '
-              'Classes without an amount are skipped.':
+              'Classes without amounts are skipped.':
               'Specific fee: '+widget.workspace.currency+' '+
                 FeeMoney.showMinor(amount)+'.')+
-            '\nExisting invoices are never overwritten.'),
+            '\nOptional fee items: '+(includeOptional?'included':'excluded')+
+            '\n\nAll selected categories commit together. Existing invoices '
+            'are never overwritten.')),
           actions:[
             TextButton(onPressed:()=>Navigator.pop(d,false),
               child:const Text('Cancel')),
@@ -69,22 +83,43 @@ class _FeeCategoryGenerationPageState extends State<FeeCategoryGenerationPage>{
     }
     setState((){busy=true;error=null;});
     try{
-      final result=await widget.repository.generateCategory(
-        schoolId:widget.workspace.schoolId,
-        campusId:widget.workspace.campusId,yearId:widget.workspace.yearId,
-        month:text+'-01',categoryId:categoryId!,scope:scope,
-        targetId:scope=='campus'?null:targetId,
-        overrideMinor:amount,includeOptional:includeOptional,
-        operationId:operationId!);
-      if(!mounted)return;
-      setState((){
-        done=true;busy=false;
-        notice='Generated '+result.added.toString()+' '+
-          result.category+' charge(s). Already billed: '+
-          result.skipped.toString()+'. Eligible: '+
-          result.eligible.toString()+'.'+(result.added==0
-            ?' Check active plans or enter an individual fee amount.':'');
-      });
+      if(batch){
+        final result=await widget.repository.generateCategories(
+          schoolId:widget.workspace.schoolId,
+          campusId:widget.workspace.campusId,yearId:widget.workspace.yearId,
+          month:text+'-01',
+          categoryIds:categories.map((c)=>c.id).toList(),
+          scope:scope,targetId:scope=='campus'?null:targetId,
+          includeOptional:includeOptional,operationId:operationId!);
+        if(!mounted)return;
+        setState((){
+          done=true;busy=false;
+          notice='Generated '+result.added.toString()+
+            ' charges across '+result.categories.length.toString()+
+            ' categories. Already billed: '+result.skipped.toString()+
+            '. Eligible charge entries: '+result.eligible.toString()+
+            '.\n'+result.categories.map((c)=>c.name+': '+
+              c.added.toString()+' new, '+c.skipped.toString()+
+              ' already billed').join('\n');
+        });
+      }else{
+        final result=await widget.repository.generateCategory(
+          schoolId:widget.workspace.schoolId,
+          campusId:widget.workspace.campusId,yearId:widget.workspace.yearId,
+          month:text+'-01',categoryId:categoryId!,scope:scope,
+          targetId:scope=='campus'?null:targetId,
+          overrideMinor:amount,includeOptional:includeOptional,
+          operationId:operationId!);
+        if(!mounted)return;
+        setState((){
+          done=true;busy=false;
+          notice='Generated '+result.added.toString()+' '+
+            result.category+' charge(s). Already billed: '+
+            result.skipped.toString()+'. Eligible: '+
+            result.eligible.toString()+'.'+(result.added==0
+              ?' Check active plans or enter an individual fee amount.':'');
+        });
+      }
     }catch(e){
       if(!mounted)return;
       setState((){
@@ -117,17 +152,43 @@ class _FeeCategoryGenerationPageState extends State<FeeCategoryGenerationPage>{
             onPressed:()=>Navigator.pop(context,true),
             child:const Text('Return to Fee Ledger')),
         ]else...[
-          DropdownButtonFormField<String>(
-            key:const Key('fee-generate-category'),value:categoryId,
-            isExpanded:true,decoration:const InputDecoration(
-              border:OutlineInputBorder(),labelText:'Fee Category'),
-            items:[
-              for(final c in w.categories)
-                if(c.active)DropdownMenuItem(value:c.id,
-                  child:Text(c.name+' • '+c.frequency,
-                    overflow:TextOverflow.ellipsis)),
-            ],onChanged:operationId!=null?null:(v)=>
-              setState(()=>categoryId=v)),
+          SwitchListTile(
+            key:const Key('fee-generate-batch-mode'),
+            value:batch,
+            title:const Text('Generate multiple fee categories together'),
+            subtitle:const Text('Tuition, transport, annual, one-time and '
+              'manual plan items in one atomic billing operation'),
+            onChanged:operationId!=null?null:(v)=>
+              setState((){
+                batch=v;useCustom=false;
+              })),
+          if(!batch)
+            DropdownButtonFormField<String>(
+              key:const Key('fee-generate-category'),value:categoryId,
+              isExpanded:true,decoration:const InputDecoration(
+                border:OutlineInputBorder(),labelText:'Fee Category'),
+              items:[
+                for(final c in w.categories)
+                  if(c.active)DropdownMenuItem(value:c.id,
+                    child:Text(c.name+' • '+c.frequency,
+                      overflow:TextOverflow.ellipsis)),
+              ],onChanged:operationId!=null?null:(v)=>
+                setState(()=>categoryId=v))
+          else Card.outlined(child:Column(children:[
+            const ListTile(title:Text('Categories to bill'),
+              subtitle:Text('Unconfigured categories are safely skipped. '
+                'Optional items remain excluded unless selected below.')),
+            for(final c in w.categories.where((c)=>c.active))
+              CheckboxListTile(
+                key:Key('fee-generate-batch-'+c.code),
+                value:selectedCategoryIds.contains(c.id),
+                title:Text(c.name),
+                subtitle:Text(c.frequency),
+                onChanged:operationId!=null?null:(v)=>setState((){
+                  if(v==true)selectedCategoryIds.add(c.id);
+                  else selectedCategoryIds.remove(c.id);
+                })),
+          ])),
           const SizedBox(height:10),
           TextField(key:const Key('fee-generate-month'),controller:month,
             enabled:operationId==null,
@@ -171,14 +232,15 @@ class _FeeCategoryGenerationPageState extends State<FeeCategoryGenerationPage>{
                     s.registration,overflow:TextOverflow.ellipsis)),
               ],onChanged:operationId!=null?null:(v)=>
                 setState(()=>targetId=v)),
-            CheckboxListTile(key:const Key('fee-generate-custom-amount'),
+            if(!batch)CheckboxListTile(key:const Key('fee-generate-custom-amount'),
               value:useCustom,
               title:const Text('Charge a specific amount'),
               subtitle:const Text('Use for individual Transport, Exam, '
                 'Resources or other fees without a class plan amount'),
               onChanged:operationId!=null?null:(v)=>
                 setState(()=>useCustom=v??false)),
-            if(useCustom)TextField(key:const Key('fee-generate-custom-value'),
+            if(!batch&&useCustom)TextField(
+              key:const Key('fee-generate-custom-value'),
               controller:custom,enabled:operationId==null,
               keyboardType:const TextInputType.numberWithOptions(decimal:true),
               decoration:InputDecoration(border:const OutlineInputBorder(),
@@ -194,7 +256,8 @@ class _FeeCategoryGenerationPageState extends State<FeeCategoryGenerationPage>{
           const SizedBox(height:10),
           const Text('Plan-based bills use active class plans. Yearly '
             'categories are billed once per academic year; one-time '
-            'fees once per student. New charges appear in Quick Pay.'),
+            'fees once per student. Manual non-plan charges require '
+            'individual billing. New charges appear in Quick Pay.'),
           const SizedBox(height:12),
           FilledButton.icon(key:const Key('fee-generate-process'),
             onPressed:busy?null:generate,

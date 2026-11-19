@@ -12,6 +12,48 @@ class CategoryBillResult {
   final String category;
 }
 
+/// Per-category result in an atomic billing batch.
+class BatchBillCategory {
+  const BatchBillCategory({
+    required this.name, required this.frequency,
+    required this.added, required this.skipped,
+  });
+  final String name, frequency;
+  final int added, skipped;
+
+  factory BatchBillCategory.fromJson(Map<String, dynamic> row) =>
+      BatchBillCategory(
+        name: row['category'] as String,
+        frequency: row['frequency'] as String,
+        added: feeInt(row['added_charges']),
+        skipped: feeInt(row['skipped_existing']),
+      );
+}
+
+class BatchBillResult {
+  const BatchBillResult({
+    required this.added, required this.skipped, required this.eligible,
+    required this.categories,
+  });
+  final int added, skipped, eligible;
+  final List<BatchBillCategory> categories;
+
+  factory BatchBillResult.fromJson(Map<String, dynamic> row) {
+    if (row['saved'] != true || row['mode'] != 'batch') {
+      throw StateError('Batch billing was not confirmed; retry same operation');
+    }
+    return BatchBillResult(
+      added: feeInt(row['added_charges']),
+      skipped: feeInt(row['skipped_existing']),
+      eligible: feeInt(row['eligible_charges']),
+      categories: List.unmodifiable([
+        for (final x in feeRows(row['categories']))
+          BatchBillCategory.fromJson(x),
+      ]),
+    );
+  }
+}
+
 class OtherPersonCharge {
   const OtherPersonCharge({
     required this.id,required this.categoryId,required this.categoryName,
@@ -80,6 +122,13 @@ abstract class FeeBillingRepository {
     required String month,required String categoryId,
     required String scope,String? targetId,int? overrideMinor,
     required bool includeOptional,required String operationId});
+  /// All categories are generated in one PostgreSQL transaction.
+  Future<BatchBillResult> generateCategories({
+    required String schoolId, required String campusId, required String yearId,
+    required String month, required List<String> categoryIds,
+    required String scope, String? targetId,
+    required bool includeOptional, required String operationId,
+  });
   Future<OtherPeopleLedger> otherPeople({
     required String schoolId,required String campusId,required String yearId});
   Future<String> createPerson({
@@ -133,6 +182,33 @@ class SupabaseFeeBillingRepository implements FeeBillingRepository {
       eligible:feeInt(x['eligible_students']),
       category:x['category'] as String);
   }
+  @override
+  Future<BatchBillResult> generateCategories({
+    required String schoolId, required String campusId, required String yearId,
+    required String month, required List<String> categoryIds,
+    required String scope, String? targetId,
+    required bool includeOptional, required String operationId,
+  }) async {
+    if (categoryIds.isEmpty || categoryIds.length > 40 ||
+        categoryIds.toSet().length != categoryIds.length ||
+        !{'campus', 'class', 'student'}.contains(scope) ||
+        (scope == 'campus' && targetId != null) ||
+        (scope != 'campus' && targetId == null)) {
+      throw const FormatException('Invalid multi-category billing request');
+    }
+    final x = await rpc('fee_generate_categories', {
+      'p_school': schoolId, 'p_campus': campusId, 'p_year': yearId,
+      'p_month': month, 'p_categories': categoryIds,
+      'p_scope': scope, 'p_target': targetId,
+      'p_include_optional': includeOptional, 'p_operation': operationId,
+    });
+    final value = BatchBillResult.fromJson(x);
+    if (value.categories.length != categoryIds.length) {
+      throw StateError('Category billing result incomplete; retry same operation');
+    }
+    return value;
+  }
+
   @override
   Future<OtherPeopleLedger> otherPeople({required String schoolId,
     required String campusId,required String yearId}) async {
