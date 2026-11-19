@@ -8,6 +8,9 @@ import 'package:supa_model_school/features/fees/data/fee_payment_repository.dart
 import 'package:supa_model_school/features/fees/presentation/fee_detailed_ledger_page.dart';
 import 'package:supa_model_school/features/fees/presentation/fee_statement_pdf.dart';
 import 'package:supa_model_school/features/fees/presentation/fee_billing_reports_page.dart';
+import 'package:supa_model_school/features/fees/data/fee_receipt_slip.dart';
+import 'package:supa_model_school/features/fees/presentation/fee_receipt_slip_pdf.dart';
+import 'package:supa_model_school/features/fees/presentation/fee_receipt_slip_page.dart';
 
 Map<String,dynamic> fixture(){
  Map<String,dynamic> group(String label,String id,int gross,int discount,
@@ -191,4 +194,60 @@ void main(){
    expect(find.text('Class Totals'),findsOneWidget);
    expect(tester.takeException(),isNull);
  });
+ test('Student Copy and Office Copy are based on exact posted allocations',(){
+   final ledger=FeeDetailedStudentLedger.fromJson(fixture());
+   final first=FeeReceiptSlip.fromLedger(ledger,'r1');
+   expect(first.receiptNo,'SAMPLE-REC-1');
+   expect(first.amountMinor,8500);
+   expect(first.categoryTotals['Tuition'],5500);
+   expect(first.categoryTotals['Transport'],3000);
+   expect(first.lines.length,2);
+   expect(first.priorReceipts,isEmpty);
+   final second=FeeReceiptSlip.fromLedger(ledger,'r2');
+   expect(second.bankReference,'TEST-REF');
+   expect(second.amountMinor,1500);
+   expect(second.priorReceipts.single.number,'SAMPLE-REC-1');
+   expect(()=>FeeReceiptSlip.fromLedger(ledger,'unknown'),throwsStateError);
+ });
+
+ test('Do not print partial receipt allocated across school years',(){
+   final modified=fixture();
+   ((modified['receipts'] as List).first as Map<String,dynamic>)
+       ['receipt_total_minor']=8600;
+   final ledger=FeeDetailedStudentLedger.fromJson(modified);
+   expect(()=>FeeReceiptSlip.fromLedger(ledger,'r1'),throwsStateError);
+ });
+
+ test('PDF builder generates printable both, Student and Office copies',()async{
+   final slip=FeeReceiptSlip.fromLedger(
+     FeeDetailedStudentLedger.fromJson(fixture()),'r1');
+   for(final variant in ['both','student','office']){
+     final bytes=await FeeReceiptSlipPdf.build(
+       slip,PdfPageFormat.a4,copy:variant);
+     expect(bytes.length,greaterThan(600));
+     expect(ascii.decode(bytes.sublist(0,5)),'%PDF-');
+   }
+   expect(()=>FeeReceiptSlipPdf.build(slip,PdfPageFormat.a4,copy:'unknown'),
+     throwsFormatException);
+ });
+
+ testWidgets('Receipt slip page shows verified category and print actions',
+   (tester)async{
+   await tester.binding.setSurfaceSize(const Size(1050,1200));
+   addTearDown(()=>tester.binding.setSurfaceSize(null));
+   final repo=FakeLedgerRepo();
+   await tester.pumpWidget(MaterialApp(home:FeeReceiptSlipPage(
+     repository:repo,schoolId:'school',campusId:'campus',
+     yearId:'year',studentId:'st1',receiptId:'r1')));
+   await tester.pumpAndSettle();
+   expect(repo.calls,1);
+   expect(find.byKey(const Key('fee-receipt-slip-page')),findsOneWidget);
+   expect(find.textContaining('SAMPLE-REC-1'),findsWidgets);
+   expect(find.byKey(const Key('fee-receipt-print-both')),findsOneWidget);
+   expect(find.byKey(const Key('fee-receipt-print-student')),findsOneWidget);
+   expect(find.byKey(const Key('fee-receipt-print-office')),findsOneWidget);
+   expect(find.byKey(const Key('fee-receipt-share-both')),findsOneWidget);
+   expect(tester.takeException(),isNull);
+ });
+
 }
