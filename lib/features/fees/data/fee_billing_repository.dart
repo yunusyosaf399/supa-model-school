@@ -72,6 +72,32 @@ class IndividualFeeResult {
   }
 }
 
+
+class ScopedBillResult {
+  const ScopedBillResult({required this.scope,required this.students,
+    required this.added,required this.skipped,required this.eligible,
+    required this.categories});
+  final String scope;
+  final int students,added,skipped,eligible;
+  final List<BatchBillCategory> categories;
+  factory ScopedBillResult.fromJson(Map<String,dynamic> x) {
+    if(x['saved']!=true||x['mode']!='scoped'||
+       !{'section','selected'}.contains(x['scope'])||
+       x['categories'] is! List) {
+      throw StateError('Scoped billing not confirmed; retry same operation');
+    }
+    final categories=List<BatchBillCategory>.unmodifiable([
+      for(final c in feeRows(x['categories']))
+        BatchBillCategory.fromJson(c),
+    ]);
+    return ScopedBillResult(scope:x['scope'] as String,
+      students:feeInt(x['student_count']),
+      added:feeInt(x['added_charges']),
+      skipped:feeInt(x['skipped_existing']),
+      eligible:feeInt(x['eligible_charges']),categories:categories);
+  }
+}
+
 class OtherPersonCharge {
   const OtherPersonCharge({
     required this.id,required this.categoryId,required this.categoryName,
@@ -146,6 +172,16 @@ abstract class FeeBillingRepository {
     required String description,required String operationId,
   }) => throw UnsupportedError('Individual charging not configured');
 
+
+  /// One atomic transaction for a section or explicitly selected students.
+  /// No per-student override: use addIndividualCharge for different prices.
+  Future<ScopedBillResult> generateScoped({
+    required String schoolId,required String campusId,required String yearId,
+    required String month,required List<String> categoryIds,
+    required String scope,String? sectionId,List<String> studentIds=const [],
+    required bool includeOptional,required String operationId,
+  }) => throw UnsupportedError('Scoped generation not configured');
+
   Future<CategoryBillResult> generateCategory({
     required String schoolId,required String campusId,required String yearId,
     required String month,required String categoryId,
@@ -213,6 +249,36 @@ class SupabaseFeeBillingRepository implements FeeBillingRepository {
     if(result is! Map)throw StateError('Invalid server response from $name');
     return Map<String,dynamic>.from(result);
   }
+
+  @override
+  Future<ScopedBillResult> generateScoped({
+    required String schoolId,required String campusId,required String yearId,
+    required String month,required List<String> categoryIds,
+    required String scope,String? sectionId,List<String> studentIds=const [],
+    required bool includeOptional,required String operationId,
+  }) async {
+    if(categoryIds.isEmpty||categoryIds.length>20||
+       categoryIds.length!=categoryIds.toSet().length||
+       !{'section','selected'}.contains(scope)||
+       (scope=='section'&&(sectionId==null||studentIds.isNotEmpty))||
+       (scope=='selected'&&(sectionId!=null||studentIds.isEmpty||
+           studentIds.length>120||studentIds.toSet().length!=studentIds.length))){
+      throw const FormatException('Invalid section or student group selection');
+    }
+    final x=await rpc('fee_generate_scoped',{
+      'p_school':schoolId,'p_campus':campusId,'p_year':yearId,
+      'p_month':month,'p_categories':categoryIds,
+      'p_scope':scope,'p_section':sectionId,
+      'p_students':scope=='selected'?studentIds:[],
+      'p_include_optional':includeOptional,'p_operation':operationId,
+    });
+    final result=ScopedBillResult.fromJson(x);
+    if(result.scope!=scope||result.categories.length!=categoryIds.length){
+      throw StateError('Scoped billing result incomplete; retry same operation');
+    }
+    return result;
+  }
+
   @override
   Future<CategoryBillResult> generateCategory({
     required String schoolId,required String campusId,required String yearId,
