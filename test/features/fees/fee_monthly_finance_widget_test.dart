@@ -110,6 +110,8 @@ class FakeBillingRepository implements FeeMonthlyRepository {
 }
 
 class FakeFeeSetupRepository implements FeeSetupRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation)=>super.noSuchMethod(invocation);
   @override Future<FeeSetupSnapshot> load({
     required String schoolId,required String campusId,
     required String academicYearId,
