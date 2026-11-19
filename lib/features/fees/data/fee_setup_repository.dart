@@ -119,34 +119,32 @@ class FeeSetupSnapshot {
 
 class StudentFeeRateStudent {
   const StudentFeeRateStudent({required this.id,required this.name,
-    required this.registration,required this.classId,
-    required this.className,this.sectionName});
+    required this.registration,required this.classId,required this.className,
+    this.sectionName});
   final String id,name,registration,classId,className;
   final String? sectionName;
-  factory StudentFeeRateStudent.fromJson(Map<String,dynamic> x)=>
+  factory StudentFeeRateStudent.fromJson(Map<String,dynamic> x) =>
     StudentFeeRateStudent(id:x['id'] as String,name:x['name'] as String,
-      registration:x['registration'] as String,
-      classId:x['class_id'] as String,className:x['class_name'] as String,
-      sectionName:x['section_name'] as String?);
+      registration:x['registration'] as String,classId:x['class_id'] as String,
+      className:x['class_name'] as String,sectionName:x['section_name'] as String?);
 }
 class StudentFeeRateCategory {
   const StudentFeeRateCategory({required this.id,required this.name,
     required this.code,required this.frequency});
   final String id,name,code,frequency;
-  factory StudentFeeRateCategory.fromJson(Map<String,dynamic> x)=>
+  factory StudentFeeRateCategory.fromJson(Map<String,dynamic> x) =>
     StudentFeeRateCategory(id:x['id'] as String,name:x['name'] as String,
       code:x['code'] as String,frequency:x['frequency'] as String);
 }
 class StudentFeeRateRule {
   const StudentFeeRateRule({required this.id,required this.studentId,
-    required this.categoryId,required this.kind,
-    required this.startMonth,required this.reason,
-    required this.active,this.amountMinor,this.endMonth});
+    required this.categoryId,required this.kind,required this.startMonth,
+    required this.reason,required this.active,this.amountMinor,this.endMonth});
   final String id,studentId,categoryId,kind,startMonth,reason;
   final int? amountMinor;
   final String? endMonth;
   final bool active;
-  factory StudentFeeRateRule.fromJson(Map<String,dynamic> x)=>
+  factory StudentFeeRateRule.fromJson(Map<String,dynamic> x) =>
     StudentFeeRateRule(id:x['id'] as String,studentId:x['student_id'] as String,
       categoryId:x['category_id'] as String,kind:x['kind'] as String,
       amountMinor:(x['amount_minor'] as num?)?.toInt(),
@@ -163,7 +161,7 @@ class StudentFeeRatesSnapshot {
   final List<StudentFeeRateRule> rules;
   factory StudentFeeRatesSnapshot.fromJson(Map<String,dynamic> x) {
     List<Map<String,dynamic>> rows(Object? v) {
-      if(v is! List)throw const FormatException('Invalid fee rate snapshot');
+      if(v is! List)throw const FormatException('Invalid rate snapshot');
       return [for(final y in v)Map<String,dynamic>.from(y as Map)];
     }
     return StudentFeeRatesSnapshot(
@@ -181,8 +179,6 @@ class StudentFeeRatesSnapshot {
 abstract class FeeSetupRepository {
   const FeeSetupRepository();
 
-  /// Owner-only, date-effective student-specific recurring rates.
-  /// Default methods preserve existing repository test doubles.
   Future<StudentFeeRatesSnapshot> loadStudentRates({
     required String schoolId,required String campusId,required String yearId,
   }) => throw UnsupportedError('Student rate setup unavailable');
@@ -223,11 +219,11 @@ class SupabaseFeeSetupRepository implements FeeSetupRepository {
     _requireSession();
     final response=await client.rpc('owner_student_fee_rates_snapshot',params:{
       'p_school':schoolId,'p_campus':campusId,'p_year':yearId});
-    if(response is! Map)throw StateError('Invalid rate snapshot');
+    if(response is! Map)throw StateError('Invalid student rates response');
     final result=StudentFeeRatesSnapshot.fromJson(Map<String,dynamic>.from(response));
     if(result.schoolId!=schoolId||result.campusId!=campusId||
        result.yearId!=yearId) {
-      throw StateError('Fee rules returned from an unrelated school/year');
+      throw StateError('Fee rates returned from an unrelated school/year');
     }
     return result;
   }
@@ -244,181 +240,9 @@ class SupabaseFeeSetupRepository implements FeeSetupRepository {
       (kind=='override'&&(amountMinor==null||amountMinor<=0))||
       (kind!='override'&&amountMinor!=null)||
       reason.trim().length<4||reason.trim().length>500||
-      !RegExp(r'^\\d{4}-(0[1-9]|1[0-2])-01
-
-  void _requireSession() {
-    if (client.auth.currentSession == null) {
-      throw StateError('Verified school Owner sign-in required');
-    }
-  }
-
-  @override
-  Future<FeeSetupSnapshot> load({
-    required String schoolId, required String campusId,
-    required String academicYearId,
-  }) async {
-    _requireSession();
-    final response = await client.rpc('owner_fee_setup_snapshot', params: {
-      'p_school': schoolId, 'p_campus': campusId, 'p_year': academicYearId,
-    });
-    if (response is! Map) throw StateError('Invalid fee setup response');
-    final snapshot = FeeSetupSnapshot.fromJson(Map<String, dynamic>.from(response));
-    if (snapshot.schoolId != schoolId || snapshot.campusId != campusId ||
-        snapshot.yearId != academicYearId) {
-      throw StateError('Fee setup returned a different school or campus');
-    }
-    return snapshot;
-  }
-
-  @override
-  Future<void> createCategory({
-    required String schoolId, required String code, required String name,
-    required String frequency, required bool discountable,
-  }) async {
-    _requireSession();
-    final response = await client.rpc('owner_create_fee_category', params: {
-      'p_school': schoolId,
-      'p_code': code.trim().toUpperCase(),
-      'p_name': name.trim(),
-      'p_frequency': frequency,
-      'p_discountable': discountable,
-    });
-    if (response is! Map || response['saved'] != true ||
-        response['code'] != code.trim().toUpperCase()) {
-      throw StateError('Category save not confirmed. Refresh before retrying.');
-    }
-  }
-
-  @override
-  Future<void> saveClassPlan({
-    required String schoolId, required String campusId,
-    required String academicYearId, required String classId,
-    required String name, required List<FeePlanLine> items,
-  }) async {
-    _requireSession();
-    if (items.isEmpty || items.length > 30 ||
-        items.any((item) => item.amountMinor < 0)) {
-      throw const FormatException('Select valid fee categories and amounts');
-    }
-    final response = await client.rpc('owner_save_class_fee_plan', params: {
-      'p_school': schoolId, 'p_campus': campusId, 'p_year': academicYearId,
-      'p_class': classId, 'p_name': name.trim(),
-      'p_items': items.map((item) => item.toJson()).toList(),
-    });
-    if (response is! Map || response['saved'] != true ||
-        (response['item_count'] as num?)?.toInt() != items.length) {
-      throw StateError('Fee plan save not confirmed. Refresh before retrying.');
-    }
-  }
-}
-
-/// Monetary values use integer minor units, never binary floating point.
-class FeeMoney {
-  static int? parseMinor(String text) {
-    final cleaned = text.trim();
-    if (!RegExp(r'^\d{1,9}(\.\d{1,2})?$').hasMatch(cleaned)) return null;
-    final parts = cleaned.split('.');
-    final major = int.parse(parts[0]);
-    final fraction = parts.length == 1
-      ? 0 : int.parse(parts[1].padRight(2, '0'));
-    return major * 100 + fraction;
-  }
-
-  static String showMinor(int minor) {
-    final major = minor ~/ 100;
-    final cents = (minor % 100).toString().padLeft(2, '0');
-    return '$major.$cents';
-  }
-}
-).hasMatch(startMonth)||
+      !RegExp(r'^\d{4}-(0[1-9]|1[0-2])-01$').hasMatch(startMonth)||
       (endMonth!=null&&
-       !RegExp(r'^\\d{4}-(0[1-9]|1[0-2])-01
-
-  void _requireSession() {
-    if (client.auth.currentSession == null) {
-      throw StateError('Verified school Owner sign-in required');
-    }
-  }
-
-  @override
-  Future<FeeSetupSnapshot> load({
-    required String schoolId, required String campusId,
-    required String academicYearId,
-  }) async {
-    _requireSession();
-    final response = await client.rpc('owner_fee_setup_snapshot', params: {
-      'p_school': schoolId, 'p_campus': campusId, 'p_year': academicYearId,
-    });
-    if (response is! Map) throw StateError('Invalid fee setup response');
-    final snapshot = FeeSetupSnapshot.fromJson(Map<String, dynamic>.from(response));
-    if (snapshot.schoolId != schoolId || snapshot.campusId != campusId ||
-        snapshot.yearId != academicYearId) {
-      throw StateError('Fee setup returned a different school or campus');
-    }
-    return snapshot;
-  }
-
-  @override
-  Future<void> createCategory({
-    required String schoolId, required String code, required String name,
-    required String frequency, required bool discountable,
-  }) async {
-    _requireSession();
-    final response = await client.rpc('owner_create_fee_category', params: {
-      'p_school': schoolId,
-      'p_code': code.trim().toUpperCase(),
-      'p_name': name.trim(),
-      'p_frequency': frequency,
-      'p_discountable': discountable,
-    });
-    if (response is! Map || response['saved'] != true ||
-        response['code'] != code.trim().toUpperCase()) {
-      throw StateError('Category save not confirmed. Refresh before retrying.');
-    }
-  }
-
-  @override
-  Future<void> saveClassPlan({
-    required String schoolId, required String campusId,
-    required String academicYearId, required String classId,
-    required String name, required List<FeePlanLine> items,
-  }) async {
-    _requireSession();
-    if (items.isEmpty || items.length > 30 ||
-        items.any((item) => item.amountMinor < 0)) {
-      throw const FormatException('Select valid fee categories and amounts');
-    }
-    final response = await client.rpc('owner_save_class_fee_plan', params: {
-      'p_school': schoolId, 'p_campus': campusId, 'p_year': academicYearId,
-      'p_class': classId, 'p_name': name.trim(),
-      'p_items': items.map((item) => item.toJson()).toList(),
-    });
-    if (response is! Map || response['saved'] != true ||
-        (response['item_count'] as num?)?.toInt() != items.length) {
-      throw StateError('Fee plan save not confirmed. Refresh before retrying.');
-    }
-  }
-}
-
-/// Monetary values use integer minor units, never binary floating point.
-class FeeMoney {
-  static int? parseMinor(String text) {
-    final cleaned = text.trim();
-    if (!RegExp(r'^\d{1,9}(\.\d{1,2})?$').hasMatch(cleaned)) return null;
-    final parts = cleaned.split('.');
-    final major = int.parse(parts[0]);
-    final fraction = parts.length == 1
-      ? 0 : int.parse(parts[1].padRight(2, '0'));
-    return major * 100 + fraction;
-  }
-
-  static String showMinor(int minor) {
-    final major = minor ~/ 100;
-    final cents = (minor % 100).toString().padLeft(2, '0');
-    return '$major.$cents';
-  }
-}
-).hasMatch(endMonth))) {
+       !RegExp(r'^\d{4}-(0[1-9]|1[0-2])-01$').hasMatch(endMonth))) {
       throw const FormatException('Invalid individual fee rate terms');
     }
     final response=await client.rpc('owner_set_student_fee_rate',params:{
@@ -431,7 +255,7 @@ class FeeMoney {
     if(response is! Map || response['saved']!=true ||
        response['rate_id'] is! String||response['student_id']!=studentId||
        response['category_id']!=categoryId||response['kind']!=kind){
-      throw StateError('Rate change was not confirmed; retry same operation');
+      throw StateError('Rate change not confirmed; retry same operation');
     }
   }
 
