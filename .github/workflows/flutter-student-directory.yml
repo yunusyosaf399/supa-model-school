@@ -47,6 +47,8 @@ jobs:
         run: flutter test test/features/fees/fee_quick_pay_widget_test.dart
       - name: Individual category billing and external payer collection regression
         run: flutter test test/features/fees/fee_category_and_external_payers_widget_test.dart
+      - name: Per-student Uniform fee, repeat-charge form and safe retry regression
+        run: flutter test test/features/fees/individual_fee_widget_test.dart
       - name: Reconciled Fee Income cashbook and collection report regression
         run: flutter test test/features/fees/fee_cashbook_widget_test.dart
       - name: School finance cash movement and retail/expense report regression

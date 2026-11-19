@@ -35,6 +35,14 @@ OtherPeopleLedger exampleExternal({bool collect=true})=>OtherPeopleLedger(
 class FakeBilling implements FeeBillingRepository{
   FakeBilling({this.allowCollect=true});
   final bool allowCollect;
+  @override
+  Future<IndividualFeeResult> addIndividualCharge({
+    required String schoolId,required String campusId,required String yearId,
+    required String studentId,required String categoryId,
+    required String chargeOn,required String dueOn,
+    required String priceMode,int? amountMinor,
+    required String description,required String operationId,
+  }) => throw UnsupportedError('Unused in legacy generation tests');
   int generated=0,generatedBatch=0,charged=0,collected=0,created=0;
   List<String>? lastBatchCategories;
   String? lastBatchOperation;
