@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../data/fee_detailed_statement.dart';
-import '../data/fee_monthly_repository.dart';
+import '../data/fee_setup_repository.dart';
 
 /// Produces a read-only school-year statement. All receipt amounts come from
 /// server-reconciled allocations; the PDF itself never writes payment records.
@@ -18,7 +18,7 @@ class FeeStatementPdf {
       fontSize:11,fontWeight:pw.FontWeight.bold)));
 
   static pw.Widget _table(List<String> headers,List<List<String>> data)=>
-    pw.Table.fromTextArray(
+    pw.TableHelper.fromTextArray(
       headers:headers,
       data:data.isEmpty?
         [List<String>.filled(headers.length,'—')]:data,
