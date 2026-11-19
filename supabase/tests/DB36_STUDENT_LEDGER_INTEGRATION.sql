@@ -77,15 +77,12 @@ begin
  'Personal transport amount',v_owner);
  insert into public.fee_receipts(
  id,school_id,collection_campus_id,student_id,receipt_no,
- operation_id,amount_minor,payment_method,issued_by)
+ operation_id,amount_minor,payment_method,issued_by,bank_reference)
  values
  (v_r1,v_school,v_campus,v_student,'DB36-REC-1',
- gen_random_uuid(),8500,'cash',v_owner),
+ gen_random_uuid(),8500,'cash',v_owner,null),
  (v_r2,v_school,v_campus,v_student,'DB36-REC-2',
- gen_random_uuid(),1500,'bank',v_owner);
- -- Bank payments require a reference, use explicit update within test txn.
- update public.fee_receipts set bank_reference='TEST-BANK-001'
- where id=v_r2;
+ gen_random_uuid(),1500,'bank',v_owner,'TEST-BANK-001');
  insert into public.fee_allocations(
  school_id,student_id,receipt_id,charge_id,amount_minor)
  values
