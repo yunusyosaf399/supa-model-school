@@ -8,6 +8,7 @@ import '../data/fee_billing_repository.dart';
 import '../data/fee_cashbook_repository.dart';
 import 'fee_cashbook_page.dart';
 import 'fee_category_generation_page.dart';
+import 'fee_scoped_generation_page.dart';
 import 'individual_fee_page.dart';
 import 'fee_other_people_page.dart';
 
@@ -119,6 +120,16 @@ class _FeeCollectionPageState extends State<FeeCollectionPage> {
     if(saved==true&&mounted)await load();
   }
 
+
+  Future<void> scopedFees(FeePaymentWorkspace workspace) async {
+    final billing=widget.billingRepository;
+    if(!workspace.canCollect||billing==null)return;
+    final saved=await Navigator.push<bool>(context,MaterialPageRoute(
+      builder:(_)=>FeeScopedGenerationPage(
+        workspace:workspace,repository:billing)));
+    if(saved==true&&mounted)await load();
+  }
+
   Future<void> otherPayers(FeePaymentWorkspace workspace) async {
     final billing=widget.billingRepository;
     if(billing==null)return;
@@ -196,6 +207,11 @@ class _FeeCollectionPageState extends State<FeeCollectionPage> {
                 onPressed:()=>generateFee(w),
                 icon:const Icon(Icons.post_add_outlined),
                 label:const Text('Generate Category Fees')),
+              if(w.canCollect)OutlinedButton.icon(
+                key:const Key('fee-generate-scoped-open'),
+                onPressed:()=>scopedFees(w),
+                icon:const Icon(Icons.groups_outlined),
+                label:const Text('Section / Selected Students')),
               if(w.canCollect)FilledButton.icon(
                 key:const Key('fee-add-individual-open'),
                 onPressed:()=>addIndividual(w),
