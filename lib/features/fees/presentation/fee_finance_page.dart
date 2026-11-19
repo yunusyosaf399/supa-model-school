@@ -9,14 +9,13 @@ import '../data/fee_billing_repository.dart';
 import '../data/fee_cashbook_repository.dart';
 import '../data/school_cashflow_repository.dart';
 import '../data/expense_repository.dart';
-import 'expense_management_page.dart';
 import 'school_cashflow_page.dart';
 import 'fee_cashbook_page.dart';
 import 'fee_collection_page.dart';
 import 'fee_category_generation_page.dart';
 import 'fee_setup_page.dart';
 
-/// Shared Owner finance navigation, identical for Windows and Android.
+/// Fee child of Fee & Finance; Expenses uses its own separate route.
 class FeeFinancePage extends StatelessWidget {
   const FeeFinancePage({
     super.key, required this.owner,
@@ -42,7 +41,8 @@ class FeeFinancePage extends StatelessWidget {
       (cashbookRepository != null && owner.activeYearId != null &&
         owner.campuses.isNotEmpty
           ? (schoolCashflowRepository != null ? 5 : 4) : 3)) +
-        (expenseRepository != null && owner.campuses.isNotEmpty ? 1 : 0),
+        0,
+    initialIndex: paymentRepository != null && owner.campuses.isNotEmpty ? 2 : 0,
     child: Column(children: [
       Material(
         color: Theme.of(context).colorScheme.surface,
@@ -51,11 +51,11 @@ class FeeFinancePage extends StatelessWidget {
           isScrollable: true,
           tabAlignment: TabAlignment.start,
           tabs: [
-            const Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Monthly Billing'),
+            const Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Generate Monthly Fees'),
             const Tab(icon: Icon(Icons.tune_outlined), text: 'Fee Setup'),
             if (paymentRepository != null)
               const Tab(icon: Icon(Icons.payments_outlined),
-                text: 'Quick Pay & Categories'),
+                text: 'Fee Register & Quick Pay'),
             if (paymentRepository != null && cashbookRepository != null &&
                 owner.activeYearId != null && owner.campuses.isNotEmpty)
               const Tab(icon: Icon(Icons.summarize_outlined),
@@ -65,9 +65,6 @@ class FeeFinancePage extends StatelessWidget {
                 owner.activeYearId != null && owner.campuses.isNotEmpty)
               const Tab(icon: Icon(Icons.account_balance_outlined),
                 text: 'School Cash Movement'),
-            if (expenseRepository != null && owner.campuses.isNotEmpty)
-              const Tab(icon: Icon(Icons.request_quote_outlined),
-                text: 'Expenses'),
           ],
         ),
       ),
@@ -113,13 +110,6 @@ class FeeFinancePage extends StatelessWidget {
             yearId: owner.activeYearId!,
             initialCampusId: owner.campuses.any((c)=>c.id==selectedCampusId)
               ? selectedCampusId : owner.campuses.first.id,
-          ),
-        if (expenseRepository != null && owner.campuses.isNotEmpty)
-          ExpenseManagementPage(
-            repository: expenseRepository!,
-            schoolId: owner.schoolId,
-            campusId: owner.campuses.any((c)=>c.id==selectedCampusId)
-              ? selectedCampusId! : owner.campuses.first.id,
           ),
       ])),
     ]),
