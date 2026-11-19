@@ -13,6 +13,8 @@ const owner = OwnerAccess(
 );
 
 class FakeFeeRepository implements FeeSetupRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation)=>super.noSuchMethod(invocation);
   final calls = <String>[];
   FeeCategory? category;
   ClassFeePlan? plan;
