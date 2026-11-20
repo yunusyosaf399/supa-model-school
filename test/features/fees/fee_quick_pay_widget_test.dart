@@ -143,6 +143,11 @@ void main() {
     await tester.scrollUntilVisible(
       find.byKey(const Key('fee-quickpay-SAMPLE-2026-0003')), 250,
       scrollable: find.byType(Scrollable).first);
+    // The Fee Register now has a bulk print action above student accounts.
+    // A finder can exist in a lazy list while still being outside the viewport.
+    await tester.ensureVisible(
+      find.byKey(const Key('fee-quickpay-SAMPLE-2026-0003')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(
       const Key('fee-quickpay-SAMPLE-2026-0003')));
     await tester.pumpAndSettle();

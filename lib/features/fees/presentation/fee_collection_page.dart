@@ -10,6 +10,7 @@ import 'fee_cashbook_page.dart';
 import 'fee_detailed_ledger_page.dart';
 import 'fee_receipt_slip_page.dart';
 import 'fee_billing_reports_page.dart';
+import 'fee_bulk_demand_slips_page.dart';
 import 'fee_category_generation_page.dart';
 import 'fee_scoped_generation_page.dart';
 import 'individual_fee_page.dart';
@@ -92,6 +93,14 @@ class _FeeCollectionPageState extends State<FeeCollectionPage> {
       (q.isEmpty||s.name.toLowerCase().contains(q)||
         s.registration.toLowerCase().contains(q))&&
       ((frequency=='all'&&categoryId==null)||charges(s).isNotEmpty);
+  }
+
+  Future<void> openBulkDemandSlips(FeePaymentWorkspace workspace) async {
+    await Navigator.push<void>(context,MaterialPageRoute(
+      builder:(_)=>FeeBulkDemandSlipsPage(
+        repository:widget.repository,initialWorkspace:workspace,
+        initialClassId:classId,initialSectionId:sectionId)));
+    if(mounted)await load();
   }
 
   Future<void> openBillingReports(FeePaymentWorkspace workspace) async {
@@ -250,6 +259,11 @@ class _FeeCollectionPageState extends State<FeeCollectionPage> {
                 icon:const Icon(Icons.summarize_outlined),
                 label:const Text('Collection Reports')),
             ]),
+          OutlinedButton.icon(
+            key:const Key('fee-bulk-demand-open'),
+            onPressed:()=>openBulkDemandSlips(w),
+            icon:const Icon(Icons.print_outlined),
+            label:const Text('Bulk Monthly Fee Demand Slips')),
           const SizedBox(height:10),
           TextField(key:const Key('fee-collection-search'),
             decoration:const InputDecoration(border:OutlineInputBorder(),
