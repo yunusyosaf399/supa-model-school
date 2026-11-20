@@ -89,12 +89,12 @@ class FeeDemandBatch {
           throw const FormatException('Fee balance does not reconcile');
         }
         final billMonth=c.month.substring(0,7);
-        if(billMonth>month||c.outstandingMinor==0)continue;
-        if(billMonth<month&&!includeArrears)continue;
+        if(billMonth.compareTo(month)>0||c.outstandingMinor==0)continue;
+        if(billMonth.compareTo(month)<0&&!includeArrears)continue;
         rows.add(FeeDemandLine(
           chargeId:c.id,category:c.categoryName,month:billMonth,
           dueOn:c.dueOn,billedMinor:c.netMinor,paidMinor:c.paidMinor,
-          dueMinor:c.outstandingMinor,arrears:billMonth<month));
+          dueMinor:c.outstandingMinor,arrears:billMonth.compareTo(month)<0));
       }
       if(rows.isEmpty)continue;
       rows.sort((a,b){
