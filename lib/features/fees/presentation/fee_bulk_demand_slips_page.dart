@@ -162,7 +162,7 @@ class _FeeBulkDemandSlipsPageState extends State<FeeBulkDemandSlipsPage> {
             FilledButton(key:const Key('bulk-demand-confirm'),
               onPressed:()=>Navigator.pop(ctx,true),
               child:Text(share?'Share PDF':'Print Slips')),
-          ]);
+          ]));
       if(!mounted||yes!=true)return;
       if(share){
         final bytes=await FeeDemandSlipPdf.build(
