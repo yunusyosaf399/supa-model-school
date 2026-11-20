@@ -31,7 +31,7 @@ const demoStudent=FeePaymentStudent(
   ],
 );
 
-const workspace=FeePaymentWorkspace(
+const sampleWorkspace=FeePaymentWorkspace(
   schoolId:'school',campusId:'campus',yearId:'year',
   yearLabel:'2026-2027',currency:'PKR',canCollect:true,
   years:[FeeYearChoice('year','2026-2027',true)],
@@ -116,7 +116,7 @@ class FakeWorkspace implements FeePaymentRepository{
     if(fail)throw StateError('No network');
     expect(schoolId,'school');expect(campusId,'campus');
     expect(yearId,'year');
-    return workspace;
+    return sampleWorkspace;
   }
 }
 
@@ -158,7 +158,7 @@ class FakeSetup implements FeeSetupRepository{
 }
 
 FinanceOverviewSnapshot snapshot()=>FinanceOverviewSnapshot.fromReports(
-  today:DateTime(2026,11,20),workspace:workspace,
+  today:DateTime(2026,11,20),workspace:sampleWorkspace,
   cashbooks:[cashbook('2026-10-01','2026-11-20')],
   cashflows:[cashflow('2026-10-01','2026-11-20')],
   periodStart:'2026-10-01',periodEnd:'2026-11-20');
@@ -196,7 +196,7 @@ void main(){
     final mismatch=FeePaymentWorkspace(
       schoolId:'another-school',campusId:'campus',yearId:'year',
       yearLabel:'2026-2027',currency:'PKR',canCollect:true,
-      years:const[],categories:workspace.categories,students:workspace.students);
+      years:const[],categories:sampleWorkspace.categories,students:sampleWorkspace.students);
     expect(()=>FinanceOverviewSnapshot.fromReports(
       today:DateTime(2026,11,20),workspace:mismatch,
       cashbooks:[cashbook('2026-10-01','2026-11-20')],
