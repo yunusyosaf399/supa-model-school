@@ -12,10 +12,10 @@ import '../data/fee_setup_repository.dart';
 class FeeBulkDemandSlipsPage extends StatefulWidget {
   const FeeBulkDemandSlipsPage({
     super.key,required this.repository,required this.initialWorkspace,
-    this.initialClassId,this.initialSectionId});
+    this.initialClassId,this.initialSectionId,this.initialMonth});
   final FeePaymentRepository repository;
   final FeePaymentWorkspace initialWorkspace;
-  final String? initialClassId,initialSectionId;
+  final String? initialClassId,initialSectionId,initialMonth;
   @override State<FeeBulkDemandSlipsPage> createState()=>_FeeBulkDemandSlipsPageState();
 }
 
@@ -30,6 +30,7 @@ class _FeeBulkDemandSlipsPageState extends State<FeeBulkDemandSlipsPage> {
     workspace=widget.initialWorkspace;
     classId=widget.initialClassId;
     sectionId=widget.initialSectionId;
+    month=widget.initialMonth;
     _chooseMonth();
     WidgetsBinding.instance.addPostFrameCallback((_){
       if(mounted)refresh();
@@ -117,12 +118,19 @@ class _FeeBulkDemandSlipsPageState extends State<FeeBulkDemandSlipsPage> {
         workspace:latest,month:original.month,
         classId:original.classId,sectionId:sectionId,
         includeArrears:includeArrears);
-      final oldAmounts={
-        for(final s in original.students)s.id:s.totalDueMinor};
-      final newAmounts={
-        for(final s in updated.students)s.id:s.totalDueMinor};
-      if(oldAmounts.length!=newAmounts.length||
-          oldAmounts.entries.any((e)=>newAmounts[e.key]!=e.value)){
+      // Compare exact charge-level allocations, not only totals: another
+      // collector could reallocate the same total across categories.
+      Map<String,String> signature(FeeDemandBatch b)=>{
+        for(final student in b.students)
+          student.id:student.lines.map((line)=>
+            [line.chargeId,line.month,line.category,
+             line.billedMinor,line.paidMinor,line.dueMinor]
+              .join(':')).join('|'),
+      };
+      final before=signature(original);
+      final after=signature(updated);
+      if(before.length!=after.length||
+          before.entries.any((e)=>after[e.key]!=e.value)){
         setState((){
           workspace=latest;
           notice='Student balances changed after the preview. '
