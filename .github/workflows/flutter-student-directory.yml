@@ -43,6 +43,8 @@ jobs:
         run: flutter test test/features/fees/fee_setup_widget_test.dart
       - name: Monthly billing, payment receipt and scholarship regression
         run: flutter test test/features/fees/fee_monthly_finance_widget_test.dart
+      - name: Reference Fee and Finance dashboard, six month KPI, charts and responsive navigation regression
+        run: flutter test test/features/fees/finance_reference_overview_widget_test.dart
       - name: Quick Pay allocation review and finance category filters
         run: flutter test test/features/fees/fee_quick_pay_widget_test.dart
       - name: Individual category billing and external payer collection regression
