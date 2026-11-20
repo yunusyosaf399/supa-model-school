@@ -55,6 +55,8 @@ jobs:
         run: flutter test test/features/fees/student_fee_rates_widget_test.dart
       - name: Fee statement, dual-copy posted receipts, PDFs and billing reports regression
         run: flutter test test/features/fees/fee_detailed_ledger_widget_test.dart
+      - name: Bulk monthly class and section fee demand slip PDF and arrears regression
+        run: flutter test test/features/fees/fee_bulk_demand_slips_widget_test.dart
       - name: Reconciled Fee Income cashbook and collection report regression
         run: flutter test test/features/fees/fee_cashbook_widget_test.dart
       - name: School finance cash movement and retail/expense report regression
