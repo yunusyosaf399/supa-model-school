@@ -662,6 +662,8 @@ class _SchoolShellState extends State<_SchoolShell> {
         schoolCashflowRepository: widget.schoolCashflowRepository,
         expenseRepository: widget.expenseRepository,
         selectedCampusId: activeCampusId,
+        onOpenExpenses: () => setState(() => selected = 7),
+        onOpenPayroll: () => setState(() => selected = 6),
       );
     }
     if (selected == 7 && widget.owner != null &&
