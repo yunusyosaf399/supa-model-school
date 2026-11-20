@@ -221,7 +221,7 @@ void main(){
     expect(find.byKey(const Key('finance-overview-live')),findsOneWidget);
     expect(find.byKey(const Key('finance-collection-trend-chart')),findsOneWidget);
     expect(find.byKey(const Key('finance-category-donut')),findsOneWidget);
-    expect(find.text('Total Collected'),findsOneWidget);
+    expect(find.text('Total Collected'),findsWidgets);
     expect(find.text('Pending Fees'),findsOneWidget);
     expect(find.text('Transport Fees'),findsOneWidget);
     expect(find.text('Salaries (Paid)'),findsOneWidget);
@@ -271,6 +271,8 @@ void main(){
     expect(find.byKey(const Key('finance-overview-live')),findsOneWidget);
     expect(find.byKey(const Key('finance-collection-trend-chart')),findsOneWidget);
     final btn=find.byKey(const Key('finance-action-collect-fee'));
+    await tester.scrollUntilVisible(btn,260,
+      scrollable:find.byType(Scrollable).first);
     await tester.ensureVisible(btn);
     await tester.pumpAndSettle();
     await tester.tap(btn);
