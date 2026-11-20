@@ -307,10 +307,11 @@ class _CategoryPanel extends StatelessWidget {
         Row(children:[
           const Icon(Icons.pie_chart_outline,color:_seaTeal),
           const SizedBox(width:8),
-          Text('Collection by Category',
+          Expanded(child:Text('Collection by Category',
+            maxLines:2,overflow:TextOverflow.ellipsis,
             style:Theme.of(context).textTheme.titleMedium?.copyWith(
               color:Theme.of(context).brightness==Brightness.dark?
-                Colors.white:_deepTeal,fontWeight:FontWeight.w800)),
+                Colors.white:_deepTeal,fontWeight:FontWeight.w800))),
         ]),
         const SizedBox(height:16),
         LayoutBuilder(builder:(context,box){
