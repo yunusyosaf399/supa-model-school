@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:math' as math;
 
 import '../../auth/data/owner_auth_gateway.dart';
 import '../data/fee_setup_repository.dart';
@@ -14,6 +15,8 @@ import 'fee_cashbook_page.dart';
 import 'fee_collection_page.dart';
 import 'fee_category_generation_page.dart';
 import 'fee_setup_page.dart';
+import '../data/finance_overview_model.dart';
+import 'finance_overview_widgets.dart';
 
 /// Fee child of Fee & Finance; Expenses uses its own separate route.
 class FeeFinancePage extends StatelessWidget {
@@ -22,7 +25,7 @@ class FeeFinancePage extends StatelessWidget {
     required this.setupRepository, required this.monthlyRepository,
     this.selectedCampusId, this.paymentRepository, this.billingRepository,
     this.cashbookRepository, this.schoolCashflowRepository,
-    this.expenseRepository,
+    this.expenseRepository,this.onOpenExpenses,this.onOpenPayroll,
   });
 
   final OwnerAccess owner;
@@ -34,13 +37,27 @@ class FeeFinancePage extends StatelessWidget {
   final SchoolCashflowRepository? schoolCashflowRepository;
   final ExpenseRepository? expenseRepository;
   final String? selectedCampusId;
+  final VoidCallback? onOpenExpenses,onOpenPayroll;
 
   @override
-  Widget build(BuildContext context) => DefaultTabController(
+  Widget build(BuildContext context) {
+    if(paymentRepository!=null&&cashbookRepository!=null&&
+       schoolCashflowRepository!=null&&owner.activeYearId!=null&&
+       owner.campuses.isNotEmpty) {
+      return _FinanceReferenceHome(page:this);
+    }
+    return _buildLegacyTabs(context);
+  }
+
+  // Retain all existing, working fee screens unchanged under the reference
+  // design's Tuition & Transport navigation.
+  Widget _buildLegacyTabs(BuildContext context,{int? initialIndex})=>
+      DefaultTabController(
     length: (paymentRepository == null || owner.campuses.isEmpty ? 2 :
       (cashbookRepository != null && owner.activeYearId != null
         ? (schoolCashflowRepository != null ? 5 : 4) : 3)),
-    initialIndex: paymentRepository != null && owner.campuses.isNotEmpty ? 2 : 0,
+    initialIndex: initialIndex??(
+      paymentRepository!=null&&owner.campuses.isNotEmpty?2:0),
     child: Column(children: [
       Material(
         color: Theme.of(context).colorScheme.surface,
@@ -112,6 +129,252 @@ class FeeFinancePage extends StatelessWidget {
       ])),
     ]),
   );
+}
+
+/// The uploaded design is applied to the finance content pane, never to the
+/// shared desktop sidebar, search header, campus switcher or school shell.
+class _FinanceReferenceHome extends StatefulWidget {
+  const _FinanceReferenceHome({required this.page});
+  final FeeFinancePage page;
+  @override State<_FinanceReferenceHome> createState()=>
+    _FinanceReferenceHomeState();
+}
+
+class _FinanceReferenceHomeState extends State<_FinanceReferenceHome>{
+  FinanceOverviewSnapshot? snapshot;
+  String? error;
+  bool loading=false;
+  int sequence=0,primaryTab=0,legacyTab=2;
+
+  @override void initState(){
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_){
+      if(mounted)load();
+    });
+  }
+
+  @override void didUpdateWidget(covariant _FinanceReferenceHome oldWidget){
+    super.didUpdateWidget(oldWidget);
+    if(oldWidget.page.owner.schoolId!=widget.page.owner.schoolId||
+       oldWidget.page.owner.activeYearId!=widget.page.owner.activeYearId||
+       oldWidget.page.selectedCampusId!=widget.page.selectedCampusId){
+      snapshot=null;error=null;
+      WidgetsBinding.instance.addPostFrameCallback((_){
+        if(mounted)load();
+      });
+    }
+  }
+
+  String get campusId=>widget.page.owner.campuses.any((c)=>
+      c.id==widget.page.selectedCampusId)
+    ?widget.page.selectedCampusId!:widget.page.owner.campuses.first.id;
+
+  String get campusName=>widget.page.owner.campuses.firstWhere(
+    (c)=>c.id==campusId).name;
+
+  Future<void> load()async{
+    final token=++sequence;
+    setState((){loading=true;error=null;});
+    final owner=widget.page.owner;
+    final today=DateTime.now();
+    final windows=financeOverviewWindows(today,
+      academicStart:DateTime.tryParse(owner.activeYearStartsOn??''),
+      academicEnd:DateTime.tryParse(owner.activeYearEndsOn??''));
+    try{
+      final data=await Future.wait<Object>([
+        widget.page.paymentRepository!.workspace(
+          schoolId:owner.schoolId,campusId:campusId,
+          yearId:owner.activeYearId),
+        for(final w in windows)
+          widget.page.cashbookRepository!.load(
+            schoolId:owner.schoolId,yearId:owner.activeYearId!,
+            campusId:campusId,from:financeDay(w.start),to:financeDay(w.end),
+            method:'all',source:'all'),
+        for(final w in windows)
+          widget.page.schoolCashflowRepository!.load(
+            schoolId:owner.schoolId,yearId:owner.activeYearId!,
+            campusId:campusId,from:financeDay(w.start),to:financeDay(w.end)),
+      ]);
+      final workspace=data.first as FeePaymentWorkspace;
+      if(workspace.schoolId!=owner.schoolId||
+         workspace.campusId!=campusId||
+         workspace.yearId!=owner.activeYearId){
+        throw StateError('Fee data returned outside the selected scope');
+      }
+      final cashbooks=<FeeCashbookReport>[
+        for(var i=1;i<=windows.length;i++)
+          data[i] as FeeCashbookReport,
+      ];
+      final cashflows=<SchoolCashflowReport>[
+        for(var i=1+windows.length;i<data.length;i++)
+          data[i] as SchoolCashflowReport,
+      ];
+      final next=FinanceOverviewSnapshot.fromReports(
+        today:today,workspace:workspace,
+        cashbooks:cashbooks,cashflows:cashflows,
+        periodStart:windows.isEmpty?'No active period':
+          financeDay(windows.first.start),
+        periodEnd:windows.isEmpty?'No active period':
+          financeDay(windows.last.end));
+      if(!mounted||token!=sequence)return;
+      setState((){snapshot=next;loading=false;});
+    }catch(e){
+      if(!mounted||token!=sequence)return;
+      setState((){
+        error='Live finance overview unavailable: '+e.toString();
+        snapshot=null;loading=false;
+      });
+    }
+  }
+
+  void openFeeTab(int index){
+    if(index==4 && widget.page.schoolCashflowRepository==null)return;
+    setState((){
+      primaryTab=1;legacyTab=index;
+    });
+  }
+
+  Widget _topButton(int index,String label,IconData icon,double width){
+    final active=primaryTab==index;
+    final dark=Theme.of(context).brightness==Brightness.dark;
+    return SizedBox(width:width,height:49,child:Material(
+      color:Colors.transparent,
+      borderRadius:BorderRadius.circular(12),
+      child:InkWell(
+        key:Key('finance-primary-tab-'+index.toString()),
+        onTap:()=>setState(()=>primaryTab=index),
+        borderRadius:BorderRadius.circular(12),
+        child:Ink(
+          decoration:BoxDecoration(
+            borderRadius:BorderRadius.circular(12),
+            gradient:active?const LinearGradient(
+              colors:[Color(0xFF00AA8D),Color(0xFF00564F)],
+              begin:Alignment.topCenter,end:Alignment.bottomCenter):null,
+            color:active?null:Theme.of(context).colorScheme.surface,
+            border:active?null:Border.all(
+              color:dark?Theme.of(context).dividerColor:
+                const Color(0xFFD2E3EA)),
+            boxShadow:const [BoxShadow(color:Color(0x120C5160),
+              blurRadius:5,offset:Offset(0,3))],
+          ),
+          child:Row(mainAxisAlignment:MainAxisAlignment.center,
+            children:[
+              Icon(icon,size:20,color:active?Colors.white:
+                const Color(0xFF00665D)),
+              const SizedBox(width:8),
+              Flexible(child:Text(label,maxLines:1,
+                overflow:TextOverflow.ellipsis,
+                style:TextStyle(fontSize:12,
+                  fontWeight:FontWeight.w700,
+                  color:active?Colors.white:
+                    (dark?Colors.white:null)))),
+            ]),
+        ))));
+  }
+
+  Widget _body(){
+    if(primaryTab==1){
+      return KeyedSubtree(
+        key:ValueKey('finance-tuition-tools-'+legacyTab.toString()),
+        child:widget.page._buildLegacyTabs(context,initialIndex:legacyTab));
+    }
+    if(loading && snapshot==null){
+      return const Center(child:Column(
+        mainAxisSize:MainAxisSize.min,children:[
+          CircularProgressIndicator(),
+          SizedBox(height:12),
+          Text('Loading posted finance records...'),
+        ]));
+    }
+    if(error!=null){
+      return Center(child:Padding(
+        padding:const EdgeInsets.all(24),child:Column(
+          mainAxisSize:MainAxisSize.min,children:[
+            const Icon(Icons.cloud_off_outlined,size:37),
+            const SizedBox(height:8),
+            Text(error!,textAlign:TextAlign.center),
+            const SizedBox(height:12),
+            OutlinedButton.icon(
+              key:const Key('finance-overview-retry'),
+              onPressed:load,icon:const Icon(Icons.refresh),
+              label:const Text('Retry')),
+            TextButton(onPressed:()=>openFeeTab(2),
+              child:const Text('Open Fee Register')),
+          ])));
+    }
+    final data=snapshot;
+    if(data==null)return const Center(child:Text('No live finance data.'));
+    if(primaryTab==2||primaryTab==3){
+      return FinanceMovementPanel(snapshot:data,salaries:primaryTab==2,
+        onOpenModule:primaryTab==2
+          ?(widget.page.onOpenPayroll??()=>openFeeTab(2))
+          :(widget.page.onOpenExpenses??()=>openFeeTab(2)));
+    }
+    return FinanceOverviewBody(
+      snapshot:data,
+      onCollect:()=>openFeeTab(2),
+      onTransport:()=>openFeeTab(2),
+      onSalaries:()=>setState(()=>primaryTab=2),
+      onAddExpense:widget.page.onOpenExpenses??()=>openFeeTab(2),
+      onInvoice:()=>openFeeTab(0),
+      onReconciliation:()=>openFeeTab(3),
+      onReports:()=>openFeeTab(4),
+      onFeeSettings:()=>openFeeTab(1));
+  }
+
+  @override Widget build(BuildContext context){
+    final dark=Theme.of(context).brightness==Brightness.dark;
+    return Container(
+      key:const Key('fee-finance-reference-page'),
+      color:dark?Theme.of(context).scaffoldBackgroundColor:
+        const Color(0xFFF2F8FC),
+      child:Column(children:[
+        Padding(padding:const EdgeInsets.fromLTRB(18,17,18,12),
+          child:LayoutBuilder(builder:(context,layout){
+            final wide=layout.maxWidth>=1050;
+            final heading=Row(mainAxisSize:MainAxisSize.min,
+              crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Container(width:5,height:55,
+                decoration:BoxDecoration(
+                  borderRadius:BorderRadius.circular(5),
+                  color:const Color(0xFF02A185))),
+              const SizedBox(width:13),
+              Flexible(child:Column(
+                crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Text('Fee & Finance',
+                  style:Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight:FontWeight.w900,
+                    color:dark?Colors.white:const Color(0xFF005A53))),
+                Text('Financial Overview • '+campusName+
+                  ' • '+(widget.page.owner.activeYearLabel??'Academic Year'),
+                  maxLines:2,style:TextStyle(fontSize:12,
+                    color:dark?Colors.white70:const Color(0xFF597580))),
+              ])),
+            ]);
+            final tabWidth=wide?
+                math.max(112.0,(layout.maxWidth-360-10*3)/4):
+                math.max(117.0,(layout.maxWidth-10)/2);
+            final tabs=Wrap(
+              spacing:10,runSpacing:8,children:[
+                _topButton(0,'Overview',Icons.paid_outlined,tabWidth),
+                _topButton(1,'Tuition & Transport',
+                  Icons.school_outlined,tabWidth),
+                _topButton(2,'Salaries',Icons.groups_2_outlined,tabWidth),
+                _topButton(3,'Other',Icons.wallet_outlined,tabWidth),
+              ]);
+            return wide?Row(children:[
+              Expanded(flex:1,child:heading),
+              const SizedBox(width:12),
+              tabs,
+            ]):Column(crossAxisAlignment:CrossAxisAlignment.start,
+              children:[heading,const SizedBox(height:15),tabs]);
+          })),
+        if(loading && snapshot!=null)
+          const LinearProgressIndicator(minHeight:2),
+        Expanded(child:_body()),
+      ]),
+    );
+  }
 }
 
 class FeeMonthlyPage extends StatefulWidget {
